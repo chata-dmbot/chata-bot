@@ -4,7 +4,7 @@ import requests
 app = Flask(__name__)
 
 VERIFY_TOKEN = "chata_verify_token"
-ACCESS_TOKEN = "EAAUpDddy4TkBPB51vIZBnoq5YgZAOufErizbc9383Toz0oTab94K3y4PwuxZACPTT3FGwtXNsxCJrp4q8pCZCterXrHdrTkbpUUs4ZB1ldJFGJxQ0C4nBoJaCluTQZBsRgC0fiiX5SuvqZAcE3Jy3WA0wFTgho3ELK2dLnVIqqxcixnnsQmzYgeibSZA7wzZCkC7ZAfVLzIGsIVkio70rZBH9ZBqOsxmFK1rfTwi60ZCGc0i5vUhW5vfsUHF2RxkZD"
+ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
 INSTAGRAM_USER_ID = "745508148639483"
 
 @app.route("/webhook", methods=["GET", "POST"])
