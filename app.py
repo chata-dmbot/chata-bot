@@ -9,7 +9,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MimeText
+from email.mime.multipart import MimeMultipart
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,6 +32,67 @@ INSTAGRAM_USER_ID = "745508148639483"
 
 DB_FILE = "chata.db"
 
+# ---- Email helpers ----
+
+def send_reset_email(email, reset_token):
+    """Send password reset email (placeholder - replace with your email service)"""
+    # For now, we'll just print the reset link
+    # In production, you'd use a service like SendGrid, Mailgun, or AWS SES
+    reset_url = f"https://chata-bot.onrender.com/reset-password?token={reset_token}"
+    print(f"Password reset link for {email}: {reset_url}")
+    
+    # TODO: Implement actual email sending
+    # Example with SMTP:
+    # msg = MimeMultipart()
+    # msg['From'] = 'noreply@chata.com'
+    # msg['To'] = email
+    # msg['Subject'] = 'Password Reset Request - Chata'
+    # body = f"Click here to reset your password: {reset_url}"
+    # msg.attach(MimeText(body, 'plain'))
+    # 
+    # server = smtplib.SMTP('smtp.gmail.com', 587)
+    # server.starttls()
+    # server.login('your-email@gmail.com', 'your-app-password')
+    # server.send_message(msg)
+    # server.quit()
+
+def create_reset_token(user_id):
+    """Create a password reset token"""
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now() + timedelta(hours=1)
+    
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO password_resets (user_id, token, expires_at)
+        VALUES (?, ?, ?)
+    """, (user_id, token, expires))
+    conn.commit()
+    conn.close()
+    
+    return token
+
+def verify_reset_token(token):
+    """Verify a password reset token"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id FROM password_resets 
+        WHERE token = ? AND expires_at > ? AND used = 0
+    """, (token, datetime.now()))
+    result = cursor.fetchone()
+    conn.close()
+    
+    return result[0] if result else None
+
+def mark_reset_token_used(token):
+    """Mark a reset token as used"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE password_resets SET used = 1 WHERE token = ?", (token,))
+    conn.commit()
+    conn.close()
+
 # ---- Authentication helpers ----
 
 def login_required(f):
@@ -41,50 +105,62 @@ def login_required(f):
     return decorated_function
 
 def get_user_by_id(user_id):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = ?", (user_id,))
-    user = cursor.fetchone()
-    conn.close()
-    if user:
-        return {
-            'id': user[0],
-            'email': user[1],
-            'first_name': user[2],
-            'last_name': user[3],
-            'company_name': user[4],
-            'subscription_plan': user[5]
-        }
-    return None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {
+                'id': user[0],
+                'email': user[1],
+                'first_name': user[2],
+                'last_name': user[3],
+                'company_name': user[4],
+                'subscription_plan': user[5]
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting user by ID: {e}")
+        return None
 
 def get_user_by_email(email):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = ?", (email,))
-    user = cursor.fetchone()
-    conn.close()
-    if user:
-        return {
-            'id': user[0],
-            'email': user[1],
-            'password_hash': user[2],
-            'first_name': user[3],
-            'last_name': user[4]
-        }
-    return None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {
+                'id': user[0],
+                'email': user[1],
+                'password_hash': user[2],
+                'first_name': user[3],
+                'last_name': user[4]
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting user by email: {e}")
+        return None
 
 def create_user(email, password, first_name, last_name, company_name):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    password_hash = generate_password_hash(password)
-    cursor.execute(
-        "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (?, ?, ?, ?, ?)",
-        (email, password_hash, first_name, last_name, company_name)
-    )
-    user_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return user_id
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        password_hash = generate_password_hash(password)
+        cursor.execute(
+            "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (?, ?, ?, ?, ?)",
+            (email, password_hash, first_name, last_name, company_name)
+        )
+        user_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return user_id
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        raise
 
 # ---- Authentication routes ----
 
@@ -126,16 +202,95 @@ def login():
         email = request.form.get("email")
         password = request.form.get("password")
         
-        user = get_user_by_email(email)
-        if user and check_password_hash(user['password_hash'], password):
-            session['user_id'] = user['id']
-            log_activity(user['id'], 'login', 'User logged in successfully')
-            flash(f"Welcome back, {user['first_name'] or 'User'}!", "success")
-            return redirect(url_for('dashboard'))
-        else:
-            flash("Invalid email or password.", "error")
+        if not email or not password:
+            flash("Email and password are required.", "error")
+            return render_template("login.html")
+        
+        try:
+            user = get_user_by_email(email)
+            if user and check_password_hash(user['password_hash'], password):
+                session['user_id'] = user['id']
+                log_activity(user['id'], 'login', 'User logged in successfully')
+                flash(f"Welcome back, {user['first_name'] or 'User'}!", "success")
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Invalid email or password.", "error")
+        except Exception as e:
+            print(f"Login error: {e}")
+            flash("An error occurred during login. Please try again.", "error")
     
     return render_template("login.html")
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        
+        if not email:
+            flash("Please enter your email address.", "error")
+            return render_template("forgot_password.html")
+        
+        user = get_user_by_email(email)
+        if user:
+            # Create reset token and send email
+            reset_token = create_reset_token(user['id'])
+            send_reset_email(email, reset_token)
+            flash("If an account with that email exists, we've sent a password reset link.", "success")
+        else:
+            # Don't reveal if email exists or not (security best practice)
+            flash("If an account with that email exists, we've sent a password reset link.", "success")
+        
+        return redirect(url_for('login'))
+    
+    return render_template("forgot_password.html")
+
+@app.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    token = request.args.get("token")
+    
+    if not token:
+        flash("Invalid reset link.", "error")
+        return redirect(url_for('login'))
+    
+    user_id = verify_reset_token(token)
+    if not user_id:
+        flash("Invalid or expired reset link.", "error")
+        return redirect(url_for('login'))
+    
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+        
+        if not password or not confirm_password:
+            flash("Please enter both password fields.", "error")
+            return render_template("reset_password.html")
+        
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("reset_password.html")
+        
+        if len(password) < 6:
+            flash("Password must be at least 6 characters long.", "error")
+            return render_template("reset_password.html")
+        
+        # Update password
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            password_hash = generate_password_hash(password)
+            cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+            conn.commit()
+            conn.close()
+            
+            # Mark token as used
+            mark_reset_token_used(token)
+            
+            flash("Password updated successfully! You can now log in.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash("Error updating password. Please try again.", "error")
+    
+    return render_template("reset_password.html")
 
 @app.route("/logout")
 def logout():

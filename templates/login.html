@@ -35,6 +35,9 @@
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required>
+                    <div class="forgot-password">
+                        <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-full">Sign In</button>

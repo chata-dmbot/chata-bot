@@ -114,6 +114,19 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 );
 """)
 
+# Create password_resets table for forgot password functionality
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        used INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+""")
+
 # Insert default admin settings
 cursor.execute("""
 INSERT OR IGNORE INTO settings (key, value) VALUES 
@@ -121,6 +134,15 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
 ('temperature', '0.8'),
 ('max_tokens', '100')
 """)
+
+# Create indexes for better performance
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections (user_id)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_client_settings_user_id ON client_settings (user_id)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages (user_id)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON usage_logs (user_id)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id)")
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets (token)")
 
 # Save (commit) changes and close
 conn.commit()
