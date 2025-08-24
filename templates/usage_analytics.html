@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usage Analytics - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('bot_settings') }}" class="nav-link">Bot Settings</a>
+                <a href="{{ url_for('account_settings') }}" class="nav-link">Account</a>
+                <a href="{{ url_for('usage_analytics') }}" class="nav-link active">Usage</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-chart-line"></i> Usage Analytics</h1>
+            <p>Track your bot's performance and usage statistics</p>
+        </div>
+
+        <div class="analytics-grid">
+            <!-- Current Month Overview -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> This Month</h3>
+                </div>
+                <div class="card-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ messages_this_month }}</div>
+                            <div class="stat-label">Messages Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ api_calls_this_month }}</div>
+                            <div class="stat-label">API Calls</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${{ "%.2f"|format(cost_this_month) }}</div>
+                            <div class="stat-label">Total Cost</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Chart -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-bar"></i> Usage Trend</h3>
+                </div>
+                <div class="card-content">
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-line"></i>
+                        <p>Usage charts coming soon</p>
+                        <small>Track your daily message volume and costs</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Breakdown -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-dollar-sign"></i> Cost Breakdown</h3>
+                </div>
+                <div class="card-content">
+                    <div class="cost-item">
+                        <div class="cost-label">API Calls</div>
+                        <div class="cost-value">${{ "%.2f"|format(cost_this_month) }}</div>
+                    </div>
+                    <div class="cost-item">
+                        <div class="cost-label">Storage</div>
+                        <div class="cost-value">$0.00</div>
+                    </div>
+                    <div class="cost-item">
+                        <div class="cost-label">Bandwidth</div>
+                        <div class="cost-value">$0.00</div>
+                    </div>
+                    <div class="cost-total">
+                        <div class="cost-label">Total</div>
+                        <div class="cost-value">${{ "%.2f"|format(cost_this_month) }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-tachometer-alt"></i> Performance</h3>
+                </div>
+                <div class="card-content">
+                    <div class="metric-item">
+                        <div class="metric-label">Response Time</div>
+                        <div class="metric-value">~2.3s</div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <div class="metric-label">Uptime</div>
+                        <div class="metric-value">99.9%</div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 99%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <div class="metric-label">Success Rate</div>
+                        <div class="metric-value">98.5%</div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: 98%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage History -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                </div>
+                <div class="card-content">
+                    <div class="activity-list">
+                        {% if recent_activity %}
+                            {% for activity in recent_activity %}
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        {% if activity[0] == 'login' %}
+                                            <i class="fas fa-sign-in-alt"></i>
+                                        {% elif activity[0] == 'settings_updated' %}
+                                            <i class="fas fa-cog"></i>
+                                        {% elif activity[0] == 'profile_updated' %}
+                                            <i class="fas fa-user-edit"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-content">
+                                        <div class="activity-title">
+                                            {% if activity[0] == 'login' %}
+                                                User logged in
+                                            {% elif activity[0] == 'settings_updated' %}
+                                                Bot settings updated
+                                            {% elif activity[0] == 'profile_updated' %}
+                                                Profile updated
+                                            {% else %}
+                                                {{ activity[1] or activity[0] }}
+                                            {% endif %}
+                                        </div>
+                                        <div class="activity-time">{{ activity[2][:16] }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>No recent activity</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Limits -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-shield-alt"></i> Usage Limits</h3>
+                </div>
+                <div class="card-content">
+                    <div class="limit-item">
+                        <div class="limit-info">
+                            <div class="limit-label">Monthly Messages</div>
+                            <div class="limit-progress">
+                                <div class="limit-bar">
+                                    <div class="limit-fill" style="width: 15%"></div>
+                                </div>
+                                <span class="limit-text">{{ messages_this_month }} / 1000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="limit-item">
+                        <div class="limit-info">
+                            <div class="limit-label">API Calls</div>
+                            <div class="limit-progress">
+                                <div class="limit-bar">
+                                    <div class="limit-fill" style="width: 8%"></div>
+                                </div>
+                                <span class="limit-text">{{ api_calls_this_month }} / 5000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="limit-item">
+                        <div class="limit-info">
+                            <div class="limit-label">Storage</div>
+                            <div class="limit-progress">
+                                <div class="limit-bar">
+                                    <div class="limit-fill" style="width: 5%"></div>
+                                </div>
+                                <span class="limit-text">50MB / 1GB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <button class="btn btn-primary" disabled>
+                <i class="fas fa-download"></i> Export Report
+            </button>
+        </div>
+    </div>
+</body>
+</html>

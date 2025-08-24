@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('features') }}" class="nav-link">Features</a>
+                <a href="{{ url_for('pricing') }}" class="nav-link">Pricing</a>
+                <a href="{{ url_for('contact') }}" class="nav-link">Contact</a>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Sign In</a>
+                    <a href="{{ url_for('signup') }}" class="nav-link nav-cta">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="privacy-section">
+            <div class="container">
+                <div class="section-header">
+                    <h1>Terms of Service</h1>
+                    <p>Last updated: {{ moment.strftime('%B %d, %Y') }}</p>
+                </div>
+
+                <div class="privacy-content">
+                    <div class="privacy-section-block">
+                        <h2>1. Acceptance of Terms</h2>
+                        <p>By accessing and using Chata's Instagram DM bot service ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>2. Description of Service</h2>
+                        <p>Chata provides an AI-powered Instagram Direct Message automation service that allows users to:</p>
+                        <ul>
+                            <li>Connect their Instagram Business accounts</li>
+                            <li>Automate responses to incoming messages</li>
+                            <li>Customize bot personality and behavior</li>
+                            <li>Track usage analytics and performance</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>3. User Accounts and Registration</h2>
+                        
+                        <h3>3.1 Account Creation</h3>
+                        <p>To use our Service, you must create an account by providing accurate, current, and complete information. You are responsible for maintaining the confidentiality of your account credentials.</p>
+                        
+                        <h3>3.2 Account Responsibilities</h3>
+                        <p>You are responsible for:</p>
+                        <ul>
+                            <li>All activities that occur under your account</li>
+                            <li>Maintaining the security of your password</li>
+                            <li>Notifying us immediately of any unauthorized use</li>
+                            <li>Ensuring your account information is accurate and up-to-date</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>4. Acceptable Use Policy</h2>
+                        
+                        <h3>4.1 Permitted Uses</h3>
+                        <p>You may use our Service for lawful purposes only, including:</p>
+                        <ul>
+                            <li>Managing legitimate business communications</li>
+                            <li>Providing customer support and engagement</li>
+                            <li>Automating routine responses to common inquiries</li>
+                        </ul>
+                        
+                        <h3>4.2 Prohibited Uses</h3>
+                        <p>You agree not to use the Service to:</p>
+                        <ul>
+                            <li>Send spam, unsolicited messages, or engage in harassment</li>
+                            <li>Violate Instagram's Terms of Service or Community Guidelines</li>
+                            <li>Impersonate others or misrepresent your identity</li>
+                            <li>Distribute malware, viruses, or harmful content</li>
+                            <li>Engage in fraudulent activities or scams</li>
+                            <li>Violate any applicable laws or regulations</li>
+                            <li>Attempt to reverse engineer or hack our systems</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>5. Instagram Integration</h2>
+                        
+                        <h3>5.1 Instagram Terms Compliance</h3>
+                        <p>By using our Service with Instagram, you agree to comply with Instagram's Terms of Service, Platform Policy, and Community Guidelines. You are responsible for ensuring your use of our Service does not violate Instagram's policies.</p>
+                        
+                        <h3>5.2 API Usage</h3>
+                        <p>Our Service uses Instagram's API to provide functionality. You acknowledge that:</p>
+                        <ul>
+                            <li>Instagram may change their API or policies at any time</li>
+                            <li>We are not responsible for Instagram's actions or policy changes</li>
+                            <li>Your access to Instagram features is subject to Instagram's approval</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>6. Subscription and Billing</h2>
+                        
+                        <h3>6.1 Subscription Plans</h3>
+                        <p>We offer various subscription plans with different features and usage limits. You may upgrade, downgrade, or cancel your subscription at any time through your account dashboard.</p>
+                        
+                        <h3>6.2 Payment Terms</h3>
+                        <ul>
+                            <li>All fees are billed in advance on a monthly or annual basis</li>
+                            <li>Payments are non-refundable except as required by law</li>
+                            <li>We may change our pricing with 30 days' notice</li>
+                            <li>Failed payments may result in service suspension</li>
+                        </ul>
+                        
+                        <h3>6.3 Usage Limits</h3>
+                        <p>Each subscription plan includes specific usage limits. Exceeding these limits may result in additional charges or service restrictions.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>7. Data and Privacy</h2>
+                        <p>Your privacy is important to us. Our collection and use of your data is governed by our Privacy Policy, which is incorporated into these Terms by reference.</p>
+                        
+                        <h3>7.1 Data Ownership</h3>
+                        <p>You retain ownership of your content and data. We only use your data to provide and improve our Service.</p>
+                        
+                        <h3>7.2 Data Security</h3>
+                        <p>We implement industry-standard security measures to protect your data, but no method of transmission over the internet is 100% secure.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>8. Intellectual Property</h2>
+                        
+                        <h3>8.1 Our Rights</h3>
+                        <p>Chata and its original content, features, and functionality are owned by us and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.</p>
+                        
+                        <h3>8.2 Your Rights</h3>
+                        <p>You retain ownership of any content you create or upload to our Service. By using our Service, you grant us a limited license to use your content solely to provide the Service.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>9. Service Availability</h2>
+                        <p>We strive to maintain high service availability but cannot guarantee uninterrupted access. We may temporarily suspend the Service for maintenance, updates, or other operational reasons.</p>
+                        
+                        <h3>9.1 Service Level Agreement</h3>
+                        <p>We target 99.9% uptime but do not guarantee specific availability levels. We are not liable for any damages resulting from service interruptions.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>10. Limitation of Liability</h2>
+                        <p>To the maximum extent permitted by law, Chata shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or use.</p>
+                        
+                        <h3>10.1 Maximum Liability</h3>
+                        <p>Our total liability to you for any claims arising from the use of our Service shall not exceed the amount you paid us in the 12 months preceding the claim.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>11. Indemnification</h2>
+                        <p>You agree to indemnify and hold harmless Chata from any claims, damages, or expenses arising from your use of the Service or violation of these Terms.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>12. Termination</h2>
+                        
+                        <h3>12.1 Termination by You</h3>
+                        <p>You may terminate your account at any time by contacting us or using the account deletion feature in your dashboard.</p>
+                        
+                        <h3>12.2 Termination by Us</h3>
+                        <p>We may terminate or suspend your account immediately if you:</p>
+                        <ul>
+                            <li>Violate these Terms of Service</li>
+                            <li>Engage in fraudulent or illegal activities</li>
+                            <li>Fail to pay subscription fees</li>
+                            <li>Violate Instagram's policies</li>
+                        </ul>
+                        
+                        <h3>12.3 Effect of Termination</h3>
+                        <p>Upon termination, your access to the Service will cease immediately, and we may delete your account data in accordance with our Privacy Policy.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>13. Dispute Resolution</h2>
+                        <p>Any disputes arising from these Terms or your use of the Service shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>14. Governing Law</h2>
+                        <p>These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law provisions.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>15. Changes to Terms</h2>
+                        <p>We reserve the right to modify these Terms at any time. We will notify you of any changes by posting the new Terms on this page and updating the "Last updated" date.</p>
+                        
+                        <p>Your continued use of the Service after any changes constitutes acceptance of the updated Terms.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>16. Contact Information</h2>
+                        <p>If you have any questions about these Terms of Service, please contact us:</p>
+                        
+                        <div class="contact-info">
+                            <p><strong>Email:</strong> legal@chata.com</p>
+                            <p><strong>Address:</strong> [Your Business Address]</p>
+                            <p><strong>Phone:</strong> [Your Phone Number]</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="footer-logo">
+                    <p>Automate your Instagram DMs with AI-powered responses.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Product</h3>
+                    <a href="{{ url_for('features') }}">Features</a>
+                    <a href="{{ url_for('pricing') }}">Pricing</a>
+                    <a href="{{ url_for('faq') }}">FAQ</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <a href="{{ url_for('about') }}">About</a>
+                    <a href="{{ url_for('contact') }}">Contact</a>
+                    <a href="{{ url_for('privacy') }}">Privacy</a>
+                    <a href="{{ url_for('terms') }}">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <a href="{{ url_for('contact') }}">Help Center</a>
+                    <a href="{{ url_for('contact') }}">Contact Support</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Chata. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

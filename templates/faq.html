@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FAQ – Everything You Need to Know</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+  <!-- CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <!-- Icon Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/heroicons@2.0.18/24/outline/esm/index.js"></script>
+</head>
+<body>
+  <!-- Background Elements -->
+  <div class="background-container">
+    <!-- Animated background bubbles -->
+    <div class="background-bubble bubble-1"></div>
+    <div class="background-bubble bubble-2"></div>
+    <div class="background-bubble bubble-3"></div>
+    <div class="background-bubble bubble-4"></div>
+    <div class="background-bubble bubble-5"></div>
+    
+    <!-- Dynamic scroll-triggered shapes -->
+    <div class="scroll-shape scroll-shape-1"></div>
+    <div class="scroll-shape scroll-shape-2"></div>
+    <div class="scroll-shape scroll-shape-3"></div>
+    <div class="scroll-shape scroll-shape-4"></div>
+    <div class="scroll-shape scroll-shape-5"></div>
+    
+    <!-- Blurred icons scattered in background -->
+    <div class="background-icon icon-1"></div>
+    <div class="background-icon icon-2"></div>
+    <div class="background-icon icon-3"></div>
+    <div class="background-icon icon-4"></div>
+    <div class="background-icon icon-5"></div>
+    
+    <!-- Gradient orbs -->
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+    
+    <!-- Subtle grid pattern -->
+    <div class="grid-pattern"></div>
+  </div>
+  
+  <!-- Header and Logo -->
+  <header>
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata logo" class="logo">
+    <nav>
+      <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
+      <a href="{{ url_for('about') }}"><i class="fas fa-info-circle"></i> About</a>
+      <a href="{{ url_for('features') }}"><i class="fas fa-star"></i> Features</a>
+      <a href="{{ url_for('pricing') }}"><i class="fas fa-tags"></i> Pricing</a>
+      <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
+      <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('dashboard') }}" class="nav-cta"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{{ url_for('logout') }}" class="nav-cta secondary"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="nav-cta"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+        <a href="{{ url_for('signup') }}" class="nav-cta secondary"><i class="fas fa-user-plus"></i> Sign Up</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <section class="faq fade-in">
+      <div class="section-header">
+        <h1>Frequently Asked Questions</h1>
+        <p class="section-subtitle">Everything you need to know about Chata and how it works</p>
+      </div>
+      
+      <div class="faq-grid">
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-cog"></i>
+          </div>
+          <h3>How does Chata work?</h3>
+          <p>Chata connects to your Instagram account through Meta's official API. When someone sends you a DM, our AI analyzes the message and responds using your personalized settings. Think of it as having a smart assistant who knows exactly how you talk and can handle conversations just like you would.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <h3>Is it safe to connect my Instagram account?</h3>
+          <p>Absolutely! We use Instagram's official API and Meta's secure authentication system. We never store your password and only access the permissions you explicitly grant. Your account security is our top priority - we take this very seriously.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-magic"></i>
+          </div>
+          <h3>Can I customize how Chata responds?</h3>
+          <p>Yes! You can set your bot's personality, tone, and even specific responses for common questions. You can also add custom links, offers, or promotional messages that Chata will share when appropriate. It's like training your own personal assistant.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-edit"></i>
+          </div>
+          <h3>What if Chata gives a wrong answer?</h3>
+          <p>Chata is designed to be helpful but not perfect. You can review all conversations in your dashboard and manually respond to any messages that need your personal touch. The AI learns from your corrections to improve over time, so it gets better with every interaction.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Can I use Chata for multiple Instagram accounts?</h3>
+          <p>Yes! Our Pro and Creator plans support multiple Instagram accounts. You can set up different personalities and settings for each account, making it perfect for managing multiple brands or personal accounts. Each account gets its own unique voice.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-tags"></i>
+          </div>
+          <h3>How much does it cost?</h3>
+          <p>We offer three simple pricing tiers: Starter ($29/month), Creator ($49/month), and Pro ($99/month). All plans include a 7-day free trial, and you can cancel anytime. Check our <a href="{{ url_for('pricing') }}">pricing page</a> for full details.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-rocket"></i>
+          </div>
+          <h3>Do I need technical skills to use Chata?</h3>
+          <p>Not at all! Chata is designed to be super simple. Just connect your Instagram account, set your preferences, and you're ready to go. No coding or technical knowledge required - if you can use Instagram, you can use Chata.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-play"></i>
+          </div>
+          <h3>Can I try Chata before paying?</h3>
+          <p>Yes! We offer a free demo that you can try right now. Just click the "Try the Demo" button to see how Chata works with sample conversations. We also offer a 7-day free trial on all paid plans, so you can test it with your real account.</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-headset"></i>
+          </div>
+          <h3>What kind of support do you offer?</h3>
+          <p>We provide email support for all users, with priority support for Pro and Creator plans. Our team is here to help you get the most out of Chata and answer any questions you might have. We want you to succeed!</p>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h3>Is my data private and secure?</h3>
+          <p>Yes! We take data privacy seriously. All conversations are encrypted, and we never share your data with third parties. You can delete your data at any time, and we comply with all major privacy regulations. Your privacy is non-negotiable.</p>
+        </div>
+      </div>
+
+      <div class="faq-cta fade-in">
+        <div class="section-header">
+          <h2>Still have questions?</h2>
+          <p class="section-subtitle">We're here to help you get the most out of Chata</p>
+        </div>
+        <div class="cta-section">
+          <p>Can't find what you're looking for? Our team is ready to help you succeed with Chata.</p>
+          <div class="hero-cta">
+            <a class="cta-btn primary" href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact Us</a>
+            <a class="cta-btn secondary" href="/admin/prompt"><i class="fas fa-play"></i> Try the Demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <img src="{{ url_for('static', filename='images/icon.png') }}" alt="Chata" class="footer-logo">
+        <p>&copy; 2024 Chata — Crafted for creators by creators.</p>
+      </div>
+      <div class="footer-links">
+        <a href="{{ url_for('privacy') }}"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+        <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
+        <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
+      </div>
+      <div class="footer-cta">
+        <a class="cta-btn primary" href="/admin/prompt"><i class="fas fa-play"></i> Try Chata</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Animation scripts -->
+  <script>
+    // Fade-in animation observer
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-in').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Gentle floating animation for background elements
+    function animateBackgroundElements() {
+      const icons = document.querySelectorAll('.background-icon');
+      const orbs = document.querySelectorAll('.gradient-orb');
+      
+      icons.forEach((icon, index) => {
+        const delay = index * 0.5;
+        const duration = 6 + index * 2;
+        icon.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
+      });
+      
+      orbs.forEach((orb, index) => {
+        const delay = index * 1;
+        const duration = 8 + index * 3;
+        orb.style.animation = `pulse ${duration}s ease-in-out ${delay}s infinite`;
+      });
+    }
+
+    // Scroll effect for logo and navigation
+    function handleScroll() {
+      const logo = document.querySelector('.logo');
+      const navLinks = document.querySelectorAll('nav a');
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (scrollTop > 50) {
+        logo.classList.add('scrolled');
+        navLinks.forEach(link => link.classList.add('scrolled'));
+      } else {
+        logo.classList.remove('scrolled');
+        navLinks.forEach(link => link.classList.remove('scrolled'));
+      }
+      
+      // Trigger dynamic background shapes based on scroll position
+      triggerBackgroundShapes(scrollTop);
+    }
+    
+    // Dynamic background shapes on scroll
+    function triggerBackgroundShapes(scrollTop) {
+      const shapes = document.querySelectorAll('.scroll-shape');
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      shapes.forEach((shape, index) => {
+        const triggerPoint = (windowHeight * 0.8) + (index * windowHeight * 0.3);
+        
+        if (scrollTop > triggerPoint && scrollTop < triggerPoint + windowHeight) {
+          if (!shape.classList.contains('active')) {
+            shape.classList.add('active');
+            // Remove active class after animation completes
+            setTimeout(() => {
+              shape.classList.remove('active');
+            }, 3000);
+          }
+        }
+      });
+    }
+
+    // Initialize animations when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      animateBackgroundElements();
+      
+      // Add scroll event listener
+      window.addEventListener('scroll', handleScroll);
+      
+      // Initial check for scroll position
+      handleScroll();
+    });
+  </script>
+</body>
+</html>

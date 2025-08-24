@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Settings - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('bot_settings') }}" class="nav-link active">Bot Settings</a>
+                <a href="{{ url_for('account_settings') }}" class="nav-link">Account</a>
+                <a href="{{ url_for('usage_analytics') }}" class="nav-link">Usage</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-robot"></i> Bot Settings</h1>
+            <p>Customize your Instagram bot's personality and behavior</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="settings-form">
+            <div class="settings-grid">
+                <!-- Basic Settings -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cog"></i> Basic Settings</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="bot_name">Bot Name</label>
+                            <input type="text" id="bot_name" name="bot_name" value="{{ settings.bot_name }}" 
+                                   placeholder="Enter your bot's name">
+                            <small>This name will be used when your bot introduces itself</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="welcome_message">Welcome Message</label>
+                            <textarea id="welcome_message" name="welcome_message" rows="3" 
+                                      placeholder="Message sent when someone first messages your bot">{{ settings.welcome_message }}</textarea>
+                            <small>This message is sent to new conversations</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Personality -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-brain"></i> AI Personality</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="system_prompt">System Prompt (Bot Personality)</label>
+                            <textarea id="system_prompt" name="system_prompt" rows="6" 
+                                      placeholder="Define your bot's personality, role, and how it should respond">{{ settings.system_prompt }}</textarea>
+                            <small>This defines your bot's core personality and behavior</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Response Settings -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-sliders-h"></i> Response Settings</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="temperature">Temperature (Creativity)</label>
+                            <div class="slider-container">
+                                <input type="range" id="temperature" name="temperature" 
+                                       min="0" max="2" step="0.1" value="{{ settings.temperature }}"
+                                       oninput="updateSliderValue('temperature', this.value)">
+                                <span class="slider-value" id="temperature-value">{{ settings.temperature }}</span>
+                            </div>
+                            <small>0 = More focused, 2 = More creative</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="max_tokens">Max Response Length</label>
+                            <div class="slider-container">
+                                <input type="range" id="max_tokens" name="max_tokens" 
+                                       min="50" max="500" step="10" value="{{ settings.max_tokens }}"
+                                       oninput="updateSliderValue('max_tokens', this.value)">
+                                <span class="slider-value" id="max_tokens-value">{{ settings.max_tokens }} tokens</span>
+                            </div>
+                            <small>Controls how long your bot's responses can be</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-eye"></i> Preview</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="preview-container">
+                            <div class="preview-message">
+                                <strong>User:</strong> Hi, I have a question about your content
+                            </div>
+                            <div class="preview-message bot-response">
+                                <strong>{{ settings.bot_name }}:</strong> 
+                                <span id="preview-text">Loading preview...</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="generatePreview()">
+                            <i class="fas fa-sync"></i> Update Preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function updateSliderValue(sliderId, value) {
+            const valueElement = document.getElementById(sliderId + '-value');
+            if (sliderId === 'max_tokens') {
+                valueElement.textContent = value + ' tokens';
+            } else {
+                valueElement.textContent = value;
+            }
+        }
+
+        function generatePreview() {
+            const systemPrompt = document.getElementById('system_prompt').value;
+            const botName = document.getElementById('bot_name').value;
+            const previewText = document.getElementById('preview-text');
+            
+            // Simple preview generation
+            if (systemPrompt.includes('friendly') || systemPrompt.includes('helpful')) {
+                previewText.textContent = "Hi there! I'd be happy to help with any questions about my content. What would you like to know?";
+            } else if (systemPrompt.includes('professional') || systemPrompt.includes('business')) {
+                previewText.textContent = "Thank you for reaching out. I'm here to assist with any inquiries about my content or services.";
+            } else {
+                previewText.textContent = "Hello! Thanks for your message. How can I help you today?";
+            }
+        }
+
+        // Generate initial preview
+        document.addEventListener('DOMContentLoaded', function() {
+            generatePreview();
+        });
+    </script>
+</body>
+</html>

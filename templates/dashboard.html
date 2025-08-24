@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
+                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Welcome, {{ user.first_name or user.email }}!</h1>
+            <p>Manage your Instagram bot connections and settings</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="dashboard-grid">
+            <!-- Account Info Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-user"></i> Account Information</h3>
+                </div>
+                <div class="card-content">
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+                    {% if user.company_name %}
+                        <p><strong>Company:</strong> {{ user.company_name }}</p>
+                    {% endif %}
+                    <p><strong>Plan:</strong> <span class="badge badge-{{ 'premium' if user.subscription_plan == 'premium' else 'basic' }}">{{ user.subscription_plan.title() }}</span></p>
+                </div>
+            </div>
+
+            <!-- Instagram Connections Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3><i class="fab fa-instagram"></i> Instagram Connections</h3>
+                    <a href="#" class="btn btn-primary btn-sm">Connect New Account</a>
+                </div>
+                <div class="card-content">
+                    {% if connections %}
+                        {% for connection in connections %}
+                            <div class="connection-item">
+                                <div class="connection-info">
+                                    <h4>{{ connection.page_name or 'Instagram Account' }}</h4>
+                                    <p>ID: {{ connection.instagram_user_id }}</p>
+                                    <p>Connected: {{ connection.created_at[:10] }}</p>
+                                </div>
+                                <div class="connection-status">
+                                    <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
+                                        {{ 'Active' if connection.is_active else 'Inactive' }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-instagram"></i>
+                            <p>No Instagram accounts connected yet</p>
+                            <a href="#" class="btn btn-primary">Connect Your First Account</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Stats Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-bar"></i> This Month</h3>
+                </div>
+                <div class="card-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Messages Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">API Calls</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">$0.00</div>
+                            <div class="stat-label">Cost</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-cog"></i> Quick Actions</h3>
+                </div>
+                <div class="card-content">
+                    <div class="action-buttons">
+                        <a href="{{ url_for('bot_settings') }}" class="btn btn-secondary btn-full">Manage Bot Settings</a>
+                        <a href="{{ url_for('usage_analytics') }}" class="btn btn-secondary btn-full">View Analytics</a>
+                        <a href="{{ url_for('account_settings') }}" class="btn btn-secondary btn-full">Account Settings</a>
+                        <a href="{{ url_for('contact') }}" class="btn btn-secondary btn-full">Get Support</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

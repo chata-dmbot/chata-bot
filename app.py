@@ -1,16 +1,427 @@
-from flask import Flask, request
+from dotenv import load_dotenv
+import os
+from flask import Flask, request, render_template, redirect, url_for, flash, session
 import requests
+import openai
+import sqlite3
+from flask import render_template_string, request as flask_request
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+import hashlib
+import secrets
+from datetime import datetime
 
+# Load environment variables from .env file
+load_dotenv()
+
+# OpenAI API key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+print("Loaded API Key:", OPENAI_API_KEY[:8] + "..." if OPENAI_API_KEY else "Not found")
+
+# Flask app
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 
+# Meta/Instagram setup
 VERIFY_TOKEN = "chata_verify_token"
 ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
 INSTAGRAM_USER_ID = "745508148639483"
 
+DB_FILE = "chata.db"
+
+# ---- Authentication helpers ----
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_user_by_id(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    if user:
+        return {
+            'id': user[0],
+            'email': user[1],
+            'first_name': user[2],
+            'last_name': user[3],
+            'company_name': user[4],
+            'subscription_plan': user[5]
+        }
+    return None
+
+def get_user_by_email(email):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+    if user:
+        return {
+            'id': user[0],
+            'email': user[1],
+            'password_hash': user[2],
+            'first_name': user[3],
+            'last_name': user[4]
+        }
+    return None
+
+def create_user(email, password, first_name, last_name, company_name):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    password_hash = generate_password_hash(password)
+    cursor.execute(
+        "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (?, ?, ?, ?, ?)",
+        (email, password_hash, first_name, last_name, company_name)
+    )
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return user_id
+
+# ---- Authentication routes ----
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        company_name = request.form.get("company_name")
+        
+        # Basic validation
+        if not email or not password:
+            flash("Email and password are required.", "error")
+            return render_template("signup.html")
+        
+        # Check if user already exists
+        existing_user = get_user_by_email(email)
+        if existing_user:
+            flash("An account with this email already exists.", "error")
+            return render_template("signup.html")
+        
+        # Create new user
+        try:
+            user_id = create_user(email, password, first_name, last_name, company_name)
+            session['user_id'] = user_id
+            flash("Account created successfully! Welcome to Chata.", "success")
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash("Error creating account. Please try again.", "error")
+            return render_template("signup.html")
+    
+    return render_template("signup.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        user = get_user_by_email(email)
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            log_activity(user['id'], 'login', 'User logged in successfully')
+            flash(f"Welcome back, {user['first_name'] or 'User'}!", "success")
+            return redirect(url_for('dashboard'))
+        else:
+            flash("Invalid email or password.", "error")
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.pop('user_id', None)
+    flash("You have been logged out.", "info")
+    return redirect(url_for('home'))
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    user = get_user_by_id(session['user_id'])
+    
+    # Get user's Instagram connections
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, page_name, instagram_user_id, is_active, created_at 
+        FROM instagram_connections 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC
+    """, (user['id'],))
+    connections = cursor.fetchall()
+    conn.close()
+    
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'page_name': conn_data[1],
+            'instagram_user_id': conn_data[2],
+            'is_active': conn_data[3],
+            'created_at': conn_data[4]
+        })
+    
+    return render_template("dashboard.html", user=user, connections=connections_list)
+
+# ---- Bot Settings Management ----
+
+def get_client_settings(user_id, connection_id=None):
+    """Get bot settings for a specific client/connection"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    if connection_id:
+        cursor.execute("""
+            SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
+            FROM client_settings 
+            WHERE user_id = ? AND instagram_connection_id = ?
+        """, (user_id, connection_id))
+    else:
+        cursor.execute("""
+            SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
+            FROM client_settings 
+            WHERE user_id = ? AND instagram_connection_id IS NULL
+        """, (user_id,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return {
+            'system_prompt': row[0],
+            'temperature': row[1],
+            'max_tokens': row[2],
+            'bot_name': row[3],
+            'welcome_message': row[4]
+        }
+    
+    # Return default settings if none exist
+    return {
+        'system_prompt': "You are a friendly digital creator's assistant. Reply to DMs from fans in a positive, helpful way.",
+        'temperature': 0.8,
+        'max_tokens': 100,
+        'bot_name': 'Chata Bot',
+        'welcome_message': 'Hi! I\'m here to help. How can I assist you today?'
+    }
+
+def log_activity(user_id, action_type, description=None):
+    """Log user activity for analytics and security"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        INSERT INTO activity_logs (user_id, action_type, description, ip_address, user_agent)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, action_type, description, request.remote_addr, request.headers.get('User-Agent')))
+    
+    conn.commit()
+    conn.close()
+
+def save_client_settings(user_id, settings, connection_id=None):
+    """Save bot settings for a specific client/connection"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    if connection_id:
+        cursor.execute("""
+            INSERT OR REPLACE INTO client_settings 
+            (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
+              settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+    else:
+        cursor.execute("""
+            INSERT OR REPLACE INTO client_settings 
+            (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, settings['system_prompt'], settings['temperature'], 
+              settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+    
+    conn.commit()
+    conn.close()
+    
+    # Log the activity
+    log_activity(user_id, 'settings_updated', f'Bot settings updated for connection {connection_id or "default"}')
+
+@app.route("/dashboard/bot-settings", methods=["GET", "POST"])
+@login_required
+def bot_settings():
+    user_id = session['user_id']
+    
+    if request.method == "POST":
+        settings = {
+            'system_prompt': request.form.get('system_prompt', ''),
+            'temperature': float(request.form.get('temperature', 0.8)),
+            'max_tokens': int(request.form.get('max_tokens', 100)),
+            'bot_name': request.form.get('bot_name', 'Chata Bot'),
+            'welcome_message': request.form.get('welcome_message', '')
+        }
+        
+        save_client_settings(user_id, settings)
+        flash("Bot settings updated successfully!", "success")
+        return redirect(url_for('bot_settings'))
+    
+    current_settings = get_client_settings(user_id)
+    return render_template("bot_settings.html", settings=current_settings)
+
+@app.route("/dashboard/account-settings", methods=["GET", "POST"])
+@login_required
+def account_settings():
+    user = get_user_by_id(session['user_id'])
+    
+    if request.method == "POST":
+        # Update account information
+        first_name = request.form.get('first_name', '')
+        last_name = request.form.get('last_name', '')
+        company_name = request.form.get('company_name', '')
+        
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE users 
+            SET first_name = ?, last_name = ?, company_name = ?
+            WHERE id = ?
+        """, (first_name, last_name, company_name, user['id']))
+        conn.commit()
+        conn.close()
+        
+        log_activity(user['id'], 'profile_updated', 'Account profile information updated')
+        flash("Account information updated successfully!", "success")
+        return redirect(url_for('account_settings'))
+    
+    return render_template("account_settings.html", user=user)
+
+@app.route("/dashboard/usage")
+@login_required
+def usage_analytics():
+    user_id = session['user_id']
+    
+    # Get usage statistics for the current month
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    # Get message count for current month
+    cursor.execute("""
+        SELECT COUNT(*) FROM messages 
+        WHERE user_id = ? 
+        AND timestamp >= date('now', 'start of month')
+    """, (user_id,))
+    messages_this_month = cursor.fetchone()[0]
+    
+    # Get API usage for current month
+    cursor.execute("""
+        SELECT SUM(tokens_used), SUM(cost_cents) FROM usage_logs 
+        WHERE user_id = ? 
+        AND timestamp >= date('now', 'start of month')
+    """, (user_id,))
+    usage_data = cursor.fetchone()
+    api_calls_this_month = usage_data[0] or 0
+    cost_this_month = (usage_data[1] or 0) / 100.0  # Convert cents to dollars
+    
+    # Get recent activity
+    cursor.execute("""
+        SELECT action_type, description, timestamp 
+        FROM activity_logs 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 10
+    """, (user_id,))
+    recent_activity = cursor.fetchall()
+    
+    conn.close()
+    
+    return render_template("usage_analytics.html", 
+                         messages_this_month=messages_this_month,
+                         api_calls_this_month=api_calls_this_month,
+                         cost_this_month=cost_this_month,
+                         recent_activity=recent_activity)
+
+# ---- SQLite settings helpers ----
+
+def get_setting(key, default=None):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return row[0]
+    return default
+
+def set_setting(key, value):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (value, key))
+    conn.commit()
+    conn.close()
+
+# ---- Message DB helpers ----
+
+def save_message(user_id, role, content):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)",
+        (user_id, role, content)
+    )
+    conn.commit()
+    conn.close()
+
+def get_last_messages(user_id, n=35):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+        (user_id, n)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    rows.reverse()
+    return [{"role": role, "content": content} for role, content in rows]
+
+# ---- AI Reply ----
+
+def get_ai_reply(history):
+    openai.api_key = OPENAI_API_KEY
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        system_prompt = get_setting("system_prompt",
+            "You are a friendly digital creator's assistant. Reply to DMs from fans in a positive, helpful way.")
+        temperature = float(get_setting("temperature", "0.8"))
+        max_tokens = int(get_setting("max_tokens", "100"))
+
+        messages = [{"role": "system", "content": system_prompt}]
+        messages += history
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        ai_reply = response.choices[0].message.content.strip()
+        return ai_reply
+
+    except Exception as e:
+        print("OpenAI API error:", e)
+        return "Sorry, I'm having trouble replying right now."
+
+# ---- Webhook Route ----
+
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        # Verification challenge from Meta
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
@@ -24,28 +435,129 @@ def webhook():
         print("Webhook received POST:", request.json)
         data = request.json
 
-        # Basic check for Instagram messaging events
         if 'entry' in data:
             for entry in data['entry']:
                 if 'messaging' in entry:
                     for event in entry['messaging']:
+                        if event.get('message', {}).get('is_echo'):
+                            continue
+
                         sender_id = event['sender']['id']
                         if 'message' in event and 'text' in event['message']:
                             message_text = event['message']['text']
                             print(f"Received a message from {sender_id}: {message_text}")
 
-                            # Prepare your reply
-                            reply_text = "👋 Hello from Chata bot! This is an automated reply."
+                            save_message(sender_id, "user", message_text)
+                            history = get_last_messages(sender_id, n=35)
+                            print(f"History for {sender_id} BEFORE reply: {history}")
+
+                            reply_text = get_ai_reply(history)
+
+                            save_message(sender_id, "assistant", reply_text)
+                            print(f"History for {sender_id} AFTER reply: {get_last_messages(sender_id, n=10)}")
+
                             url = f"https://graph.facebook.com/v18.0/{INSTAGRAM_USER_ID}/messages?access_token={ACCESS_TOKEN}"
                             payload = {
                                 "recipient": {"id": sender_id},
                                 "message": {"text": reply_text}
                             }
 
-                            # Send the reply using requests
                             r = requests.post(url, json=payload)
                             print("Sent reply:", r.text)
+
         return "EVENT_RECEIVED", 200
 
+# ---- Admin Panel Route ----
+
+@app.route("/admin/prompt", methods=["GET", "POST"])
+def admin_prompt():
+    message = None
+
+    if flask_request.method == "POST":
+        set_setting("system_prompt", flask_request.form.get("system_prompt", ""))
+        set_setting("temperature", flask_request.form.get("temperature", "0.8"))
+        set_setting("max_tokens", flask_request.form.get("max_tokens", "100"))
+        message = "Bot settings updated successfully!"
+
+    current_prompt = get_setting("system_prompt", "")
+    current_temperature = get_setting("temperature", "0.8")
+    current_max_tokens = get_setting("max_tokens", "100")
+
+    return render_template_string("""
+        <!doctype html>
+        <title>Edit Bot Settings</title>
+        <style>
+          body { background: #181e29; color: #fff; font-family: Arial, sans-serif; padding:40px; }
+          textarea, input[type=text], input[type=number] { width: 100%; background: #232b3d; color: #fff; border-radius: 10px; padding: 10px; border: 1px solid #444; font-size: 1.1em;}
+          input[type=submit] { background: #36f; color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-size: 1em; margin-top:10px; cursor:pointer;}
+          .message { margin-top:20px; color: #3fcf64; }
+          h2 { color: #3fcf64; }
+          label {font-size:1.1em;}
+          .field-group { margin-bottom: 24px;}
+        </style>
+        <h2>Edit Bot Settings</h2>
+        <form method="POST">
+          <div class="field-group">
+            <label for="system_prompt">System Prompt (Bot Role/Personality):</label><br>
+            <textarea id="system_prompt" name="system_prompt" rows="4">{{current_prompt}}</textarea>
+          </div>
+          <div class="field-group">
+            <label for="temperature">Temperature (Creativity, 0=serious, 1=random):</label><br>
+            <input type="number" step="0.01" min="0" max="2" id="temperature" name="temperature" value="{{current_temperature}}">
+          </div>
+          <div class="field-group">
+            <label for="max_tokens">Max Tokens (Length of Reply):</label><br>
+            <input type="number" min="1" max="2048" id="max_tokens" name="max_tokens" value="{{current_max_tokens}}">
+          </div>
+          <input type="submit" value="Save Settings">
+        </form>
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
+    """, current_prompt=current_prompt, current_temperature=current_temperature, current_max_tokens=current_max_tokens, message=message)
+
+
+
+from flask import render_template
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/pricing")
+def pricing():
+    return render_template("pricing.html")
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        # Here you would typically send an email or save to database
+        # For now, we'll just return a success message
+        return render_template("contact.html", message="Thank you for your message! We'll get back to you soon.")
+    return render_template("contact.html")
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/features")
+def features():
+    return render_template("features.html")
+
+@app.route("/faq")
+def faq():
+    return render_template("faq.html")
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html", moment=datetime.now())
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html", moment=datetime.now())
+
+
 if __name__ == "__main__":
-    app.run(port=5000)
+    # Use environment variable for port (Render requirement)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

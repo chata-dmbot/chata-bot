@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>About Chata – Built for Creators</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+  <!-- CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <!-- Icon Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/heroicons@2.0.18/24/outline/esm/index.js"></script>
+</head>
+<body>
+  <!-- Background Elements -->
+  <div class="background-container">
+    <!-- Animated background bubbles -->
+    <div class="background-bubble bubble-1"></div>
+    <div class="background-bubble bubble-2"></div>
+    <div class="background-bubble bubble-3"></div>
+    <div class="background-bubble bubble-4"></div>
+    <div class="background-bubble bubble-5"></div>
+    
+    <!-- Dynamic scroll-triggered shapes -->
+    <div class="scroll-shape scroll-shape-1"></div>
+    <div class="scroll-shape scroll-shape-2"></div>
+    <div class="scroll-shape scroll-shape-3"></div>
+    <div class="scroll-shape scroll-shape-4"></div>
+    <div class="scroll-shape scroll-shape-5"></div>
+    
+    <!-- Blurred icons scattered in background -->
+    <div class="background-icon icon-1"></div>
+    <div class="background-icon icon-2"></div>
+    <div class="background-icon icon-3"></div>
+    <div class="background-icon icon-4"></div>
+    <div class="background-icon icon-5"></div>
+    
+    <!-- Gradient orbs -->
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+    
+    <!-- Subtle grid pattern -->
+    <div class="grid-pattern"></div>
+  </div>
+  
+  <!-- Header and Logo -->
+  <header>
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata logo" class="logo">
+    <nav>
+      <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
+      <a href="{{ url_for('about') }}"><i class="fas fa-info-circle"></i> About</a>
+      <a href="{{ url_for('features') }}"><i class="fas fa-star"></i> Features</a>
+      <a href="{{ url_for('pricing') }}"><i class="fas fa-tags"></i> Pricing</a>
+      <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
+      <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('dashboard') }}" class="nav-cta"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{{ url_for('logout') }}" class="nav-cta secondary"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="nav-cta"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+        <a href="{{ url_for('signup') }}" class="nav-cta secondary"><i class="fas fa-user-plus"></i> Sign Up</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <section class="about fade-in">
+      <div class="section-header">
+        <h1>About Chata</h1>
+        <p class="section-subtitle">Built by creators, for creators</p>
+      </div>
+      
+      <div class="about-content">
+        <div class="about-text">
+          <div class="mission">
+            <h2><i class="fas fa-heart"></i> Our Mission</h2>
+            <p>We know how it feels to spend hours responding to DMs when you could be creating amazing content. Chata was built for creators who want to focus on what matters most—your creativity and genuine connections with your audience.</p>
+          </div>
+
+          <div class="what-we-do">
+            <h2><i class="fas fa-magic"></i> What We Do</h2>
+            <p>Chata is your personal Instagram assistant that handles the everyday conversations in your DMs. Think of us as your best friend who knows exactly how you talk and can respond to your followers just like you would.</p>
+            
+            <p>Whether you're a content creator, influencer, small business owner, or just someone who gets tons of Instagram messages, Chata helps you stay connected without feeling overwhelmed.</p>
+          </div>
+
+          <div class="our-values">
+            <h2><i class="fas fa-gem"></i> What Makes Us Different</h2>
+            <div class="values-grid">
+              <div class="value-item">
+                <div class="value-icon">
+                  <i class="fas fa-user-check"></i>
+                </div>
+                <h3>Sounds Like You</h3>
+                <p>We learn your unique voice and personality, so every response feels authentic and personal.</p>
+              </div>
+              <div class="value-item">
+                <div class="value-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <h3>Saves You Time</h3>
+                <p>Get back 3+ hours every day by automating routine conversations while keeping the human touch.</p>
+              </div>
+              <div class="value-item">
+                <div class="value-icon">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Grows Your Business</h3>
+                <p>Turn casual followers into engaged fans and customers with smart, personalized responses.</p>
+              </div>
+              <div class="value-item">
+                <div class="value-icon">
+                  <i class="fas fa-rocket"></i>
+                </div>
+                <h3>Super Easy Setup</h3>
+                <p>Get started in 5 minutes. No complicated settings or technical knowledge required.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="about-visual">
+          <div class="stats-card">
+            <h3><i class="fas fa-users"></i> Trusted by Creators</h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-number">10K+</div>
+                <div class="stat-label">Happy Creators</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number">2M+</div>
+                <div class="stat-label">DMs Handled</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number">98%</div>
+                <div class="stat-label">Satisfaction Rate</div>
+              </div>
+            </div>
+            <div class="testimonial-preview">
+              <p>"Chata literally changed my life. I went from spending 4 hours a day on DMs to just 30 minutes!"</p>
+              <div class="testimonial-author">
+                <div class="author-avatar"></div>
+                <div class="author-info">
+                  <strong>Sarah Chen</strong>
+                  <span>Fashion Influencer, 50K followers</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="get-started fade-in">
+        <div class="section-header">
+          <h2>Ready to Get Your Time Back?</h2>
+          <p class="section-subtitle">Join thousands of creators who are already using Chata to manage their Instagram presence</p>
+        </div>
+        <div class="cta-section">
+          <p>Start with our free trial and see how much time you can save. No credit card required, no complicated setup.</p>
+          <div class="hero-cta">
+            <a class="cta-btn primary" href="/admin/prompt"><i class="fas fa-rocket"></i> Start Free Trial</a>
+            <a class="cta-btn secondary" href="{{ url_for('pricing') }}"><i class="fas fa-chart-line"></i> View Pricing</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <img src="{{ url_for('static', filename='images/icon.png') }}" alt="Chata" class="footer-logo">
+        <p>&copy; 2024 Chata — Crafted for creators by creators.</p>
+      </div>
+      <div class="footer-links">
+        <a href="{{ url_for('privacy') }}"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+        <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
+        <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
+      </div>
+      <div class="footer-cta">
+        <a class="cta-btn primary" href="/admin/prompt"><i class="fas fa-play"></i> Try Chata</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Animation scripts -->
+  <script>
+    // Fade-in animation observer
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-in').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Gentle floating animation for background elements
+    function animateBackgroundElements() {
+      const icons = document.querySelectorAll('.background-icon');
+      const orbs = document.querySelectorAll('.gradient-orb');
+      
+      icons.forEach((icon, index) => {
+        const delay = index * 0.5;
+        const duration = 6 + index * 2;
+        icon.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
+      });
+      
+      orbs.forEach((orb, index) => {
+        const delay = index * 1;
+        const duration = 8 + index * 3;
+        orb.style.animation = `pulse ${duration}s ease-in-out ${delay}s infinite`;
+      });
+    }
+
+    // Scroll effect for logo and navigation
+    function handleScroll() {
+      const logo = document.querySelector('.logo');
+      const navLinks = document.querySelectorAll('nav a');
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (scrollTop > 50) {
+        logo.classList.add('scrolled');
+        navLinks.forEach(link => link.classList.add('scrolled'));
+      } else {
+        logo.classList.remove('scrolled');
+        navLinks.forEach(link => link.classList.remove('scrolled'));
+      }
+      
+      // Trigger dynamic background shapes based on scroll position
+      triggerBackgroundShapes(scrollTop);
+    }
+    
+    // Dynamic background shapes on scroll
+    function triggerBackgroundShapes(scrollTop) {
+      const shapes = document.querySelectorAll('.scroll-shape');
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      shapes.forEach((shape, index) => {
+        const triggerPoint = (windowHeight * 0.8) + (index * windowHeight * 0.3);
+        
+        if (scrollTop > triggerPoint && scrollTop < triggerPoint + windowHeight) {
+          if (!shape.classList.contains('active')) {
+            shape.classList.add('active');
+            // Remove active class after animation completes
+            setTimeout(() => {
+              shape.classList.remove('active');
+            }, 3000);
+          }
+        }
+      });
+    }
+
+    // Initialize animations when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      animateBackgroundElements();
+      
+      // Add scroll event listener
+      window.addEventListener('scroll', handleScroll);
+      
+      // Initial check for scroll position
+      handleScroll();
+    });
+  </script>
+</body>
+</html>

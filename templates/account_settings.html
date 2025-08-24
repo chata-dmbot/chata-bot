@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('bot_settings') }}" class="nav-link">Bot Settings</a>
+                <a href="{{ url_for('account_settings') }}" class="nav-link active">Account</a>
+                <a href="{{ url_for('usage_analytics') }}" class="nav-link">Usage</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-user-cog"></i> Account Settings</h1>
+            <p>Manage your account information and preferences</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="settings-grid">
+            <!-- Profile Information -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-user"></i> Profile Information</h3>
+                </div>
+                <div class="card-content">
+                    <form method="POST" class="settings-form">
+                        <div class="form-group">
+                            <label for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name or '' }}" 
+                                   placeholder="Enter your first name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}" 
+                                   placeholder="Enter your last name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" value="{{ user.email }}" disabled>
+                            <small>Email address cannot be changed</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="company_name">Company Name (Optional)</label>
+                            <input type="text" id="company_name" name="company_name" value="{{ user.company_name or '' }}" 
+                                   placeholder="Enter your company name">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Status -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-info-circle"></i> Account Status</h3>
+                </div>
+                <div class="card-content">
+                    <div class="status-item">
+                        <span class="status-label">Account Type:</span>
+                        <span class="status-value">
+                            <span class="badge badge-{{ 'premium' if user.subscription_plan == 'premium' else 'basic' }}">
+                                {{ user.subscription_plan.title() }}
+                            </span>
+                        </span>
+                    </div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">Member Since:</span>
+                        <span class="status-value">{{ user.created_at[:10] if user.created_at else 'N/A' }}</span>
+                    </div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">Account Status:</span>
+                        <span class="status-value">
+                            <span class="badge badge-success">Active</span>
+                        </span>
+                    </div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">Connected Accounts:</span>
+                        <span class="status-value">0 Instagram accounts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                </div>
+                <div class="card-content">
+                    <div class="security-item">
+                        <div class="security-info">
+                            <h4>Password</h4>
+                            <p>Last changed: Never</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" disabled>
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-info">
+                            <h4>Two-Factor Authentication</h4>
+                            <p>Add an extra layer of security</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" disabled>
+                            <i class="fas fa-mobile-alt"></i> Enable 2FA
+                        </button>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-info">
+                            <h4>Login Sessions</h4>
+                            <p>Manage active sessions</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" disabled>
+                            <i class="fas fa-desktop"></i> View Sessions
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data & Privacy -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-database"></i> Data & Privacy</h3>
+                </div>
+                <div class="card-content">
+                    <div class="privacy-item">
+                        <div class="privacy-info">
+                            <h4>Data Export</h4>
+                            <p>Download your data</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" disabled>
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                    </div>
+                    
+                    <div class="privacy-item">
+                        <div class="privacy-info">
+                            <h4>Delete Account</h4>
+                            <p>Permanently delete your account</p>
+                        </div>
+                        <button class="btn btn-danger btn-sm" disabled>
+                            <i class="fas fa-trash"></i> Delete Account
+                        </button>
+                    </div>
+                    
+                    <div class="privacy-links">
+                        <a href="{{ url_for('privacy') }}" class="link">Privacy Policy</a>
+                        <a href="{{ url_for('contact') }}" class="link">Contact Support</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</body>
+</html>
