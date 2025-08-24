@@ -10,9 +10,6 @@ from functools import wraps
 import hashlib
 import secrets
 from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MimeText
-from email.mime.multipart import MimeMultipart
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,19 +39,18 @@ def send_reset_email(email, reset_token):
     print(f"Password reset link for {email}: {reset_url}")
     
     # TODO: Implement actual email sending
-    # Example with SMTP:
-    # msg = MimeMultipart()
-    # msg['From'] = 'noreply@chata.com'
-    # msg['To'] = email
-    # msg['Subject'] = 'Password Reset Request - Chata'
-    # body = f"Click here to reset your password: {reset_url}"
-    # msg.attach(MimeText(body, 'plain'))
+    # Example with SendGrid or similar service:
+    # import sendgrid
+    # from sendgrid.helpers.mail import Mail
     # 
-    # server = smtplib.SMTP('smtp.gmail.com', 587)
-    # server.starttls()
-    # server.login('your-email@gmail.com', 'your-app-password')
-    # server.send_message(msg)
-    # server.quit()
+    # sg = sendgrid.SendGridAPIClient(api_key='your-sendgrid-api-key')
+    # message = Mail(
+    #     from_email='noreply@chata.com',
+    #     to_emails=email,
+    #     subject='Password Reset Request - Chata',
+    #     html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
+    # )
+    # sg.send(message)
 
 def create_reset_token(user_id):
     """Create a password reset token"""
