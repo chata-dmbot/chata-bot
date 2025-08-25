@@ -4,3 +4,4 @@ gunicorn
 python-dotenv
 openai
 sendgrid
+psycopg2-binary

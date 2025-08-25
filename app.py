@@ -29,14 +29,40 @@ VERIFY_TOKEN = "chata_verify_token"
 ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
 INSTAGRAM_USER_ID = "745508148639483"
 
+# Database configuration
 DB_FILE = "chata.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# ---- Database connection helper ----
+
+def get_db_connection():
+    """Get database connection - SQLite for local, PostgreSQL for production"""
+    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+        # PostgreSQL (production)
+        import psycopg2
+        from urllib.parse import urlparse
+        
+        # Parse the DATABASE_URL
+        url = urlparse(DATABASE_URL)
+        
+        conn = psycopg2.connect(
+            host=url.hostname,
+            port=url.port,
+            database=url.path[1:],  # Remove leading slash
+            user=url.username,
+            password=url.password
+        )
+        return conn
+    else:
+        # SQLite (local development)
+        return sqlite3.connect(DB_FILE)
 
 # ---- Database initialization ----
 
 def init_database():
     """Initialize database tables if they don't exist"""
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Create the users table
@@ -267,11 +293,11 @@ def create_reset_token(user_id):
     token = secrets.token_urlsafe(32)
     expires = datetime.now() + timedelta(hours=1)
     
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO password_resets (user_id, token, expires_at)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (user_id, token, expires))
     conn.commit()
     conn.close()
@@ -280,11 +306,11 @@ def create_reset_token(user_id):
 
 def verify_reset_token(token):
     """Verify a password reset token"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT user_id FROM password_resets 
-        WHERE token = ? AND expires_at > ? AND used = 0
+        WHERE token = %s AND expires_at > %s AND used = 0
     """, (token, datetime.now()))
     result = cursor.fetchone()
     conn.close()
@@ -293,9 +319,9 @@ def verify_reset_token(token):
 
 def mark_reset_token_used(token):
     """Mark a reset token as used"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE password_resets SET used = 1 WHERE token = ?", (token,))
+    cursor.execute("UPDATE password_resets SET used = 1 WHERE token = %s", (token,))
     conn.commit()
     conn.close()
 
@@ -312,9 +338,9 @@ def login_required(f):
 
 def get_user_by_id(user_id):
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -333,9 +359,9 @@ def get_user_by_id(user_id):
 
 def get_user_by_email(email):
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -353,11 +379,11 @@ def get_user_by_email(email):
 
 def create_user(email, password, first_name, last_name, company_name):
     try:
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
         password_hash = generate_password_hash(password)
         cursor.execute(
-            "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (%s, %s, %s, %s, %s)",
             (email, password_hash, first_name, last_name, company_name)
         )
         user_id = cursor.lastrowid
