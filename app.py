@@ -240,7 +240,7 @@ def send_reset_email(email, reset_token):
         """
         
         message = Mail(
-            from_email='noreply@chata.com',
+            from_email='chata.dmbot@gmail.com',
             to_emails=email,
             subject='Password Reset Request - Chata',
             html_content=html_content
@@ -249,8 +249,16 @@ def send_reset_email(email, reset_token):
         response = sg.send(message)
         print(f"Password reset email sent to {email}. Status: {response.status_code}")
         
+        # Check if the email was sent successfully
+        if response.status_code == 202:
+            print(f"✅ Email sent successfully to {email}")
+        else:
+            print(f"❌ Email failed to send. Status: {response.status_code}")
+            print(f"Response body: {response.body}")
+        
     except Exception as e:
-        print(f"Error sending email to {email}: {e}")
+        print(f"❌ Error sending email to {email}: {e}")
+        print(f"Error type: {type(e).__name__}")
         # Fallback to console output
         print(f"Password reset link for {email}: {reset_url}")
 
