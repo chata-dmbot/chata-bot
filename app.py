@@ -10,6 +10,8 @@ from functools import wraps
 import hashlib
 import secrets
 from datetime import datetime, timedelta
+import sendgrid
+from sendgrid.helpers.mail import Mail
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,25 +34,71 @@ DB_FILE = "chata.db"
 # ---- Email helpers ----
 
 def send_reset_email(email, reset_token):
-    """Send password reset email (placeholder - replace with your email service)"""
-    # For now, we'll just print the reset link
-    # In production, you'd use a service like SendGrid, Mailgun, or AWS SES
+    """Send password reset email using SendGrid"""
     reset_url = f"https://chata-bot.onrender.com/reset-password?token={reset_token}"
-    print(f"Password reset link for {email}: {reset_url}")
     
-    # TODO: Implement actual email sending
-    # Example with SendGrid or similar service:
-    # import sendgrid
-    # from sendgrid.helpers.mail import Mail
-    # 
-    # sg = sendgrid.SendGridAPIClient(api_key='your-sendgrid-api-key')
-    # message = Mail(
-    #     from_email='noreply@chata.com',
-    #     to_emails=email,
-    #     subject='Password Reset Request - Chata',
-    #     html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
-    # )
-    # sg.send(message)
+    # Get SendGrid API key from environment
+    sendgrid_api_key = os.getenv("SENDGRID_API_KEY")
+    
+    if not sendgrid_api_key:
+        # Fallback to console output if no API key
+        print(f"Password reset link for {email}: {reset_url}")
+        print("SENDGRID_API_KEY not found in environment variables")
+        return
+    
+    try:
+        sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
+        
+        # Create email content
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">Chata</h1>
+                <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">AI-powered Instagram DM automation</p>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px;">
+                <h2 style="color: #333; margin-bottom: 20px;">Password Reset Request</h2>
+                <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                    You requested a password reset for your Chata account. Click the button below to reset your password:
+                </p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}" style="background: #3366ff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+                        Reset Password
+                    </a>
+                </div>
+                
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                    If the button doesn't work, copy and paste this link into your browser:
+                </p>
+                <p style="color: #3366ff; font-size: 14px; word-break: break-all;">
+                    {reset_url}
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+                
+                <p style="color: #999; font-size: 12px; margin: 0;">
+                    This link will expire in 1 hour. If you didn't request this password reset, you can safely ignore this email.
+                </p>
+            </div>
+        </div>
+        """
+        
+        message = Mail(
+            from_email='noreply@chata.com',
+            to_emails=email,
+            subject='Password Reset Request - Chata',
+            html_content=html_content
+        )
+        
+        response = sg.send(message)
+        print(f"Password reset email sent to {email}. Status: {response.status_code}")
+        
+    except Exception as e:
+        print(f"Error sending email to {email}: {e}")
+        # Fallback to console output
+        print(f"Password reset link for {email}: {reset_url}")
 
 def create_reset_token(user_id):
     """Create a password reset token"""

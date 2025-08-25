@@ -85,6 +85,37 @@ body {
   margin: 0;
 }
 
+.auth-subtitle {
+  color: var(--text-secondary);
+  font-size: 16px;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.auth-links {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.auth-links a {
+  color: var(--chata-blue);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+  color: var(--chata-blue-dark);
+  text-decoration: underline;
+}
+
+.auth-links .separator {
+  color: var(--text-secondary);
+  margin: 0 10px;
+  font-weight: 400;
+}
+
 .auth-form {
   text-align: left;
 }
@@ -115,6 +146,14 @@ body {
   outline: none;
   border-color: var(--chata-blue);
   box-shadow: 0 0 0 3px rgba(51, 102, 255, 0.1);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .forgot-password {
