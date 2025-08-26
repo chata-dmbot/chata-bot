@@ -43,20 +43,15 @@ def get_db_connection():
         # PostgreSQL (production)
         print("✅ Using PostgreSQL database")
         import psycopg2
-        from urllib.parse import urlparse
         
-        # Parse the DATABASE_URL
-        url = urlparse(DATABASE_URL)
-        
-        conn = psycopg2.connect(
-            host=url.hostname,
-            port=url.port,
-            database=url.path[1:],  # Remove leading slash
-            user=url.username,
-            password=url.password
-        )
-        print(f"✅ PostgreSQL connected to: {url.hostname}:{url.port}/{url.path[1:]}")
-        return conn
+        try:
+            # Use the DATABASE_URL directly - psycopg2 can handle it
+            conn = psycopg2.connect(DATABASE_URL)
+            print(f"✅ PostgreSQL connected successfully")
+            return conn
+        except Exception as e:
+            print(f"❌ PostgreSQL connection error: {e}")
+            raise
     else:
         # SQLite (local development)
         print("📱 Using SQLite database (local development)")
