@@ -57,6 +57,13 @@ def get_db_connection():
         # SQLite (local development)
         return sqlite3.connect(DB_FILE)
 
+def get_param_placeholder():
+    """Get the correct parameter placeholder for the current database"""
+    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+        return "%s"  # PostgreSQL
+    else:
+        return "?"   # SQLite
+
 # ---- Database initialization ----
 
 def init_database():
@@ -65,132 +72,263 @@ def init_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Check if we're using PostgreSQL
+        is_postgres = DATABASE_URL and DATABASE_URL.startswith("postgres://")
+        
         # Create the users table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            first_name TEXT,
-            last_name TEXT,
-            company_name TEXT,
-            subscription_plan TEXT DEFAULT 'free',
-            subscription_status TEXT DEFAULT 'active',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                first_name VARCHAR(255),
+                last_name VARCHAR(255),
+                company_name VARCHAR(255),
+                subscription_plan VARCHAR(50) DEFAULT 'free',
+                subscription_status VARCHAR(50) DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                first_name TEXT,
+                last_name TEXT,
+                company_name TEXT,
+                subscription_plan TEXT DEFAULT 'free',
+                subscription_status TEXT DEFAULT 'active',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
 
         # Create the instagram_connections table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS instagram_connections (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            instagram_user_id TEXT NOT NULL,
-            instagram_page_id TEXT NOT NULL,
-            page_access_token TEXT NOT NULL,
-            page_name TEXT,
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            UNIQUE(instagram_user_id, instagram_page_id)
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS instagram_connections (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                instagram_user_id VARCHAR(255) NOT NULL,
+                instagram_page_id VARCHAR(255) NOT NULL,
+                page_access_token TEXT NOT NULL,
+                page_name VARCHAR(255),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(instagram_user_id, instagram_page_id)
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS instagram_connections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                instagram_user_id TEXT NOT NULL,
+                instagram_page_id TEXT NOT NULL,
+                page_access_token TEXT NOT NULL,
+                page_name TEXT,
+                is_active BOOLEAN DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(instagram_user_id, instagram_page_id)
+            );
+            """)
 
         # Create the client_settings table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS client_settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            instagram_connection_id INTEGER,
-            system_prompt TEXT DEFAULT 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.',
-            temperature REAL DEFAULT 0.8,
-            max_tokens INTEGER DEFAULT 100,
-            bot_name TEXT DEFAULT 'Chata Bot',
-            welcome_message TEXT DEFAULT 'Hi! I''m here to help. How can I assist you today?',
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS client_settings (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                system_prompt TEXT DEFAULT 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.',
+                temperature REAL DEFAULT 0.8,
+                max_tokens INTEGER DEFAULT 100,
+                bot_name VARCHAR(255) DEFAULT 'Chata Bot',
+                welcome_message TEXT DEFAULT 'Hi! I''m here to help. How can I assist you today?',
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS client_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                system_prompt TEXT DEFAULT 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.',
+                temperature REAL DEFAULT 0.8,
+                max_tokens INTEGER DEFAULT 100,
+                bot_name TEXT DEFAULT 'Chata Bot',
+                welcome_message TEXT DEFAULT 'Hi! I''m here to help. How can I assist you today?',
+                is_active BOOLEAN DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
 
         # Create the messages table (updated for multi-tenant)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            instagram_connection_id INTEGER,
-            sender_instagram_id TEXT NOT NULL,
-            role TEXT NOT NULL,         -- 'user' or 'assistant'
-            content TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                sender_instagram_id VARCHAR(255) NOT NULL,
+                role VARCHAR(50) NOT NULL,         -- 'user' or 'assistant'
+                content TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                sender_instagram_id TEXT NOT NULL,
+                role TEXT NOT NULL,         -- 'user' or 'assistant'
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
 
         # Create the settings table (for global admin settings)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT UNIQUE NOT NULL,
-            value TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(255) UNIQUE NOT NULL,
+                value TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
 
         # Create the usage_logs table (for tracking API usage)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS usage_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            instagram_connection_id INTEGER,
-            action_type TEXT NOT NULL,  -- 'message_sent', 'api_call', etc.
-            tokens_used INTEGER DEFAULT 0,
-            cost_cents INTEGER DEFAULT 0,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usage_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                action_type VARCHAR(100) NOT NULL,  -- 'message_sent', 'api_call', etc.
+                tokens_used INTEGER DEFAULT 0,
+                cost_cents INTEGER DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usage_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                instagram_connection_id INTEGER,
+                action_type TEXT NOT NULL,  -- 'message_sent', 'api_call', etc.
+                tokens_used INTEGER DEFAULT 0,
+                cost_cents INTEGER DEFAULT 0,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
+            );
+            """)
 
         # Create the activity_logs table (for tracking user activities)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS activity_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            action_type TEXT NOT NULL,  -- 'login', 'settings_updated', 'bot_activated', etc.
-            description TEXT,
-            ip_address TEXT,
-            user_agent TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        );
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                action_type VARCHAR(100) NOT NULL,  -- 'login', 'settings_updated', 'bot_activated', etc.
+                description TEXT,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            );
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                action_type TEXT NOT NULL,  -- 'login', 'settings_updated', 'bot_activated', etc.
+                description TEXT,
+                ip_address TEXT,
+                user_agent TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            );
+            """)
 
         # Create password_resets table for forgot password functionality
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS password_resets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT NOT NULL UNIQUE,
-            expires_at DATETIME NOT NULL,
-            used INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-        """)
+        if is_postgres:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                token VARCHAR(255) NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+            """)
+        else:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                expires_at DATETIME NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+            """)
 
         # Insert default admin settings
-        cursor.execute("""
-        INSERT OR IGNORE INTO settings (key, value) VALUES 
-        ('system_prompt', 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.'),
-        ('temperature', '0.8'),
-        ('max_tokens', '100')
-        """)
+        if is_postgres:
+            cursor.execute("""
+            INSERT INTO settings (key, value) VALUES 
+            ('system_prompt', 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.'),
+            ('temperature', '0.8'),
+            ('max_tokens', '100')
+            ON CONFLICT (key) DO NOTHING
+            """)
+        else:
+            cursor.execute("""
+            INSERT OR IGNORE INTO settings (key, value) VALUES 
+            ('system_prompt', 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.'),
+            ('temperature', '0.8'),
+            ('max_tokens', '100')
+            """)
 
         # Create indexes for better performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)")
@@ -295,9 +433,10 @@ def create_reset_token(user_id):
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
         INSERT INTO password_resets (user_id, token, expires_at)
-        VALUES (%s, %s, %s)
+        VALUES ({placeholder}, {placeholder}, {placeholder})
     """, (user_id, token, expires))
     conn.commit()
     conn.close()
@@ -308,9 +447,10 @@ def verify_reset_token(token):
     """Verify a password reset token"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
         SELECT user_id FROM password_resets 
-        WHERE token = %s AND expires_at > %s AND used = 0
+        WHERE token = {placeholder} AND expires_at > {placeholder} AND used = 0
     """, (token, datetime.now()))
     result = cursor.fetchone()
     conn.close()
@@ -321,7 +461,8 @@ def mark_reset_token_used(token):
     """Mark a reset token as used"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE password_resets SET used = 1 WHERE token = %s", (token,))
+    placeholder = get_param_placeholder()
+    cursor.execute(f"UPDATE password_resets SET used = 1 WHERE token = {placeholder}", (token,))
     conn.commit()
     conn.close()
 
@@ -340,7 +481,8 @@ def get_user_by_id(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = %s", (user_id,))
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = {placeholder}", (user_id,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -361,7 +503,8 @@ def get_user_by_email(email):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = %s", (email,))
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}", (email,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -382,8 +525,9 @@ def create_user(email, password, first_name, last_name, company_name):
         conn = get_db_connection()
         cursor = conn.cursor()
         password_hash = generate_password_hash(password)
+        placeholder = get_param_placeholder()
         cursor.execute(
-            "INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES (%s, %s, %s, %s, %s)",
+            f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
             (email, password_hash, first_name, last_name, company_name)
         )
         user_id = cursor.lastrowid
@@ -507,10 +651,11 @@ def reset_password():
         
         # Update password
         try:
-            conn = sqlite3.connect(DB_FILE)
+            conn = get_db_connection()
             cursor = conn.cursor()
             password_hash = generate_password_hash(password)
-            cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+            placeholder = get_param_placeholder()
+            cursor.execute(f"UPDATE users SET password_hash = {placeholder} WHERE id = {placeholder}", (password_hash, user_id))
             conn.commit()
             conn.close()
             
@@ -536,12 +681,13 @@ def dashboard():
     user = get_user_by_id(session['user_id'])
     
     # Get user's Instagram connections
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
         SELECT id, page_name, instagram_user_id, is_active, created_at 
         FROM instagram_connections 
-        WHERE user_id = ? 
+        WHERE user_id = {placeholder} 
         ORDER BY created_at DESC
     """, (user['id'],))
     connections = cursor.fetchall()
@@ -563,20 +709,21 @@ def dashboard():
 
 def get_client_settings(user_id, connection_id=None):
     """Get bot settings for a specific client/connection"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     
     if connection_id:
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
             FROM client_settings 
-            WHERE user_id = ? AND instagram_connection_id = ?
+            WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
         """, (user_id, connection_id))
     else:
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
             FROM client_settings 
-            WHERE user_id = ? AND instagram_connection_id IS NULL
+            WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
         """, (user_id,))
     
     row = cursor.fetchone()
@@ -602,12 +749,13 @@ def get_client_settings(user_id, connection_id=None):
 
 def log_activity(user_id, action_type, description=None):
     """Log user activity for analytics and security"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     
-    cursor.execute("""
+    cursor.execute(f"""
         INSERT INTO activity_logs (user_id, action_type, description, ip_address, user_agent)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
     """, (user_id, action_type, description, request.remote_addr, request.headers.get('User-Agent')))
     
     conn.commit()
@@ -615,21 +763,22 @@ def log_activity(user_id, action_type, description=None):
 
 def save_client_settings(user_id, settings, connection_id=None):
     """Save bot settings for a specific client/connection"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     
     if connection_id:
-        cursor.execute("""
+        cursor.execute(f"""
             INSERT OR REPLACE INTO client_settings 
             (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
         """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
               settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
     else:
-        cursor.execute("""
+        cursor.execute(f"""
             INSERT OR REPLACE INTO client_settings 
             (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
         """, (user_id, settings['system_prompt'], settings['temperature'], 
               settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
     
@@ -671,12 +820,13 @@ def account_settings():
         last_name = request.form.get('last_name', '')
         company_name = request.form.get('company_name', '')
         
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
             UPDATE users 
-            SET first_name = ?, last_name = ?, company_name = ?
-            WHERE id = ?
+            SET first_name = {placeholder}, last_name = {placeholder}, company_name = {placeholder}
+            WHERE id = {placeholder}
         """, (first_name, last_name, company_name, user['id']))
         conn.commit()
         conn.close()
@@ -693,21 +843,22 @@ def usage_analytics():
     user_id = session['user_id']
     
     # Get usage statistics for the current month
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     
     # Get message count for current month
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT COUNT(*) FROM messages 
-        WHERE user_id = ? 
+        WHERE user_id = {placeholder} 
         AND timestamp >= date('now', 'start of month')
     """, (user_id,))
     messages_this_month = cursor.fetchone()[0]
     
     # Get API usage for current month
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT SUM(tokens_used), SUM(cost_cents) FROM usage_logs 
-        WHERE user_id = ? 
+        WHERE user_id = {placeholder} 
         AND timestamp >= date('now', 'start of month')
     """, (user_id,))
     usage_data = cursor.fetchone()
@@ -715,10 +866,10 @@ def usage_analytics():
     cost_this_month = (usage_data[1] or 0) / 100.0  # Convert cents to dollars
     
     # Get recent activity
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT action_type, description, timestamp 
         FROM activity_logs 
-        WHERE user_id = ? 
+        WHERE user_id = {placeholder} 
         ORDER BY timestamp DESC 
         LIMIT 10
     """, (user_id,))
@@ -735,9 +886,10 @@ def usage_analytics():
 # ---- SQLite settings helpers ----
 
 def get_setting(key, default=None):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    placeholder = get_param_placeholder()
+    cursor.execute(f"SELECT value FROM settings WHERE key = {placeholder}", (key,))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -745,29 +897,32 @@ def get_setting(key, default=None):
     return default
 
 def set_setting(key, value):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (value, key))
+    placeholder = get_param_placeholder()
+    cursor.execute(f"UPDATE settings SET value = {placeholder} WHERE key = {placeholder}", (value, key))
     conn.commit()
     conn.close()
 
 # ---- Message DB helpers ----
 
 def save_message(user_id, role, content):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     cursor.execute(
-        "INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)",
+        f"INSERT INTO messages (user_id, role, content) VALUES ({placeholder}, {placeholder}, {placeholder})",
         (user_id, role, content)
     )
     conn.commit()
     conn.close()
 
 def get_last_messages(user_id, n=35):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     cursor = conn.cursor()
+    placeholder = get_param_placeholder()
     cursor.execute(
-        "SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+        f"SELECT role, content FROM messages WHERE user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
         (user_id, n)
     )
     rows = cursor.fetchall()
