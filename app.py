@@ -39,7 +39,7 @@ def get_db_connection():
     """Get database connection - SQLite for local, PostgreSQL for production"""
     print(f"🔍 Database connection - DATABASE_URL: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
     
-    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
         # PostgreSQL (production)
         print("✅ Using PostgreSQL database")
         import psycopg2
@@ -64,7 +64,7 @@ def get_db_connection():
 
 def get_param_placeholder():
     """Get the correct parameter placeholder for the current database"""
-    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
         return "%s"  # PostgreSQL
     else:
         return "?"   # SQLite
@@ -79,7 +79,7 @@ def init_database():
         cursor = conn.cursor()
         
         # Check if we're using PostgreSQL
-        is_postgres = DATABASE_URL and DATABASE_URL.startswith("postgres://")
+        is_postgres = DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"))
         print(f"🔍 Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
         
         # Create the users table
