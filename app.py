@@ -536,11 +536,21 @@ def create_user(email, password, first_name, last_name, company_name):
         cursor = conn.cursor()
         password_hash = generate_password_hash(password)
         placeholder = get_param_placeholder()
-        cursor.execute(
-            f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
-            (email, password_hash, first_name, last_name, company_name)
-        )
-        user_id = cursor.lastrowid
+        
+        # For PostgreSQL, we need to get the ID differently
+        if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
+            cursor.execute(
+                f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}) RETURNING id",
+                (email, password_hash, first_name, last_name, company_name)
+            )
+            user_id = cursor.fetchone()[0]
+        else:
+            cursor.execute(
+                f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
+                (email, password_hash, first_name, last_name, company_name)
+            )
+            user_id = cursor.lastrowid
+            
         conn.commit()
         conn.close()
         return user_id
@@ -787,20 +797,49 @@ def save_client_settings(user_id, settings, connection_id=None):
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
-    if connection_id:
-        cursor.execute(f"""
-            INSERT OR REPLACE INTO client_settings 
-            (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-        """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
-              settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+    # Use different syntax for PostgreSQL vs SQLite
+    if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
+        if connection_id:
+            cursor.execute(f"""
+                INSERT INTO client_settings 
+                (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
+                system_prompt = EXCLUDED.system_prompt,
+                temperature = EXCLUDED.temperature,
+                max_tokens = EXCLUDED.max_tokens,
+                bot_name = EXCLUDED.bot_name,
+                welcome_message = EXCLUDED.welcome_message
+            """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
+                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+        else:
+            cursor.execute(f"""
+                INSERT INTO client_settings 
+                (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ON CONFLICT (user_id) DO UPDATE SET
+                system_prompt = EXCLUDED.system_prompt,
+                temperature = EXCLUDED.temperature,
+                max_tokens = EXCLUDED.max_tokens,
+                bot_name = EXCLUDED.bot_name,
+                welcome_message = EXCLUDED.welcome_message
+            """, (user_id, settings['system_prompt'], settings['temperature'], 
+                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
     else:
-        cursor.execute(f"""
-            INSERT OR REPLACE INTO client_settings 
-            (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-        """, (user_id, settings['system_prompt'], settings['temperature'], 
-              settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+        if connection_id:
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO client_settings 
+                (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
+                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+        else:
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO client_settings 
+                (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (user_id, settings['system_prompt'], settings['temperature'], 
+                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
     
     conn.commit()
     conn.close()
