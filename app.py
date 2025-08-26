@@ -511,9 +511,18 @@ def get_user_by_id(user_id):
 
 def get_user_by_email(email):
     try:
+        print(f"🔍 get_user_by_email called with email: {email}")
+        print(f"🔍 email type: {type(email)}")
+        print(f"🔍 email length: {len(email) if email else 'None'}")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
+        
+        print(f"🔍 Using placeholder: {placeholder}")
+        print(f"🔍 SQL query: SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}")
+        print(f"🔍 Parameters: {email}")
+        
         cursor.execute(f"SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}", (email,))
         user = cursor.fetchone()
         conn.close()
@@ -527,35 +536,51 @@ def get_user_by_email(email):
             }
         return None
     except Exception as e:
-        print(f"Error getting user by email: {e}")
+        print(f"❌ Error getting user by email: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def create_user(email, password, first_name, last_name, company_name):
     try:
+        print(f"🔍 create_user called with email: {email}")
+        print(f"🔍 email type: {type(email)}")
+        print(f"🔍 email length: {len(email) if email else 'None'}")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         password_hash = generate_password_hash(password)
         placeholder = get_param_placeholder()
         
+        print(f"🔍 Using placeholder: {placeholder}")
+        
         # For PostgreSQL, we need to get the ID differently
         if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
-            cursor.execute(
-                f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}) RETURNING id",
-                (email, password_hash, first_name, last_name, company_name)
-            )
+            sql = f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}) RETURNING id"
+            params = (email, password_hash, first_name, last_name, company_name)
+            print(f"🔍 PostgreSQL SQL: {sql}")
+            print(f"🔍 PostgreSQL params: {params}")
+            
+            cursor.execute(sql, params)
             user_id = cursor.fetchone()[0]
         else:
-            cursor.execute(
-                f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
-                (email, password_hash, first_name, last_name, company_name)
-            )
+            sql = f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+            params = (email, password_hash, first_name, last_name, company_name)
+            print(f"🔍 SQLite SQL: {sql}")
+            print(f"🔍 SQLite params: {params}")
+            
+            cursor.execute(sql, params)
             user_id = cursor.lastrowid
             
         conn.commit()
         conn.close()
         return user_id
     except Exception as e:
-        print(f"Error creating user: {e}")
+        print(f"❌ Error creating user: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         raise
 
 # ---- Authentication routes ----
@@ -568,6 +593,13 @@ def signup():
         first_name = request.form.get("first_name")
         last_name = request.form.get("last_name")
         company_name = request.form.get("company_name")
+        
+        print(f"🔍 Signup form data:")
+        print(f"🔍 Email: {email}")
+        print(f"🔍 Email type: {type(email)}")
+        print(f"🔍 First name: {first_name}")
+        print(f"🔍 Last name: {last_name}")
+        print(f"🔍 Company name: {company_name}")
         
         # Basic validation
         if not email or not password:
