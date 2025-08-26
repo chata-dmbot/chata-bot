@@ -602,17 +602,27 @@ def forgot_password():
     if request.method == "POST":
         email = request.form.get("email")
         
+        print(f"🔍 Forgot password request for email: {email}")
+        
         if not email:
             flash("Please enter your email address.", "error")
             return render_template("forgot_password.html")
         
         user = get_user_by_email(email)
         if user:
+            print(f"✅ User found: {user['email']}")
             # Create reset token and send email
-            reset_token = create_reset_token(user['id'])
-            send_reset_email(email, reset_token)
-            flash("If an account with that email exists, we've sent a password reset link.", "success")
+            try:
+                reset_token = create_reset_token(user['id'])
+                print(f"✅ Reset token created: {reset_token[:10]}...")
+                send_reset_email(email, reset_token)
+                print(f"✅ Email sent successfully to {email}")
+                flash("If an account with that email exists, we've sent a password reset link.", "success")
+            except Exception as e:
+                print(f"❌ Error in forgot password process: {e}")
+                flash("An error occurred while sending the reset email. Please try again.", "error")
         else:
+            print(f"❌ User not found for email: {email}")
             # Don't reveal if email exists or not (security best practice)
             flash("If an account with that email exists, we've sent a password reset link.", "success")
         
