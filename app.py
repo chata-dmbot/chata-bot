@@ -37,8 +37,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
     """Get database connection - SQLite for local, PostgreSQL for production"""
+    print(f"🔍 Database connection - DATABASE_URL: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
+    
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         # PostgreSQL (production)
+        print("✅ Using PostgreSQL database")
         import psycopg2
         from urllib.parse import urlparse
         
@@ -52,9 +55,11 @@ def get_db_connection():
             user=url.username,
             password=url.password
         )
+        print(f"✅ PostgreSQL connected to: {url.hostname}:{url.port}/{url.path[1:]}")
         return conn
     else:
         # SQLite (local development)
+        print("📱 Using SQLite database (local development)")
         return sqlite3.connect(DB_FILE)
 
 def get_param_placeholder():
@@ -69,11 +74,13 @@ def get_param_placeholder():
 def init_database():
     """Initialize database tables if they don't exist"""
     try:
+        print("🔧 Initializing database...")
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check if we're using PostgreSQL
         is_postgres = DATABASE_URL and DATABASE_URL.startswith("postgres://")
+        print(f"🔍 Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
         
         # Create the users table
         if is_postgres:
@@ -341,10 +348,13 @@ def init_database():
 
         conn.commit()
         conn.close()
-        print("Database initialized successfully!")
+        print("✅ Database initialized successfully!")
         
     except Exception as e:
-        print(f"Error initializing database: {e}")
+        print(f"❌ Error initializing database: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
 
 # Initialize database on app startup
 init_database()
