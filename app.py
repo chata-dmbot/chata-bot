@@ -88,15 +88,19 @@ def init_database():
             
             # Drop existing tables if they exist (to fix schema mismatches)
             print("🔄 Dropping existing tables to ensure correct schema...")
-            cursor.execute("DROP TABLE IF EXISTS messages CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS client_settings CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS instagram_connections CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS usage_logs CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS activity_logs CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS password_resets CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS settings CASCADE")
-            cursor.execute("DROP TABLE IF EXISTS users CASCADE")
-            print("✅ Existing tables dropped")
+            try:
+                cursor.execute("DROP TABLE IF EXISTS messages CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS client_settings CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS instagram_connections CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS usage_logs CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS activity_logs CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS password_resets CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS settings CASCADE")
+                cursor.execute("DROP TABLE IF EXISTS users CASCADE")
+                print("✅ Existing tables dropped")
+            except Exception as e:
+                print(f"⚠️ Warning: Some tables couldn't be dropped: {e}")
+                print("Continuing with table creation...")
             
             # Create users table
             cursor.execute("""
@@ -176,6 +180,7 @@ def init_database():
             """)
             
             # Create messages table
+            print("🔧 Creating messages table...")
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
@@ -185,8 +190,10 @@ def init_database():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            print("✅ Messages table created")
             
             # Create settings table
+            print("🔧 Creating settings table...")
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS settings (
                     id SERIAL PRIMARY KEY,
@@ -196,6 +203,7 @@ def init_database():
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            print("✅ Settings table created")
             
         else:
             print("✅ Using SQLite database")
@@ -300,6 +308,7 @@ def init_database():
             """)
         
         # Insert default bot settings
+        param = get_param_placeholder()
         if is_postgres:
             # PostgreSQL syntax
             cursor.execute(f"""
