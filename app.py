@@ -12,6 +12,8 @@ import secrets
 from datetime import datetime, timedelta
 import sendgrid
 from sendgrid.helpers.mail import Mail
+import psycopg2
+import psycopg2.extras
 
 # Load environment variables from .env file
 load_dotenv()
@@ -36,323 +38,282 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # ---- Database connection helper ----
 
 def get_db_connection():
-    """Get database connection - SQLite for local, PostgreSQL for production"""
-    print(f"🔍 Database connection - DATABASE_URL: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
+    """Get database connection - automatically chooses between SQLite and PostgreSQL"""
+    database_url = os.environ.get('DATABASE_URL')
     
-    if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
-        # PostgreSQL (production)
-        print("✅ Using PostgreSQL database")
-        import psycopg2
-        
+    if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
+        print(f"🔗 Connecting to PostgreSQL database...")
         try:
-            # Use the DATABASE_URL directly - psycopg2 can handle it
-            conn = psycopg2.connect(DATABASE_URL)
+            conn = psycopg2.connect(database_url)
             print(f"✅ PostgreSQL connected successfully")
             return conn
         except Exception as e:
             print(f"❌ PostgreSQL connection error: {e}")
-            raise
+            return None
     else:
-        # SQLite (local development)
-        print("📱 Using SQLite database (local development)")
+        print(f"🔗 Using SQLite database (local development)")
         return sqlite3.connect(DB_FILE)
 
 def get_param_placeholder():
     """Get the correct parameter placeholder for the current database"""
-    if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
-        return "%s"  # PostgreSQL
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
+        return '%s'  # PostgreSQL uses %s
     else:
-        return "?"   # SQLite
+        return '?'   # SQLite uses ?
 
 # ---- Database initialization ----
 
 def init_database():
-    """Initialize database tables if they don't exist"""
+    """Initialize database tables"""
+    print("🔧 Initializing database...")
+    
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        print(f"Database connection - DATABASE_URL: {database_url[:50]}...")
+    
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to get database connection")
+        return False
+    
     try:
-        print("🔧 Initializing database...")
-        conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Check if we're using PostgreSQL
-        is_postgres = DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"))
-        print(f"🔍 Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+        # Check if we're using PostgreSQL or SQLite
+        is_postgres = bool(database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')))
         
-        # Create the users table
         if is_postgres:
+            print("✅ Using PostgreSQL database")
+            
+            # Create users table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                first_name VARCHAR(255),
-                last_name VARCHAR(255),
-                company_name VARCHAR(255),
-                subscription_plan VARCHAR(50) DEFAULT 'free',
-                subscription_status VARCHAR(50) DEFAULT 'active',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
+            
+            # Create instagram_connections table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS instagram_connections (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_user_id VARCHAR(255) NOT NULL,
+                    instagram_page_id VARCHAR(255) NOT NULL,
+                    page_access_token TEXT NOT NULL,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create client_settings table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS client_settings (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    bot_personality TEXT DEFAULT 'You are a helpful and friendly Instagram bot.',
+                    temperature REAL DEFAULT 0.7,
+                    max_tokens INTEGER DEFAULT 150,
+                    auto_reply BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create usage_logs table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS usage_logs (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    action VARCHAR(100) NOT NULL,
+                    tokens_used INTEGER DEFAULT 0,
+                    cost REAL DEFAULT 0.0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create activity_logs table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    action VARCHAR(100) NOT NULL,
+                    details TEXT,
+                    ip_address VARCHAR(45),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create password_resets table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    token VARCHAR(255) UNIQUE NOT NULL,
+                    expires_at TIMESTAMP NOT NULL,
+                    used_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create messages table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id SERIAL PRIMARY KEY,
+                    instagram_user_id VARCHAR(255) NOT NULL,
+                    message_text TEXT NOT NULL,
+                    bot_response TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create settings table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS settings (
+                    id SERIAL PRIMARY KEY,
+                    key VARCHAR(255) UNIQUE NOT NULL,
+                    value TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
         else:
+            print("✅ Using SQLite database")
+            
+            # Create users table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                first_name TEXT,
-                last_name TEXT,
-                company_name TEXT,
-                subscription_plan TEXT DEFAULT 'free',
-                subscription_status TEXT DEFAULT 'active',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-
-        # Create the instagram_connections table
-        if is_postgres:
+            
+            # Create instagram_connections table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS instagram_connections (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                instagram_user_id VARCHAR(255) NOT NULL,
-                instagram_page_id VARCHAR(255) NOT NULL,
-                page_access_token TEXT NOT NULL,
-                page_name VARCHAR(255),
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                UNIQUE(instagram_user_id, instagram_page_id)
-            );
+                CREATE TABLE IF NOT EXISTS instagram_connections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_user_id TEXT NOT NULL,
+                    instagram_page_id TEXT NOT NULL,
+                    page_access_token TEXT NOT NULL,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        else:
+            
+            # Create client_settings table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS instagram_connections (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                instagram_user_id TEXT NOT NULL,
-                instagram_page_id TEXT NOT NULL,
-                page_access_token TEXT NOT NULL,
-                page_name TEXT,
-                is_active BOOLEAN DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                UNIQUE(instagram_user_id, instagram_page_id)
-            );
+                CREATE TABLE IF NOT EXISTS client_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    bot_personality TEXT DEFAULT 'You are a helpful and friendly Instagram bot.',
+                    temperature REAL DEFAULT 0.7,
+                    max_tokens INTEGER DEFAULT 150,
+                    auto_reply BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-
-        # Create the client_settings table
-        if is_postgres:
+            
+            # Create usage_logs table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS client_settings (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                system_prompt TEXT DEFAULT 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.',
-                temperature REAL DEFAULT 0.8,
-                max_tokens INTEGER DEFAULT 100,
-                bot_name VARCHAR(255) DEFAULT 'Chata Bot',
-                welcome_message TEXT DEFAULT 'Hi! I''m here to help. How can I assist you today?',
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
+                CREATE TABLE IF NOT EXISTS usage_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    action TEXT NOT NULL,
+                    tokens_used INTEGER DEFAULT 0,
+                    cost REAL DEFAULT 0.0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        else:
+            
+            # Create activity_logs table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS client_settings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                system_prompt TEXT DEFAULT 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.',
-                temperature REAL DEFAULT 0.8,
-                max_tokens INTEGER DEFAULT 100,
-                bot_name TEXT DEFAULT 'Chata Bot',
-                welcome_message TEXT DEFAULT 'Hi! I''m here to help. How can I assist you today?',
-                is_active BOOLEAN DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    ip_address TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-
-        # Create the messages table (updated for multi-tenant)
-        if is_postgres:
+            
+            # Create password_resets table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                sender_instagram_id VARCHAR(255) NOT NULL,
-                role VARCHAR(50) NOT NULL,         -- 'user' or 'assistant'
-                content TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    token TEXT UNIQUE NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    used_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        else:
+            
+            # Create messages table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                sender_instagram_id TEXT NOT NULL,
-                role TEXT NOT NULL,         -- 'user' or 'assistant'
-                content TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    instagram_user_id TEXT NOT NULL,
+                    message_text TEXT NOT NULL,
+                    bot_response TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-
-        # Create the settings table (for global admin settings)
-        if is_postgres:
+            
+            # Create settings table
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS settings (
-                id SERIAL PRIMARY KEY,
-                key VARCHAR(255) UNIQUE NOT NULL,
-                value TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                CREATE TABLE IF NOT EXISTS settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT UNIQUE NOT NULL,
+                    value TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        else:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS settings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                key TEXT UNIQUE NOT NULL,
-                value TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            """)
-
-        # Create the usage_logs table (for tracking API usage)
-        if is_postgres:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS usage_logs (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                action_type VARCHAR(100) NOT NULL,  -- 'message_sent', 'api_call', etc.
-                tokens_used INTEGER DEFAULT 0,
-                cost_cents INTEGER DEFAULT 0,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
-            """)
-        else:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS usage_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                instagram_connection_id INTEGER,
-                action_type TEXT NOT NULL,  -- 'message_sent', 'api_call', etc.
-                tokens_used INTEGER DEFAULT 0,
-                cost_cents INTEGER DEFAULT 0,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (instagram_connection_id) REFERENCES instagram_connections (id)
-            );
-            """)
-
-        # Create the activity_logs table (for tracking user activities)
-        if is_postgres:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activity_logs (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                action_type VARCHAR(100) NOT NULL,  -- 'login', 'settings_updated', 'bot_activated', etc.
-                description TEXT,
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            );
-            """)
-        else:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activity_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                action_type TEXT NOT NULL,  -- 'login', 'settings_updated', 'bot_activated', etc.
-                description TEXT,
-                ip_address TEXT,
-                user_agent TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            );
-            """)
-
-        # Create password_resets table for forgot password functionality
-        if is_postgres:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS password_resets (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                token VARCHAR(255) NOT NULL UNIQUE,
-                expires_at TIMESTAMP NOT NULL,
-                used INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-            """)
-        else:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS password_resets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                token TEXT NOT NULL UNIQUE,
-                expires_at DATETIME NOT NULL,
-                used INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-            """)
-
-        # Insert default admin settings
-        if is_postgres:
-            cursor.execute("""
-            INSERT INTO settings (key, value) VALUES 
-            ('system_prompt', 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.'),
-            ('temperature', '0.8'),
-            ('max_tokens', '100')
-            ON CONFLICT (key) DO NOTHING
-            """)
-        else:
-            cursor.execute("""
-            INSERT OR IGNORE INTO settings (key, value) VALUES 
-            ('system_prompt', 'You are a friendly digital creator''s assistant. Reply to DMs from fans in a positive, helpful way.'),
-            ('temperature', '0.8'),
-            ('max_tokens', '100')
-            """)
-
-        # Create indexes for better performance
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections (user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_client_settings_user_id ON client_settings (user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages (user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON usage_logs (user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets (token)")
-
+        
+        # Insert default bot settings
+        param = get_param_placeholder()
+        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                      ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
+        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                      ('temperature', '0.7'))
+        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                      ('max_tokens', '150'))
+        
         conn.commit()
-        conn.close()
-        print("✅ Database initialized successfully!")
+        print("✅ Database initialized successfully")
+        return True
         
     except Exception as e:
         print(f"❌ Error initializing database: {e}")
         print(f"Error type: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 # Initialize database on app startup
-init_database()
+print("🚀 Starting Chata application...")
+if init_database():
+    print("✅ Database initialized successfully")
+else:
+    print("❌ Database initialization failed - some features may not work")
 
 # ---- Email helpers ----
 
@@ -455,7 +416,7 @@ def verify_reset_token(token):
     placeholder = get_param_placeholder()
     cursor.execute(f"""
         SELECT user_id FROM password_resets 
-        WHERE token = {placeholder} AND expires_at > {placeholder} AND used = 0
+        WHERE token = {placeholder} AND expires_at > {placeholder} AND used_at IS NULL
     """, (token, datetime.now()))
     result = cursor.fetchone()
     conn.close()
@@ -467,7 +428,7 @@ def mark_reset_token_used(token):
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
-    cursor.execute(f"UPDATE password_resets SET used = 1 WHERE token = {placeholder}", (token,))
+    cursor.execute(f"UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE token = {placeholder}", (token,))
     conn.commit()
     conn.close()
 
@@ -487,17 +448,14 @@ def get_user_by_id(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id, email, first_name, last_name, company_name, subscription_plan FROM users WHERE id = {placeholder}", (user_id,))
+        cursor.execute(f"SELECT id, email, created_at FROM users WHERE id = {placeholder}", (user_id,))
         user = cursor.fetchone()
         conn.close()
         if user:
             return {
                 'id': user[0],
                 'email': user[1],
-                'first_name': user[2],
-                'last_name': user[3],
-                'company_name': user[4],
-                'subscription_plan': user[5]
+                'created_at': user[2]
             }
         return None
     except Exception as e:
@@ -518,7 +476,7 @@ def get_user_by_email(email):
         print(f"🔍 SQL query: SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}")
         print(f"🔍 Parameters: {email}")
         
-        cursor.execute(f"SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}", (email,))
+        cursor.execute(f"SELECT id, email, password_hash, created_at FROM users WHERE email = {placeholder}", (email,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -526,8 +484,7 @@ def get_user_by_email(email):
                 'id': user[0],
                 'email': user[1],
                 'password_hash': user[2],
-                'first_name': user[3],
-                'last_name': user[4]
+                'created_at': user[3]
             }
         return None
     except Exception as e:
@@ -537,7 +494,7 @@ def get_user_by_email(email):
         traceback.print_exc()
         return None
 
-def create_user(email, password, first_name, last_name, company_name):
+def create_user(email, password):
     try:
         print(f"🔍 create_user called with email: {email}")
         print(f"🔍 email type: {type(email)}")
@@ -551,17 +508,18 @@ def create_user(email, password, first_name, last_name, company_name):
         print(f"🔍 Using placeholder: {placeholder}")
         
         # For PostgreSQL, we need to get the ID differently
-        if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
-            sql = f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}) RETURNING id"
-            params = (email, password_hash, first_name, last_name, company_name)
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url and (database_url.startswith("postgres://") or database_url.startswith("postgresql://")):
+            sql = f"INSERT INTO users (email, password_hash) VALUES ({placeholder}, {placeholder}) RETURNING id"
+            params = (email, password_hash)
             print(f"🔍 PostgreSQL SQL: {sql}")
             print(f"🔍 PostgreSQL params: {params}")
             
             cursor.execute(sql, params)
             user_id = cursor.fetchone()[0]
         else:
-            sql = f"INSERT INTO users (email, password_hash, first_name, last_name, company_name) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
-            params = (email, password_hash, first_name, last_name, company_name)
+            sql = f"INSERT INTO users (email, password_hash) VALUES ({placeholder}, {placeholder})"
+            params = (email, password_hash)
             print(f"🔍 SQLite SQL: {sql}")
             print(f"🔍 SQLite params: {params}")
             
@@ -585,16 +543,10 @@ def signup():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
-        first_name = request.form.get("first_name")
-        last_name = request.form.get("last_name")
-        company_name = request.form.get("company_name")
         
         print(f"🔍 Signup form data:")
         print(f"🔍 Email: {email}")
         print(f"🔍 Email type: {type(email)}")
-        print(f"🔍 First name: {first_name}")
-        print(f"🔍 Last name: {last_name}")
-        print(f"🔍 Company name: {company_name}")
         
         # Basic validation
         if not email or not password:
@@ -609,7 +561,7 @@ def signup():
         
         # Create new user
         try:
-            user_id = create_user(email, password, first_name, last_name, company_name)
+            user_id = create_user(email, password)
             session['user_id'] = user_id
             flash("Account created successfully! Welcome to Chata.", "success")
             return redirect(url_for('dashboard'))
@@ -634,7 +586,7 @@ def login():
             if user and check_password_hash(user['password_hash'], password):
                 session['user_id'] = user['id']
                 log_activity(user['id'], 'login', 'User logged in successfully')
-                flash(f"Welcome back, {user['first_name'] or 'User'}!", "success")
+                flash(f"Welcome back, {user['email']}!", "success")
                 return redirect(url_for('dashboard'))
             else:
                 flash("Invalid email or password.", "error")
@@ -772,13 +724,13 @@ def get_client_settings(user_id, connection_id=None):
     
     if connection_id:
         cursor.execute(f"""
-            SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
+            SELECT bot_personality, temperature, max_tokens, auto_reply
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
         """, (user_id, connection_id))
     else:
         cursor.execute(f"""
-            SELECT system_prompt, temperature, max_tokens, bot_name, welcome_message
+            SELECT bot_personality, temperature, max_tokens, auto_reply
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
         """, (user_id,))
@@ -788,20 +740,18 @@ def get_client_settings(user_id, connection_id=None):
     
     if row:
         return {
-            'system_prompt': row[0],
+            'bot_personality': row[0],
             'temperature': row[1],
             'max_tokens': row[2],
-            'bot_name': row[3],
-            'welcome_message': row[4]
+            'auto_reply': row[3]
         }
     
     # Return default settings if none exist
     return {
-        'system_prompt': "You are a friendly digital creator's assistant. Reply to DMs from fans in a positive, helpful way.",
-        'temperature': 0.8,
-        'max_tokens': 100,
-        'bot_name': 'Chata Bot',
-        'welcome_message': 'Hi! I\'m here to help. How can I assist you today?'
+        'bot_personality': "You are a helpful and friendly Instagram bot.",
+        'temperature': 0.7,
+        'max_tokens': 150,
+        'auto_reply': True
     }
 
 def log_activity(user_id, action_type, description=None):
@@ -811,9 +761,9 @@ def log_activity(user_id, action_type, description=None):
     placeholder = get_param_placeholder()
     
     cursor.execute(f"""
-        INSERT INTO activity_logs (user_id, action_type, description, ip_address, user_agent)
-        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-    """, (user_id, action_type, description, request.remote_addr, request.headers.get('User-Agent')))
+        INSERT INTO activity_logs (user_id, action, details, ip_address)
+        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+    """, (user_id, action_type, description, request.remote_addr))
     
     conn.commit()
     conn.close()
@@ -829,44 +779,42 @@ def save_client_settings(user_id, settings, connection_id=None):
         if connection_id:
             cursor.execute(f"""
                 INSERT INTO client_settings 
-                (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                (user_id, instagram_connection_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
-                system_prompt = EXCLUDED.system_prompt,
+                bot_personality = EXCLUDED.bot_personality,
                 temperature = EXCLUDED.temperature,
                 max_tokens = EXCLUDED.max_tokens,
-                bot_name = EXCLUDED.bot_name,
-                welcome_message = EXCLUDED.welcome_message
-            """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
-                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+                auto_reply = EXCLUDED.auto_reply
+            """, (user_id, connection_id, settings['bot_personality'], settings['temperature'], 
+                  settings['max_tokens'], settings['auto_reply']))
         else:
             cursor.execute(f"""
                 INSERT INTO client_settings 
-                (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                (user_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 ON CONFLICT (user_id) DO UPDATE SET
-                system_prompt = EXCLUDED.system_prompt,
+                bot_personality = EXCLUDED.bot_personality,
                 temperature = EXCLUDED.temperature,
                 max_tokens = EXCLUDED.max_tokens,
-                bot_name = EXCLUDED.bot_name,
-                welcome_message = EXCLUDED.welcome_message
-            """, (user_id, settings['system_prompt'], settings['temperature'], 
-                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+                auto_reply = EXCLUDED.auto_reply
+            """, (user_id, settings['bot_personality'], settings['temperature'], 
+                  settings['max_tokens'], settings['auto_reply']))
     else:
         if connection_id:
             cursor.execute(f"""
                 INSERT OR REPLACE INTO client_settings 
-                (user_id, instagram_connection_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            """, (user_id, connection_id, settings['system_prompt'], settings['temperature'], 
-                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+                (user_id, instagram_connection_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (user_id, connection_id, settings['bot_personality'], settings['temperature'], 
+                  settings['max_tokens'], settings['auto_reply']))
         else:
             cursor.execute(f"""
                 INSERT OR REPLACE INTO client_settings 
-                (user_id, system_prompt, temperature, max_tokens, bot_name, welcome_message)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            """, (user_id, settings['system_prompt'], settings['temperature'], 
-                  settings['max_tokens'], settings['bot_name'], settings['welcome_message']))
+                (user_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (user_id, settings['bot_personality'], settings['temperature'], 
+                  settings['max_tokens'], settings['auto_reply']))
     
     conn.commit()
     conn.close()
@@ -881,11 +829,10 @@ def bot_settings():
     
     if request.method == "POST":
         settings = {
-            'system_prompt': request.form.get('system_prompt', ''),
-            'temperature': float(request.form.get('temperature', 0.8)),
-            'max_tokens': int(request.form.get('max_tokens', 100)),
-            'bot_name': request.form.get('bot_name', 'Chata Bot'),
-            'welcome_message': request.form.get('welcome_message', '')
+            'bot_personality': request.form.get('bot_personality', ''),
+            'temperature': float(request.form.get('temperature', 0.7)),
+            'max_tokens': int(request.form.get('max_tokens', 150)),
+            'auto_reply': request.form.get('auto_reply', True)
         }
         
         save_client_settings(user_id, settings)
@@ -936,16 +883,16 @@ def usage_analytics():
     # Get message count for current month
     cursor.execute(f"""
         SELECT COUNT(*) FROM messages 
-        WHERE user_id = {placeholder} 
-        AND timestamp >= date('now', 'start of month')
+        WHERE instagram_user_id IN (SELECT instagram_user_id FROM instagram_connections WHERE user_id = {placeholder})
+        AND created_at >= date('now', 'start of month')
     """, (user_id,))
     messages_this_month = cursor.fetchone()[0]
     
     # Get API usage for current month
     cursor.execute(f"""
-        SELECT SUM(tokens_used), SUM(cost_cents) FROM usage_logs 
+        SELECT SUM(tokens_used), SUM(cost) FROM usage_logs 
         WHERE user_id = {placeholder} 
-        AND timestamp >= date('now', 'start of month')
+        AND created_at >= date('now', 'start of month')
     """, (user_id,))
     usage_data = cursor.fetchone()
     api_calls_this_month = usage_data[0] or 0
@@ -953,10 +900,10 @@ def usage_analytics():
     
     # Get recent activity
     cursor.execute(f"""
-        SELECT action_type, description, timestamp 
+        SELECT action, details, created_at 
         FROM activity_logs 
         WHERE user_id = {placeholder} 
-        ORDER BY timestamp DESC 
+        ORDER BY created_at DESC 
         LIMIT 10
     """, (user_id,))
     recent_activity = cursor.fetchall()
@@ -992,29 +939,55 @@ def set_setting(key, value):
 
 # ---- Message DB helpers ----
 
-def save_message(user_id, role, content):
+def save_message(instagram_user_id, message_text, bot_response):
+    """Save a message to the database"""
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
-    cursor.execute(
-        f"INSERT INTO messages (user_id, role, content) VALUES ({placeholder}, {placeholder}, {placeholder})",
-        (user_id, role, content)
-    )
-    conn.commit()
-    conn.close()
+    
+    try:
+        cursor.execute(
+            f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
+            (instagram_user_id, message_text, bot_response)
+        )
+        conn.commit()
+        print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
+    except Exception as e:
+        print(f"❌ Error saving message: {e}")
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
-def get_last_messages(user_id, n=35):
+def get_last_messages(instagram_user_id, n=35):
+    """Get conversation history for a specific Instagram user"""
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
-    cursor.execute(
-        f"SELECT role, content FROM messages WHERE user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
-        (user_id, n)
-    )
-    rows = cursor.fetchall()
-    conn.close()
-    rows.reverse()
-    return [{"role": role, "content": content} for role, content in rows]
+    
+    try:
+        cursor.execute(
+            f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
+            (instagram_user_id, n)
+        )
+        rows = cursor.fetchall()
+        
+        # Convert to OpenAI format
+        messages = []
+        for row in reversed(rows):  # Reverse to get chronological order
+            if row[0]:  # message_text
+                messages.append({"role": "user", "content": row[0]})
+            if row[1]:  # bot_response
+                messages.append({"role": "assistant", "content": row[1]})
+        
+        print(f"✅ Retrieved {len(messages)} messages for Instagram user: {instagram_user_id}")
+        return messages
+        
+    except Exception as e:
+        print(f"❌ Error retrieving messages: {e}")
+        return []
+    finally:
+        conn.close()
 
 # ---- AI Reply ----
 
@@ -1023,10 +996,10 @@ def get_ai_reply(history):
     try:
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-        system_prompt = get_setting("system_prompt",
-            "You are a friendly digital creator's assistant. Reply to DMs from fans in a positive, helpful way.")
-        temperature = float(get_setting("temperature", "0.8"))
-        max_tokens = int(get_setting("max_tokens", "100"))
+        system_prompt = get_setting("bot_personality",
+            "You are a helpful and friendly Instagram bot.")
+        temperature = float(get_setting("temperature", "0.7"))
+        max_tokens = int(get_setting("max_tokens", "150"))
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1060,7 +1033,8 @@ def webhook():
             return "Forbidden", 403
 
     elif request.method == "POST":
-        print("Webhook received POST:", request.json)
+        print("📥 Webhook received POST request")
+        print(f"📋 Request data: {request.json}")
         data = request.json
 
         if 'entry' in data:
@@ -1072,26 +1046,45 @@ def webhook():
 
                         sender_id = event['sender']['id']
                         if 'message' in event and 'text' in event['message']:
-                            message_text = event['message']['text']
-                            print(f"Received a message from {sender_id}: {message_text}")
+                            try:
+                                message_text = event['message']['text']
+                                print(f"📨 Received a message from {sender_id}: {message_text}")
 
-                            save_message(sender_id, "user", message_text)
-                            history = get_last_messages(sender_id, n=35)
-                            print(f"History for {sender_id} BEFORE reply: {history}")
+                                # Save the incoming user message
+                                save_message(sender_id, message_text, "")
+                                print(f"✅ Saved user message for {sender_id}")
+                                
+                                # Get conversation history
+                                history = get_last_messages(sender_id, n=35)
+                                print(f"📚 History for {sender_id}: {len(history)} messages")
 
-                            reply_text = get_ai_reply(history)
+                                # Generate AI reply
+                                reply_text = get_ai_reply(history)
+                                print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                            save_message(sender_id, "assistant", reply_text)
-                            print(f"History for {sender_id} AFTER reply: {get_last_messages(sender_id, n=10)}")
+                                # Save the bot's response
+                                save_message(sender_id, "", reply_text)
+                                print(f"✅ Saved bot response for {sender_id}")
 
-                            url = f"https://graph.facebook.com/v18.0/{INSTAGRAM_USER_ID}/messages?access_token={ACCESS_TOKEN}"
-                            payload = {
-                                "recipient": {"id": sender_id},
-                                "message": {"text": reply_text}
-                            }
+                                # Send reply via Instagram API
+                                url = f"https://graph.facebook.com/v18.0/{INSTAGRAM_USER_ID}/messages?access_token={ACCESS_TOKEN}"
+                                payload = {
+                                    "recipient": {"id": sender_id},
+                                    "message": {"text": reply_text}
+                                }
 
-                            r = requests.post(url, json=payload)
-                            print("Sent reply:", r.text)
+                                r = requests.post(url, json=payload)
+                                print(f"📤 Sent reply to {sender_id}: {r.status_code}")
+                                if r.status_code != 200:
+                                    print(f"❌ Error sending reply: {r.text}")
+                                else:
+                                    print(f"✅ Reply sent successfully to {sender_id}")
+                                    
+                            except Exception as e:
+                                print(f"❌ Error processing message from {sender_id}: {e}")
+                                print(f"Error type: {type(e).__name__}")
+                                import traceback
+                                traceback.print_exc()
 
         return "EVENT_RECEIVED", 200
 
@@ -1102,14 +1095,14 @@ def admin_prompt():
     message = None
 
     if flask_request.method == "POST":
-        set_setting("system_prompt", flask_request.form.get("system_prompt", ""))
-        set_setting("temperature", flask_request.form.get("temperature", "0.8"))
-        set_setting("max_tokens", flask_request.form.get("max_tokens", "100"))
+        set_setting("bot_personality", flask_request.form.get("bot_personality", ""))
+        set_setting("temperature", flask_request.form.get("temperature", "0.7"))
+        set_setting("max_tokens", flask_request.form.get("max_tokens", "150"))
         message = "Bot settings updated successfully!"
 
-    current_prompt = get_setting("system_prompt", "")
-    current_temperature = get_setting("temperature", "0.8")
-    current_max_tokens = get_setting("max_tokens", "100")
+    current_prompt = get_setting("bot_personality", "")
+    current_temperature = get_setting("temperature", "0.7")
+    current_max_tokens = get_setting("max_tokens", "150")
 
     return render_template_string("""
         <!doctype html>
@@ -1126,8 +1119,8 @@ def admin_prompt():
         <h2>Edit Bot Settings</h2>
         <form method="POST">
           <div class="field-group">
-            <label for="system_prompt">System Prompt (Bot Role/Personality):</label><br>
-            <textarea id="system_prompt" name="system_prompt" rows="4">{{current_prompt}}</textarea>
+            <label for="bot_personality">Bot Personality:</label><br>
+            <textarea id="bot_personality" name="bot_personality" rows="4">{{current_prompt}}</textarea>
           </div>
           <div class="field-group">
             <label for="temperature">Temperature (Creativity, 0=serious, 1=random):</label><br>
