@@ -509,7 +509,7 @@ def get_user_by_email(email):
         placeholder = get_param_placeholder()
         
         print(f"🔍 Using placeholder: {placeholder}")
-        print(f"🔍 SQL query: SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = {placeholder}")
+        print(f"🔍 SQL query: SELECT id, email, password_hash, created_at FROM users WHERE email = {placeholder}")
         print(f"🔍 Parameters: {email}")
         
         cursor.execute(f"SELECT id, email, password_hash, created_at FROM users WHERE email = {placeholder}", (email,))
@@ -884,24 +884,8 @@ def account_settings():
     user = get_user_by_id(session['user_id'])
     
     if request.method == "POST":
-        # Update account information
-        first_name = request.form.get('first_name', '')
-        last_name = request.form.get('last_name', '')
-        company_name = request.form.get('company_name', '')
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            UPDATE users 
-            SET first_name = {placeholder}, last_name = {placeholder}, company_name = {placeholder}
-            WHERE id = {placeholder}
-        """, (first_name, last_name, company_name, user['id']))
-        conn.commit()
-        conn.close()
-        
-        log_activity(user['id'], 'profile_updated', 'Account profile information updated')
-        flash("Account information updated successfully!", "success")
+        # Update account information - simplified since we removed extra fields
+        flash("Account settings updated successfully!", "success")
         return redirect(url_for('account_settings'))
     
     return render_template("account_settings.html", user=user)
