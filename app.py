@@ -86,6 +86,18 @@ def init_database():
         if is_postgres:
             print("✅ Using PostgreSQL database")
             
+            # Drop existing tables if they exist (to fix schema mismatches)
+            print("🔄 Dropping existing tables to ensure correct schema...")
+            cursor.execute("DROP TABLE IF EXISTS messages CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS client_settings CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS instagram_connections CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS usage_logs CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS activity_logs CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS password_resets CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS settings CASCADE")
+            cursor.execute("DROP TABLE IF EXISTS users CASCADE")
+            print("✅ Existing tables dropped")
+            
             # Create users table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -288,13 +300,28 @@ def init_database():
             """)
         
         # Insert default bot settings
-        param = get_param_placeholder()
-        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
-                      ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
-        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
-                      ('temperature', '0.7'))
-        cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
-                      ('max_tokens', '150'))
+        if is_postgres:
+            # PostgreSQL syntax
+            cursor.execute(f"""
+                INSERT INTO settings (key, value) VALUES ({param}, {param})
+                ON CONFLICT (key) DO NOTHING
+            """, ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
+            cursor.execute(f"""
+                INSERT INTO settings (key, value) VALUES ({param}, {param})
+                ON CONFLICT (key) DO NOTHING
+            """, ('temperature', '0.7'))
+            cursor.execute(f"""
+                INSERT INTO settings (key, value) VALUES ({param}, {param})
+                ON CONFLICT (key) DO NOTHING
+            """, ('max_tokens', '150'))
+        else:
+            # SQLite syntax
+            cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                          ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
+            cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                          ('temperature', '0.7'))
+            cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
+                          ('max_tokens', '150'))
         
         conn.commit()
         print("✅ Database initialized successfully")
