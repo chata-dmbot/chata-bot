@@ -64,7 +64,7 @@
                         {% for connection in connections %}
                             <div class="connection-item">
                                 <div class="connection-info">
-                                    <h4>{{ connection.page_name or 'Instagram Account' }}</h4>
+                                    <h4>{{ connection.instagram_page_id or 'Instagram Account' }}</h4>
                                     <p>ID: {{ connection.instagram_user_id }}</p>
                                     <p>Connected: {{ connection.created_at[:10] }}</p>
                                 </div>

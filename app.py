@@ -730,7 +730,7 @@ def dashboard():
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     cursor.execute(f"""
-        SELECT id, page_name, instagram_user_id, is_active, created_at 
+        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
         FROM instagram_connections 
         WHERE user_id = {placeholder} 
         ORDER BY created_at DESC
@@ -742,8 +742,8 @@ def dashboard():
     for conn_data in connections:
         connections_list.append({
             'id': conn_data[0],
-            'page_name': conn_data[1],
-            'instagram_user_id': conn_data[2],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
             'is_active': conn_data[3],
             'created_at': conn_data[4]
         })
