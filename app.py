@@ -86,20 +86,20 @@ def init_database():
         if is_postgres:
             print("✅ Using PostgreSQL database")
             
-            # Drop existing tables if they exist (to fix schema mismatches)
-            print("🔄 Dropping existing tables to ensure correct schema...")
+            # Check if tables exist first - only drop if there's a schema mismatch
+            print("🔍 Checking existing database schema...")
             try:
-                cursor.execute("DROP TABLE IF EXISTS messages CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS client_settings CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS instagram_connections CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS usage_logs CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS activity_logs CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS password_resets CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS settings CASCADE")
-                cursor.execute("DROP TABLE IF EXISTS users CASCADE")
-                print("✅ Existing tables dropped")
+                cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+                existing_tables = [row[0] for row in cursor.fetchall()]
+                print(f"📋 Existing tables: {existing_tables}")
+                
+                # Only drop tables if they exist and we need to recreate them
+                if existing_tables:
+                    print("⚠️ Tables already exist - keeping existing data")
+                else:
+                    print("📝 No existing tables found - will create new ones")
             except Exception as e:
-                print(f"⚠️ Warning: Some tables couldn't be dropped: {e}")
+                print(f"⚠️ Warning: Could not check existing tables: {e}")
                 print("Continuing with table creation...")
             
             # Create users table
