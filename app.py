@@ -36,6 +36,11 @@ INSTAGRAM_APP_ID = os.getenv("INSTAGRAM_APP_ID")
 INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET")
 INSTAGRAM_REDIRECT_URI = os.getenv("INSTAGRAM_REDIRECT_URI", "https://chata-bot.onrender.com/auth/instagram/callback")
 
+# Debug OAuth configuration
+print(f"Instagram OAuth - App ID: {INSTAGRAM_APP_ID[:8] + '...' if INSTAGRAM_APP_ID else 'Not set'}")
+print(f"Instagram OAuth - App Secret: {'Set' if INSTAGRAM_APP_SECRET else 'Not set'}")
+print(f"Instagram OAuth - Redirect URI: {INSTAGRAM_REDIRECT_URI}")
+
 # Database configuration
 DB_FILE = "chata.db"
 DATABASE_URL = os.getenv("DATABASE_URL")
