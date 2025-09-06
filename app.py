@@ -743,12 +743,12 @@ def instagram_auth():
     state = secrets.token_urlsafe(32)
     session['instagram_oauth_state'] = state
     
-    # Build Instagram OAuth URL
+    # Build Instagram Business OAuth URL (using Facebook Graph API)
     oauth_url = (
-        f"https://api.instagram.com/oauth/authorize"
+        f"https://www.facebook.com/v18.0/dialog/oauth"
         f"?client_id={INSTAGRAM_APP_ID}"
         f"&redirect_uri={INSTAGRAM_REDIRECT_URI}"
-        f"&scope=user_profile,user_media"
+        f"&scope=instagram_basic,instagram_manage_messages"
         f"&response_type=code"
         f"&state={state}"
     )
@@ -778,12 +778,11 @@ def instagram_callback():
         return redirect(url_for('dashboard'))
     
     try:
-        # Exchange code for access token
-        token_url = "https://api.instagram.com/oauth/access_token"
+        # Exchange code for access token using Facebook Graph API
+        token_url = "https://graph.facebook.com/v18.0/oauth/access_token"
         token_data = {
             'client_id': INSTAGRAM_APP_ID,
             'client_secret': INSTAGRAM_APP_SECRET,
-            'grant_type': 'authorization_code',
             'redirect_uri': INSTAGRAM_REDIRECT_URI,
             'code': code
         }
@@ -793,14 +792,38 @@ def instagram_callback():
         token_info = response.json()
         
         access_token = token_info.get('access_token')
-        user_id = token_info.get('user_id')
         
-        if not access_token or not user_id:
+        if not access_token:
             flash("Failed to get Instagram access token.", "error")
             return redirect(url_for('dashboard'))
         
-        # Get user profile information
-        profile_url = f"https://graph.instagram.com/{user_id}"
+        # Get Instagram Business account information
+        # First, get the user's Instagram Business accounts
+        accounts_url = "https://graph.facebook.com/v18.0/me/accounts"
+        accounts_params = {
+            'access_token': access_token,
+            'fields': 'instagram_business_account'
+        }
+        
+        accounts_response = requests.get(accounts_url, params=accounts_params)
+        accounts_response.raise_for_status()
+        accounts_data = accounts_response.json()
+        
+        # Find the Instagram Business account
+        instagram_account = None
+        for account in accounts_data.get('data', []):
+            if account.get('instagram_business_account'):
+                instagram_account = account['instagram_business_account']
+                break
+        
+        if not instagram_account:
+            flash("No Instagram Business account found. Please connect a Business account.", "error")
+            return redirect(url_for('dashboard'))
+        
+        instagram_user_id = instagram_account['id']
+        
+        # Get Instagram account details
+        profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
         profile_params = {
             'fields': 'id,username,account_type,media_count',
             'access_token': access_token
