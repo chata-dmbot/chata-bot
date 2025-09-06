@@ -817,7 +817,7 @@ def instagram_callback():
                 break
         
         if not instagram_account:
-            flash("No Instagram Business account found. Please connect a Business account.", "error")
+            flash("No Instagram Business account found. Please ensure your Instagram account is connected to a Facebook Page and is set to Business type.", "error")
             return redirect(url_for('dashboard'))
         
         instagram_user_id = instagram_account['id']
@@ -873,7 +873,12 @@ def instagram_callback():
         
     except requests.RequestException as e:
         print(f"Instagram API error: {e}")
-        flash("Failed to connect Instagram account. Please try again.", "error")
+        if "access_denied" in str(e):
+            flash("Access denied. Please ensure your Instagram account is a Business account connected to a Facebook Page.", "error")
+        elif "invalid_request" in str(e):
+            flash("Invalid request. Please check your Instagram account settings and try again.", "error")
+        else:
+            flash("Failed to connect Instagram account. Please try again.", "error")
     except Exception as e:
         print(f"Unexpected error: {e}")
         flash("An unexpected error occurred. Please try again.", "error")
@@ -1356,6 +1361,10 @@ def privacy():
 @app.route("/terms")
 def terms():
     return render_template("terms.html", moment=datetime.now())
+
+@app.route("/instagram-setup-help")
+def instagram_setup_help():
+    return render_template("instagram_setup_help.html")
 
 
 if __name__ == "__main__":

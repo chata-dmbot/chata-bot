@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Instagram Setup Help - Chata{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="help-section">
+        <h1>Instagram Setup Help</h1>
+        
+        <div class="help-card">
+            <h2>📱 Step 1: Convert to Business Account</h2>
+            <p>Your Instagram account must be a Business account to use our bot features.</p>
+            <ol>
+                <li>Open Instagram app</li>
+                <li>Go to Settings → Account</li>
+                <li>Tap "Switch to Business Account"</li>
+                <li>Follow the setup process</li>
+            </ol>
+        </div>
+
+        <div class="help-card">
+            <h2>🔗 Step 2: Connect to Facebook Page</h2>
+            <p>Your Instagram Business account must be connected to a Facebook Page.</p>
+            <ol>
+                <li>Go to Settings → Account → Linked Accounts</li>
+                <li>Tap "Facebook"</li>
+                <li>Create a Facebook Page or connect existing one</li>
+                <li>Complete the connection</li>
+            </ol>
+        </div>
+
+        <div class="help-card">
+            <h2>✅ Step 3: Connect to Chata</h2>
+            <p>Once your account is set up correctly:</p>
+            <ol>
+                <li>Go to your Chata dashboard</li>
+                <li>Click "Connect New Account"</li>
+                <li>Log into your Facebook account</li>
+                <li>Authorize Chata to access your Instagram</li>
+            </ol>
+        </div>
+
+        <div class="help-card">
+            <h2>❓ Troubleshooting</h2>
+            <h3>Error: "No Instagram Business account found"</h3>
+            <p>Make sure your Instagram account is:</p>
+            <ul>
+                <li>Set to Business type (not Personal or Creator)</li>
+                <li>Connected to a Facebook Page</li>
+                <li>Linked to the Facebook account you're logging in with</li>
+            </ul>
+
+            <h3>Error: "Access denied"</h3>
+            <p>This usually means:</p>
+            <ul>
+                <li>Your Instagram account isn't a Business account</li>
+                <li>Your Instagram isn't connected to a Facebook Page</li>
+                <li>You're logging into the wrong Facebook account</li>
+            </ul>
+        </div>
+
+        <div class="help-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+            <a href="{{ url_for('contact') }}" class="btn btn-secondary">Contact Support</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
