@@ -53,7 +53,7 @@
             <div class="dashboard-card">
                 <div class="card-header">
                     <h3><i class="fab fa-instagram"></i> Instagram Connections</h3>
-                    <a href="#" class="btn btn-primary btn-sm">Connect New Account</a>
+                    <a href="{{ url_for('instagram_auth') }}" class="btn btn-primary btn-sm">Connect New Account</a>
                 </div>
                 <div class="card-content">
                     {% if connections %}
@@ -62,7 +62,7 @@
                                 <div class="connection-info">
                                     <h4>{{ connection.instagram_page_id or 'Instagram Account' }}</h4>
                                     <p>ID: {{ connection.instagram_user_id }}</p>
-                                    <p>Connected: {{ connection.created_at[:10] }}</p>
+                                    <p>Connected: {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
                                 </div>
                                 <div class="connection-status">
                                     <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
@@ -75,7 +75,7 @@
                         <div class="empty-state">
                             <i class="fas fa-instagram"></i>
                             <p>No Instagram accounts connected yet</p>
-                            <a href="#" class="btn btn-primary">Connect Your First Account</a>
+                            <a href="{{ url_for('instagram_auth') }}" class="btn btn-primary">Connect Your First Account</a>
                         </div>
                     {% endif %}
                 </div>

@@ -31,6 +31,11 @@ VERIFY_TOKEN = "chata_verify_token"
 ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
 INSTAGRAM_USER_ID = "745508148639483"
 
+# Instagram OAuth Configuration
+INSTAGRAM_APP_ID = os.getenv("INSTAGRAM_APP_ID")
+INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET")
+INSTAGRAM_REDIRECT_URI = os.getenv("INSTAGRAM_REDIRECT_URI", "https://chata-bot.onrender.com/auth/instagram/callback")
+
 # Database configuration
 DB_FILE = "chata.db"
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -719,6 +724,133 @@ def logout():
     session.pop('user_id', None)
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
+
+# Instagram OAuth Routes
+@app.route("/auth/instagram")
+@login_required
+def instagram_auth():
+    """Start Instagram OAuth flow"""
+    if not INSTAGRAM_APP_ID:
+        flash("Instagram OAuth not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    # Generate state parameter for security
+    state = secrets.token_urlsafe(32)
+    session['instagram_oauth_state'] = state
+    
+    # Build Instagram OAuth URL
+    oauth_url = (
+        f"https://api.instagram.com/oauth/authorize"
+        f"?client_id={INSTAGRAM_APP_ID}"
+        f"&redirect_uri={INSTAGRAM_REDIRECT_URI}"
+        f"&scope=user_profile,user_media"
+        f"&response_type=code"
+        f"&state={state}"
+    )
+    
+    return redirect(oauth_url)
+
+@app.route("/auth/instagram/callback")
+@login_required
+def instagram_callback():
+    """Handle Instagram OAuth callback"""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    # Check for errors
+    if error:
+        flash(f"Instagram authorization failed: {error}", "error")
+        return redirect(url_for('dashboard'))
+    
+    # Verify state parameter
+    if state != session.get('instagram_oauth_state'):
+        flash("Invalid state parameter. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+    
+    if not code:
+        flash("No authorization code received from Instagram.", "error")
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Exchange code for access token
+        token_url = "https://api.instagram.com/oauth/access_token"
+        token_data = {
+            'client_id': INSTAGRAM_APP_ID,
+            'client_secret': INSTAGRAM_APP_SECRET,
+            'grant_type': 'authorization_code',
+            'redirect_uri': INSTAGRAM_REDIRECT_URI,
+            'code': code
+        }
+        
+        response = requests.post(token_url, data=token_data)
+        response.raise_for_status()
+        token_info = response.json()
+        
+        access_token = token_info.get('access_token')
+        user_id = token_info.get('user_id')
+        
+        if not access_token or not user_id:
+            flash("Failed to get Instagram access token.", "error")
+            return redirect(url_for('dashboard'))
+        
+        # Get user profile information
+        profile_url = f"https://graph.instagram.com/{user_id}"
+        profile_params = {
+            'fields': 'id,username,account_type,media_count',
+            'access_token': access_token
+        }
+        
+        profile_response = requests.get(profile_url, params=profile_params)
+        profile_response.raise_for_status()
+        profile_data = profile_response.json()
+        
+        # Save Instagram connection to database
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                param = get_param_placeholder()
+                
+                # Check if connection already exists
+                cursor.execute(f"SELECT id FROM instagram_connections WHERE user_id = {param} AND instagram_user_id = {param}", 
+                              (session['user_id'], user_id))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Update existing connection
+                    cursor.execute(f"""
+                        UPDATE instagram_connections 
+                        SET page_access_token = {param}, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = {param}
+                    """, (access_token, existing[0]))
+                else:
+                    # Create new connection
+                    cursor.execute(f"""
+                        INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, page_access_token, is_active)
+                        VALUES ({param}, {param}, {param}, {param}, TRUE)
+                    """, (session['user_id'], user_id, user_id, access_token))
+                
+                conn.commit()
+                flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                
+            except Exception as e:
+                print(f"Database error: {e}")
+                flash("Failed to save Instagram connection. Please try again.", "error")
+            finally:
+                conn.close()
+        
+        # Clean up session
+        session.pop('instagram_oauth_state', None)
+        
+    except requests.RequestException as e:
+        print(f"Instagram API error: {e}")
+        flash("Failed to connect Instagram account. Please try again.", "error")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        flash("An unexpected error occurred. Please try again.", "error")
+    
+    return redirect(url_for('dashboard'))
 
 @app.route("/dashboard")
 @login_required
