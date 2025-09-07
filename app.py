@@ -1362,6 +1362,10 @@ def privacy():
 def terms():
     return render_template("terms.html", moment=datetime.now())
 
+@app.route("/data-deletion")
+def data_deletion():
+    return render_template("data_deletion.html", moment=datetime.now())
+
 @app.route("/instagram-setup-help")
 def instagram_setup_help():
     return render_template("instagram_setup_help.html")

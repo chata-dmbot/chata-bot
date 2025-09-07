@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Deletion Instructions - Chata</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('features') }}" class="nav-link">Features</a>
+                <a href="{{ url_for('pricing') }}" class="nav-link">Pricing</a>
+                <a href="{{ url_for('contact') }}" class="nav-link">Contact</a>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Sign In</a>
+                    <a href="{{ url_for('signup') }}" class="nav-link nav-cta">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="privacy-section">
+            <div class="container">
+                <div class="section-header">
+                    <h1>Data Deletion Instructions</h1>
+                    <p>Last updated: {{ moment.strftime('%B %d, %Y') }}</p>
+                </div>
+
+                <div class="privacy-content">
+                    <div class="privacy-section-block">
+                        <h2>Your Right to Data Deletion</h2>
+                        <p>Under the General Data Protection Regulation (GDPR) and other applicable privacy laws, you have the right to request the deletion of your personal data. This page explains how to exercise this right with Chata.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>What Data We Store</h2>
+                        <p>Chata may store the following types of data about you:</p>
+                        <ul>
+                            <li><strong>Account Information:</strong> Email address, password (encrypted), account creation date</li>
+                            <li><strong>Instagram Connection Data:</strong> Instagram User ID, Page ID, Page Access Token (encrypted)</li>
+                            <li><strong>Bot Settings:</strong> Custom bot personality, response preferences, usage limits</li>
+                            <li><strong>Message Data:</strong> Conversation history, bot responses, message analytics</li>
+                            <li><strong>Usage Analytics:</strong> API usage statistics, performance metrics, activity logs</li>
+                            <li><strong>Support Communications:</strong> Any emails or messages you've sent to our support team</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>How to Request Data Deletion</h2>
+                        
+                        <h3>Method 1: Through Your Account Dashboard</h3>
+                        <ol>
+                            <li>Log in to your Chata account</li>
+                            <li>Go to your Dashboard</li>
+                            <li>Navigate to "Account Settings"</li>
+                            <li>Click "Delete Account"</li>
+                            <li>Confirm your deletion request</li>
+                        </ol>
+                        
+                        <h3>Method 2: Contact Us Directly</h3>
+                        <p>If you cannot access your account or prefer to contact us directly:</p>
+                        <ol>
+                            <li>Send an email to <strong>chata.dmbot@gmail.com</strong></li>
+                            <li>Use the subject line: "Data Deletion Request"</li>
+                            <li>Include the following information:
+                                <ul>
+                                    <li>Your full name</li>
+                                    <li>Email address associated with your account</li>
+                                    <li>Instagram username (if applicable)</li>
+                                    <li>Confirmation that you want all data deleted</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>What Happens After Your Request</h2>
+                        
+                        <h3>Verification Process</h3>
+                        <p>To protect your privacy and prevent unauthorized deletions, we will:</p>
+                        <ul>
+                            <li>Verify your identity using the email address associated with your account</li>
+                            <li>Confirm your deletion request via email</li>
+                            <li>Process your request within 30 days (as required by GDPR)</li>
+                        </ul>
+                        
+                        <h3>Data Deletion Process</h3>
+                        <p>Once verified, we will:</p>
+                        <ul>
+                            <li>Delete your account and all associated data from our databases</li>
+                            <li>Remove your Instagram connection and revoke access tokens</li>
+                            <li>Delete all conversation history and bot settings</li>
+                            <li>Remove your data from our analytics and logging systems</li>
+                            <li>Send you a confirmation email once deletion is complete</li>
+                        </ul>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>Important Notes</h2>
+                        
+                        <h3>Irreversible Action</h3>
+                        <p><strong>Warning:</strong> Data deletion is permanent and cannot be undone. Once your data is deleted, you will not be able to recover your account, settings, or conversation history.</p>
+                        
+                        <h3>Third-Party Data</h3>
+                        <p>Please note that we cannot delete data that has been shared with third parties (such as Instagram/Meta) through the normal operation of our service. You may need to contact these third parties directly to request deletion of data they hold.</p>
+                        
+                        <h3>Legal Obligations</h3>
+                        <p>We may be required to retain certain data for legal, regulatory, or security purposes. If this applies to your request, we will inform you of what data must be retained and why.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>Response Time</h2>
+                        <p>We will acknowledge your deletion request within 24 hours and complete the deletion process within 30 days, as required by GDPR. In most cases, deletion will be completed within 7-14 days.</p>
+                    </div>
+
+                    <div class="privacy-section-block">
+                        <h2>Questions or Concerns</h2>
+                        <p>If you have any questions about the data deletion process or need assistance with your request, please contact us:</p>
+                        
+                        <div class="contact-info">
+                            <p><strong>Email:</strong> chata.dmbot@gmail.com</p>
+                            <p><strong>Phone:</strong> +33642092079</p>
+                            <p><strong>Address:</strong> Schöpplerstr. 6, Augsburg, 86153, Germany</p>
+                        </div>
+                        
+                        <p>We are committed to protecting your privacy and will handle your deletion request with the utmost care and respect for your rights.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="footer-logo">
+                    <p>Automate your Instagram DMs with AI-powered responses.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Product</h3>
+                    <a href="{{ url_for('features') }}">Features</a>
+                    <a href="{{ url_for('pricing') }}">Pricing</a>
+                    <a href="{{ url_for('faq') }}">FAQ</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <a href="{{ url_for('about') }}">About</a>
+                    <a href="{{ url_for('contact') }}">Contact</a>
+                    <a href="{{ url_for('privacy') }}">Privacy</a>
+                    <a href="{{ url_for('terms') }}">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <a href="{{ url_for('contact') }}">Help Center</a>
+                    <a href="{{ url_for('contact') }}">Contact Support</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Chata. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
