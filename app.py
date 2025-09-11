@@ -836,6 +836,15 @@ def instagram_callback():
             user_info_params = {'access_token': access_token}
             user_info_response = requests.get(user_info_url, params=user_info_params)
             print(f"🔍 User info response: {user_info_response.json()}")
+            
+            # Let's check what permissions the access token has
+            debug_token_url = "https://graph.facebook.com/v18.0/debug_token"
+            debug_params = {
+                'input_token': access_token,
+                'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET
+            }
+            debug_response = requests.get(debug_token_url, params=debug_params)
+            print(f"🔍 Token debug response: {debug_response.json()}")
         
         if not instagram_account:
             flash("No Instagram Business account found. Please ensure your Instagram account is connected to a Facebook Page and is set to Business type.", "error")
