@@ -805,16 +805,26 @@ def instagram_callback():
             'fields': 'instagram_business_account'
         }
         
+        print(f"🔍 Fetching accounts from: {accounts_url}")
+        print(f"🔍 With params: {accounts_params}")
+        
         accounts_response = requests.get(accounts_url, params=accounts_params)
         accounts_response.raise_for_status()
         accounts_data = accounts_response.json()
         
+        print(f"🔍 Accounts response: {accounts_data}")
+        
         # Find the Instagram Business account
         instagram_account = None
         for account in accounts_data.get('data', []):
+            print(f"🔍 Checking account: {account}")
             if account.get('instagram_business_account'):
                 instagram_account = account['instagram_business_account']
+                print(f"✅ Found Instagram account: {instagram_account}")
                 break
+        
+        if not instagram_account:
+            print(f"❌ No Instagram Business account found in {len(accounts_data.get('data', []))} accounts")
         
         if not instagram_account:
             flash("No Instagram Business account found. Please ensure your Instagram account is connected to a Facebook Page and is set to Business type.", "error")
