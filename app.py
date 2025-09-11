@@ -831,20 +831,44 @@ def instagram_callback():
         
         if not instagram_account:
             print(f"❌ No Instagram Business account found in {len(accounts_data.get('data', []))} accounts")
-            # Let's also try to get more info about the user
-            user_info_url = "https://graph.facebook.com/v18.0/me"
-            user_info_params = {'access_token': access_token}
-            user_info_response = requests.get(user_info_url, params=user_info_params)
-            print(f"🔍 User info response: {user_info_response.json()}")
             
-            # Let's check what permissions the access token has
+            # Let's try a different approach - get the specific Page ID from the token
             debug_token_url = "https://graph.facebook.com/v18.0/debug_token"
             debug_params = {
                 'input_token': access_token,
                 'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET
             }
             debug_response = requests.get(debug_token_url, params=debug_params)
-            print(f"🔍 Token debug response: {debug_response.json()}")
+            debug_data = debug_response.json()
+            print(f"🔍 Token debug response: {debug_data}")
+            
+            # Extract Page ID from the token
+            page_id = None
+            if 'data' in debug_data and 'granular_scopes' in debug_data['data']:
+                for scope in debug_data['data']['granular_scopes']:
+                    if scope['scope'] == 'pages_read_engagement' and scope['target_ids']:
+                        page_id = scope['target_ids'][0]
+                        print(f"🔍 Found Page ID: {page_id}")
+                        break
+            
+            if page_id:
+                # Try to get Instagram account directly from the Page
+                page_url = f"https://graph.facebook.com/v18.0/{page_id}"
+                page_params = {
+                    'access_token': access_token,
+                    'fields': 'instagram_business_account'
+                }
+                print(f"🔍 Fetching Page info from: {page_url}")
+                print(f"🔍 With params: {page_params}")
+                
+                page_response = requests.get(page_url, params=page_params)
+                print(f"🔍 Page response status: {page_response.status_code}")
+                page_data = page_response.json()
+                print(f"🔍 Page response: {page_data}")
+                
+                if 'instagram_business_account' in page_data:
+                    instagram_account = page_data['instagram_business_account']
+                    print(f"✅ Found Instagram account via Page: {instagram_account}")
         
         if not instagram_account:
             flash("No Instagram Business account found. Please ensure your Instagram account is connected to a Facebook Page and is set to Business type.", "error")
