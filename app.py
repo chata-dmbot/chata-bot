@@ -748,7 +748,7 @@ def instagram_auth():
         f"https://www.facebook.com/v18.0/dialog/oauth"
         f"?client_id={FACEBOOK_APP_ID}"
         f"&redirect_uri={FACEBOOK_REDIRECT_URI}"
-        f"&scope=instagram_basic,instagram_manage_messages"
+        f"&scope=instagram_basic,instagram_manage_messages,pages_read_engagement"
         f"&response_type=code"
         f"&state={state}"
     )
