@@ -900,7 +900,7 @@ def instagram_callback():
         # Now get Instagram account details using the Page Access Token
         profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
         profile_params = {
-            'fields': 'id,username,account_type,media_count',
+            'fields': 'id,username,media_count',
             'access_token': page_access_token
         }
         
