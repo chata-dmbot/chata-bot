@@ -842,7 +842,7 @@ def instagram_callback():
                 
                 # Check if connection already exists
                 cursor.execute(f"SELECT id FROM instagram_connections WHERE user_id = {param} AND instagram_user_id = {param}", 
-                              (session['user_id'], user_id))
+                              (session['user_id'], instagram_user_id))
                 existing = cursor.fetchone()
                 
                 if existing:
@@ -857,7 +857,7 @@ def instagram_callback():
                     cursor.execute(f"""
                         INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, page_access_token, is_active)
                         VALUES ({param}, {param}, {param}, {param}, TRUE)
-                    """, (session['user_id'], user_id, user_id, access_token))
+                    """, (session['user_id'], instagram_user_id, instagram_user_id, access_token))
                 
                 conn.commit()
                 flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
