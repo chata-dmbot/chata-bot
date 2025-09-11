@@ -31,15 +31,15 @@ VERIFY_TOKEN = "chata_verify_token"
 ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
 INSTAGRAM_USER_ID = "745508148639483"
 
-# Instagram OAuth Configuration
-INSTAGRAM_APP_ID = os.getenv("INSTAGRAM_APP_ID")
-INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET")
-INSTAGRAM_REDIRECT_URI = os.getenv("INSTAGRAM_REDIRECT_URI", "https://chata-bot.onrender.com/auth/instagram/callback")
+# Facebook OAuth Configuration (for Instagram Business API)
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
+FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://chata-bot.onrender.com/auth/instagram/callback")
 
 # Debug OAuth configuration
-print(f"Instagram OAuth - App ID: {INSTAGRAM_APP_ID[:8] + '...' if INSTAGRAM_APP_ID else 'Not set'}")
-print(f"Instagram OAuth - App Secret: {'Set' if INSTAGRAM_APP_SECRET else 'Not set'}")
-print(f"Instagram OAuth - Redirect URI: {INSTAGRAM_REDIRECT_URI}")
+print(f"Facebook OAuth - App ID: {FACEBOOK_APP_ID[:8] + '...' if FACEBOOK_APP_ID else 'Not set'}")
+print(f"Facebook OAuth - App Secret: {'Set' if FACEBOOK_APP_SECRET else 'Not set'}")
+print(f"Facebook OAuth - Redirect URI: {FACEBOOK_REDIRECT_URI}")
 
 # Database configuration
 DB_FILE = "chata.db"
@@ -735,8 +735,8 @@ def logout():
 @login_required
 def instagram_auth():
     """Start Instagram OAuth flow"""
-    if not INSTAGRAM_APP_ID:
-        flash("Instagram OAuth not configured. Please contact support.", "error")
+    if not FACEBOOK_APP_ID:
+        flash("Facebook OAuth not configured. Please contact support.", "error")
         return redirect(url_for('dashboard'))
     
     # Generate state parameter for security
@@ -746,8 +746,8 @@ def instagram_auth():
     # Build Instagram Business OAuth URL (using Facebook Graph API)
     oauth_url = (
         f"https://www.facebook.com/v18.0/dialog/oauth"
-        f"?client_id={INSTAGRAM_APP_ID}"
-        f"&redirect_uri={INSTAGRAM_REDIRECT_URI}"
+        f"?client_id={FACEBOOK_APP_ID}"
+        f"&redirect_uri={FACEBOOK_REDIRECT_URI}"
         f"&scope=instagram_basic,instagram_manage_messages"
         f"&response_type=code"
         f"&state={state}"
@@ -781,9 +781,9 @@ def instagram_callback():
         # Exchange code for access token using Facebook Graph API
         token_url = "https://graph.facebook.com/v18.0/oauth/access_token"
         token_data = {
-            'client_id': INSTAGRAM_APP_ID,
-            'client_secret': INSTAGRAM_APP_SECRET,
-            'redirect_uri': INSTAGRAM_REDIRECT_URI,
+            'client_id': FACEBOOK_APP_ID,
+            'client_secret': FACEBOOK_APP_SECRET,
+            'redirect_uri': FACEBOOK_REDIRECT_URI,
             'code': code
         }
         
