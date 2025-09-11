@@ -876,16 +876,47 @@ def instagram_callback():
         
         instagram_user_id = instagram_account['id']
         
-        # Get Instagram account details
-        profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
-        profile_params = {
-            'fields': 'id,username,account_type,media_count',
+        # We need to get a Page Access Token to query Instagram account details
+        # First, let's get the Page Access Token
+        page_access_token_url = f"https://graph.facebook.com/v18.0/{page_id}"
+        page_token_params = {
+            'fields': 'access_token',
             'access_token': access_token
         }
         
+        print(f"🔍 Getting Page Access Token from: {page_access_token_url}")
+        page_token_response = requests.get(page_access_token_url, params=page_token_params)
+        print(f"🔍 Page token response status: {page_token_response.status_code}")
+        
+        if page_token_response.status_code != 200:
+            print(f"❌ Failed to get Page Access Token: {page_token_response.text}")
+            flash("Failed to get Page Access Token. Please try again.", "error")
+            return redirect(url_for('dashboard'))
+        
+        page_token_data = page_token_response.json()
+        page_access_token = page_token_data.get('access_token')
+        print(f"✅ Got Page Access Token: {page_access_token[:20]}...")
+        
+        # Now get Instagram account details using the Page Access Token
+        profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
+        profile_params = {
+            'fields': 'id,username,account_type,media_count',
+            'access_token': page_access_token
+        }
+        
+        print(f"🔍 Getting Instagram profile from: {profile_url}")
+        print(f"🔍 Using Page Access Token: {page_access_token[:20]}...")
+        
         profile_response = requests.get(profile_url, params=profile_params)
-        profile_response.raise_for_status()
+        print(f"🔍 Profile response status: {profile_response.status_code}")
+        
+        if profile_response.status_code != 200:
+            print(f"❌ Failed to get Instagram profile: {profile_response.text}")
+            flash("Failed to get Instagram profile details. Please try again.", "error")
+            return redirect(url_for('dashboard'))
+        
         profile_data = profile_response.json()
+        print(f"✅ Got Instagram profile: {profile_data}")
         
         # Save Instagram connection to database
         conn = get_db_connection()
@@ -905,13 +936,13 @@ def instagram_callback():
                         UPDATE instagram_connections 
                         SET page_access_token = {param}, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
                         WHERE id = {param}
-                    """, (access_token, existing[0]))
+                    """, (page_access_token, existing[0]))
                 else:
                     # Create new connection
                     cursor.execute(f"""
                         INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, page_access_token, is_active)
                         VALUES ({param}, {param}, {param}, {param}, TRUE)
-                    """, (session['user_id'], instagram_user_id, instagram_user_id, access_token))
+                    """, (session['user_id'], instagram_user_id, page_id, page_access_token))
                 
                 conn.commit()
                 flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
