@@ -809,9 +809,15 @@ def instagram_callback():
         print(f"🔍 With params: {accounts_params}")
         
         accounts_response = requests.get(accounts_url, params=accounts_params)
-        accounts_response.raise_for_status()
-        accounts_data = accounts_response.json()
+        print(f"🔍 Response status: {accounts_response.status_code}")
+        print(f"🔍 Response headers: {dict(accounts_response.headers)}")
         
+        if accounts_response.status_code != 200:
+            print(f"❌ API Error: {accounts_response.text}")
+            flash(f"Facebook API error: {accounts_response.status_code}", "error")
+            return redirect(url_for('dashboard'))
+        
+        accounts_data = accounts_response.json()
         print(f"🔍 Accounts response: {accounts_data}")
         
         # Find the Instagram Business account
@@ -825,6 +831,11 @@ def instagram_callback():
         
         if not instagram_account:
             print(f"❌ No Instagram Business account found in {len(accounts_data.get('data', []))} accounts")
+            # Let's also try to get more info about the user
+            user_info_url = "https://graph.facebook.com/v18.0/me"
+            user_info_params = {'access_token': access_token}
+            user_info_response = requests.get(user_info_url, params=user_info_params)
+            print(f"🔍 User info response: {user_info_response.json()}")
         
         if not instagram_account:
             flash("No Instagram Business account found. Please ensure your Instagram account is connected to a Facebook Page and is set to Business type.", "error")
