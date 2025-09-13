@@ -148,7 +148,8 @@ def init_database():
                     max_tokens INTEGER DEFAULT 150,
                     auto_reply BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, instagram_connection_id)
                 )
             """)
             
@@ -254,7 +255,8 @@ def init_database():
                     max_tokens INTEGER DEFAULT 150,
                     auto_reply BOOLEAN DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, instagram_connection_id)
                 )
             """)
             
@@ -316,6 +318,32 @@ def init_database():
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+        
+        # Add unique constraint to existing client_settings table if it doesn't exist
+        if is_postgres:
+            try:
+                # Check if the unique constraint already exists
+                cursor.execute("""
+                    SELECT constraint_name 
+                    FROM information_schema.table_constraints 
+                    WHERE table_name = 'client_settings' 
+                    AND constraint_type = 'UNIQUE'
+                    AND constraint_name LIKE '%user_id%'
+                """)
+                existing_constraints = cursor.fetchall()
+                
+                if not existing_constraints:
+                    print("🔧 Adding unique constraint to client_settings table...")
+                    cursor.execute("""
+                        ALTER TABLE client_settings 
+                        ADD CONSTRAINT unique_user_connection 
+                        UNIQUE (user_id, instagram_connection_id)
+                    """)
+                    print("✅ Unique constraint added successfully")
+                else:
+                    print("✅ Unique constraint already exists")
+            except Exception as e:
+                print(f"⚠️ Could not add unique constraint (might already exist): {e}")
         
         # Insert default bot settings
         param = get_param_placeholder()
@@ -1071,19 +1099,19 @@ def save_client_settings(user_id, settings, connection_id=None):
                 bot_personality = EXCLUDED.bot_personality,
                 temperature = EXCLUDED.temperature,
                 max_tokens = EXCLUDED.max_tokens,
-                auto_reply = EXCLUDED.auto_reply
+                auto_reply = EXCLUDED.auto_reply,
+                updated_at = CURRENT_TIMESTAMP
             """, (user_id, connection_id, settings['bot_personality'], settings['temperature'], 
                   settings['max_tokens'], settings['auto_reply']))
         else:
+            # For global settings, we need to handle NULL instagram_connection_id
+            # First, try to delete any existing global settings for this user
+            cursor.execute(f"DELETE FROM client_settings WHERE user_id = {placeholder} AND instagram_connection_id IS NULL", (user_id,))
+            # Then insert the new global settings
             cursor.execute(f"""
                 INSERT INTO client_settings 
-                (user_id, bot_personality, temperature, max_tokens, auto_reply)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                ON CONFLICT (user_id) DO UPDATE SET
-                bot_personality = EXCLUDED.bot_personality,
-                temperature = EXCLUDED.temperature,
-                max_tokens = EXCLUDED.max_tokens,
-                auto_reply = EXCLUDED.auto_reply
+                (user_id, instagram_connection_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, NULL, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (user_id, settings['bot_personality'], settings['temperature'], 
                   settings['max_tokens'], settings['auto_reply']))
     else:
@@ -1095,10 +1123,12 @@ def save_client_settings(user_id, settings, connection_id=None):
             """, (user_id, connection_id, settings['bot_personality'], settings['temperature'], 
                   settings['max_tokens'], settings['auto_reply']))
         else:
+            # For global settings in SQLite, delete existing and insert new
+            cursor.execute(f"DELETE FROM client_settings WHERE user_id = {placeholder} AND instagram_connection_id IS NULL", (user_id,))
             cursor.execute(f"""
-                INSERT OR REPLACE INTO client_settings 
-                (user_id, bot_personality, temperature, max_tokens, auto_reply)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                INSERT INTO client_settings 
+                (user_id, instagram_connection_id, bot_personality, temperature, max_tokens, auto_reply)
+                VALUES ({placeholder}, NULL, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (user_id, settings['bot_personality'], settings['temperature'], 
                   settings['max_tokens'], settings['auto_reply']))
     
