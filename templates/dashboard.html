@@ -67,10 +67,13 @@
                                     <p>ID: {{ connection.instagram_user_id }}</p>
                                     <p>Connected: {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
                                 </div>
-                                <div class="connection-status">
+                                <div class="connection-actions">
                                     <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
                                         {{ 'Active' if connection.is_active else 'Inactive' }}
                                     </span>
+                                    <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-robot"></i> Bot Settings
+                                    </a>
                                 </div>
                             </div>
                         {% endfor %}

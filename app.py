@@ -1112,6 +1112,7 @@ def save_client_settings(user_id, settings, connection_id=None):
 @login_required
 def bot_settings():
     user_id = session['user_id']
+    connection_id = request.args.get('connection_id', type=int)
     
     if request.method == "POST":
         settings = {
@@ -1121,12 +1122,37 @@ def bot_settings():
             'auto_reply': request.form.get('auto_reply', True)
         }
         
-        save_client_settings(user_id, settings)
+        save_client_settings(user_id, settings, connection_id)
         flash("Bot settings updated successfully!", "success")
-        return redirect(url_for('bot_settings'))
+        return redirect(url_for('bot_settings', connection_id=connection_id))
     
-    current_settings = get_client_settings(user_id)
-    return render_template("bot_settings.html", settings=current_settings)
+    # Get user's Instagram connections for the dropdown
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT id, instagram_user_id, instagram_page_id, is_active 
+        FROM instagram_connections 
+        WHERE user_id = {placeholder} 
+        ORDER BY created_at DESC
+    """, (user_id,))
+    connections = cursor.fetchall()
+    conn.close()
+    
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
+            'is_active': conn_data[3]
+        })
+    
+    current_settings = get_client_settings(user_id, connection_id)
+    return render_template("bot_settings.html", 
+                         settings=current_settings, 
+                         connections=connections_list,
+                         selected_connection_id=connection_id)
 
 @app.route("/dashboard/account-settings", methods=["GET", "POST"])
 @login_required
@@ -1259,6 +1285,38 @@ def get_last_messages(instagram_user_id, n=35):
     finally:
         conn.close()
 
+# ---- Instagram Connection Helpers ----
+
+def get_instagram_connection_by_id(instagram_user_id):
+    """Get Instagram connection by Instagram user ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        cursor.execute(f"""
+            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            FROM instagram_connections 
+            WHERE instagram_user_id = {placeholder} AND is_active = TRUE
+        """, (instagram_user_id,))
+        
+        row = cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'user_id': row[1],
+                'instagram_user_id': row[2],
+                'instagram_page_id': row[3],
+                'page_access_token': row[4],
+                'is_active': row[5]
+            }
+        return None
+    except Exception as e:
+        print(f"❌ Error getting Instagram connection: {e}")
+        return None
+    finally:
+        conn.close()
+
 # ---- AI Reply ----
 
 def get_ai_reply(history):
@@ -1270,6 +1328,59 @@ def get_ai_reply(history):
             "You are a helpful and friendly Instagram bot.")
         temperature = float(get_setting("temperature", "0.7"))
         max_tokens = int(get_setting("max_tokens", "150"))
+
+        messages = [{"role": "system", "content": system_prompt}]
+        messages += history
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        ai_reply = response.choices[0].message.content.strip()
+        return ai_reply
+
+    except Exception as e:
+        print("OpenAI API error:", e)
+        return "Sorry, I'm having trouble replying right now."
+
+def get_ai_reply_with_connection(history, connection_id=None):
+    """Get AI reply using connection-specific settings if available"""
+    openai.api_key = OPENAI_API_KEY
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Get settings for this specific connection
+        if connection_id:
+            # Get user_id from connection
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            placeholder = get_param_placeholder()
+            cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                user_id = result[0]
+                settings = get_client_settings(user_id, connection_id)
+                system_prompt = settings['bot_personality']
+                temperature = settings['temperature']
+                max_tokens = settings['max_tokens']
+                print(f"🎯 Using connection-specific settings for connection {connection_id}")
+            else:
+                # Fallback to global settings
+                system_prompt = get_setting("bot_personality", "You are a helpful and friendly Instagram bot.")
+                temperature = float(get_setting("temperature", "0.7"))
+                max_tokens = int(get_setting("max_tokens", "150"))
+                print(f"⚠️ Connection not found, using global settings")
+        else:
+            # Use global settings (for original Chata account)
+            system_prompt = get_setting("bot_personality", "You are a helpful and friendly Instagram bot.")
+            temperature = float(get_setting("temperature", "0.7"))
+            max_tokens = int(get_setting("max_tokens", "150"))
+            print(f"🎯 Using global settings for original Chata account")
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1320,6 +1431,36 @@ def webhook():
                                 message_text = event['message']['text']
                                 print(f"📨 Received a message from {sender_id}: {message_text}")
 
+                                # 🔍 DETECT WHICH INSTAGRAM ACCOUNT RECEIVED THE MESSAGE
+                                # The webhook receives messages for different Instagram accounts
+                                # We need to determine which account this message was sent to
+                                
+                                # Get the recipient ID from the event (this is the Instagram account that received the message)
+                                recipient_id = event.get('recipient', {}).get('id')
+                                print(f"🎯 Message sent to Instagram account: {recipient_id}")
+                                
+                                # Find the Instagram connection for this recipient
+                                instagram_connection = get_instagram_connection_by_id(recipient_id)
+                                
+                                if not instagram_connection:
+                                    print(f"❌ No Instagram connection found for account {recipient_id}")
+                                    print(f"💡 This might be the original Chata account or an unregistered account")
+                                    
+                                    # Check if this is the original Chata account
+                                    if recipient_id == INSTAGRAM_USER_ID:
+                                        print(f"✅ This is the original Chata account - using hardcoded settings")
+                                        access_token = ACCESS_TOKEN
+                                        instagram_user_id = INSTAGRAM_USER_ID
+                                        connection_id = None  # No connection ID for original account
+                                    else:
+                                        print(f"❌ Unknown Instagram account {recipient_id} - skipping message")
+                                        continue
+                                else:
+                                    print(f"✅ Found Instagram connection: {instagram_connection}")
+                                    access_token = instagram_connection['page_access_token']
+                                    instagram_user_id = instagram_connection['instagram_user_id']
+                                    connection_id = instagram_connection['id']
+
                                 # Save the incoming user message
                                 save_message(sender_id, message_text, "")
                                 print(f"✅ Saved user message for {sender_id}")
@@ -1328,23 +1469,23 @@ def webhook():
                                 history = get_last_messages(sender_id, n=35)
                                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
-                                # Generate AI reply
-                                reply_text = get_ai_reply(history)
+                                # Generate AI reply with account-specific settings
+                                reply_text = get_ai_reply_with_connection(history, connection_id)
                                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
                                 # Save the bot's response
                                 save_message(sender_id, "", reply_text)
                                 print(f"✅ Saved bot response for {sender_id}")
 
-                                # Send reply via Instagram API
-                                url = f"https://graph.facebook.com/v18.0/{INSTAGRAM_USER_ID}/messages?access_token={ACCESS_TOKEN}"
+                                # Send reply via Instagram API using the correct access token
+                                url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages?access_token={access_token}"
                                 payload = {
                                     "recipient": {"id": sender_id},
                                     "message": {"text": reply_text}
                                 }
 
                                 r = requests.post(url, json=payload)
-                                print(f"📤 Sent reply to {sender_id}: {r.status_code}")
+                                print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code}")
                                 if r.status_code != 200:
                                     print(f"❌ Error sending reply: {r.text}")
                                 else:

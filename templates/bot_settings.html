@@ -39,30 +39,35 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" class="settings-form">
-            <div class="settings-grid">
-                <!-- Basic Settings -->
-                <div class="settings-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-cog"></i> Basic Settings</h3>
-                    </div>
-                    <div class="card-content">
-                        <div class="form-group">
-                            <label for="bot_name">Bot Name</label>
-                            <input type="text" id="bot_name" name="bot_name" value="{{ settings.bot_name }}" 
-                                   placeholder="Enter your bot's name">
-                            <small>This name will be used when your bot introduces itself</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="welcome_message">Welcome Message</label>
-                            <textarea id="welcome_message" name="welcome_message" rows="3" 
-                                      placeholder="Message sent when someone first messages your bot">{{ settings.welcome_message }}</textarea>
-                            <small>This message is sent to new conversations</small>
-                        </div>
-                    </div>
+        <!-- Connection Selection -->
+        {% if connections %}
+        <div class="settings-card">
+            <div class="card-header">
+                <h3><i class="fas fa-link"></i> Select Instagram Account</h3>
+            </div>
+            <div class="card-content">
+                <div class="form-group">
+                    <label for="connection_select">Choose which Instagram account to configure:</label>
+                    <select id="connection_select" onchange="changeConnection()">
+                        <option value="">Global Settings (Original Chata Account)</option>
+                        {% for connection in connections %}
+                        <option value="{{ connection.id }}" {% if connection.id == selected_connection_id %}selected{% endif %}>
+                            Instagram Account: {{ connection.instagram_user_id }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small>Each Instagram account can have its own unique bot personality</small>
                 </div>
+            </div>
+        </div>
+        {% endif %}
 
+        <form method="POST" class="settings-form">
+            {% if selected_connection_id %}
+            <input type="hidden" name="connection_id" value="{{ selected_connection_id }}">
+            {% endif %}
+            
+            <div class="settings-grid">
                 <!-- AI Personality -->
                 <div class="settings-card">
                     <div class="card-header">
@@ -70,9 +75,9 @@
                     </div>
                     <div class="card-content">
                         <div class="form-group">
-                            <label for="system_prompt">System Prompt (Bot Personality)</label>
-                            <textarea id="system_prompt" name="system_prompt" rows="6" 
-                                      placeholder="Define your bot's personality, role, and how it should respond">{{ settings.system_prompt }}</textarea>
+                            <label for="bot_personality">System Prompt (Bot Personality)</label>
+                            <textarea id="bot_personality" name="bot_personality" rows="6" 
+                                      placeholder="Define your bot's personality, role, and how it should respond">{{ settings.bot_personality }}</textarea>
                             <small>This defines your bot's core personality and behavior</small>
                         </div>
                     </div>
@@ -151,9 +156,19 @@
             }
         }
 
+        function changeConnection() {
+            const connectionId = document.getElementById('connection_select').value;
+            const url = new URL(window.location);
+            if (connectionId) {
+                url.searchParams.set('connection_id', connectionId);
+            } else {
+                url.searchParams.delete('connection_id');
+            }
+            window.location.href = url.toString();
+        }
+
         function generatePreview() {
-            const systemPrompt = document.getElementById('system_prompt').value;
-            const botName = document.getElementById('bot_name').value;
+            const systemPrompt = document.getElementById('bot_personality').value;
             const previewText = document.getElementById('preview-text');
             
             // Simple preview generation
