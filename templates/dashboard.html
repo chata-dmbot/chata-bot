@@ -74,6 +74,11 @@
                                     <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn btn-secondary btn-sm">
                                         <i class="fas fa-robot"></i> Bot Settings
                                     </a>
+                                    <a href="{{ url_for('disconnect_instagram', connection_id=connection.id) }}" 
+                                       class="btn btn-danger btn-sm" 
+                                       onclick="return confirm('Are you sure you want to disconnect this Instagram account? This will stop the bot from responding to messages.')">
+                                        <i class="fas fa-unlink"></i> Disconnect
+                                    </a>
                                 </div>
                             </div>
                         {% endfor %}

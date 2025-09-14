@@ -1219,6 +1219,50 @@ def account_settings():
     
     return render_template("account_settings.html", user=user)
 
+@app.route("/dashboard/disconnect-instagram/<int:connection_id>")
+@login_required
+def disconnect_instagram(connection_id):
+    user_id = session['user_id']
+    
+    # Verify the connection belongs to the current user
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # Check if connection exists and belongs to user
+        cursor.execute(f"""
+            SELECT id, instagram_user_id FROM instagram_connections 
+            WHERE id = {placeholder} AND user_id = {placeholder}
+        """, (connection_id, user_id))
+        
+        connection = cursor.fetchone()
+        if not connection:
+            flash("Connection not found or you don't have permission to disconnect it.", "error")
+            return redirect(url_for('dashboard'))
+        
+        # Delete the connection
+        cursor.execute(f"DELETE FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+        
+        # Also delete associated client settings
+        cursor.execute(f"DELETE FROM client_settings WHERE instagram_connection_id = {placeholder}", (connection_id,))
+        
+        conn.commit()
+        
+        # Log the activity
+        log_activity(user_id, 'instagram_disconnected', f'Disconnected Instagram account {connection[1]}')
+        
+        flash(f"Instagram account {connection[1]} has been disconnected successfully.", "success")
+        
+    except Exception as e:
+        print(f"Error disconnecting Instagram account: {e}")
+        flash("An error occurred while disconnecting the account.", "error")
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
+
 @app.route("/dashboard/usage")
 @login_required
 def usage_analytics():
