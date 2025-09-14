@@ -344,6 +344,10 @@ def init_database():
                     print("✅ Unique constraint already exists")
             except Exception as e:
                 print(f"⚠️ Could not add unique constraint (might already exist): {e}")
+                # Rollback the transaction to continue with other operations
+                conn.rollback()
+                # Re-establish cursor after rollback
+                cursor = conn.cursor()
         
         # Insert default bot settings
         param = get_param_placeholder()
@@ -377,15 +381,37 @@ def init_database():
     except Exception as e:
         print(f"❌ Error initializing database: {e}")
         print(f"Error type: {type(e).__name__}")
-        conn.rollback()
+        # Try to rollback and continue
+        try:
+            conn.rollback()
+            print("🔄 Transaction rolled back, continuing...")
+        except:
+            pass
         return False
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass
 
 # Initialize database on app startup
 print("🚀 Starting Chata application...")
 if init_database():
     print("✅ Database initialized successfully")
+    
+    # Show current Instagram connections for debugging
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, user_id, instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
+            connections = cursor.fetchall()
+            print(f"📱 Found {len(connections)} Instagram connections:")
+            for conn_data in connections:
+                print(f"  - ID: {conn_data[0]}, User: {conn_data[1]}, IG User: {conn_data[2]}, Page: {conn_data[3]}, Active: {conn_data[4]}")
+            conn.close()
+    except Exception as e:
+        print(f"⚠️ Could not check Instagram connections: {e}")
 else:
     print("❌ Database initialization failed - some features may not work")
 
