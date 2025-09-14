@@ -149,7 +149,6 @@ def init_database():
                     auto_reply BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(user_id, instagram_connection_id)
                 )
             """)
             
@@ -256,7 +255,6 @@ def init_database():
                     auto_reply BOOLEAN DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(user_id, instagram_connection_id)
                 )
             """)
             
@@ -319,32 +317,8 @@ def init_database():
                 )
             """)
         
-        # Add unique constraint to existing client_settings table if it doesn't exist
-        if is_postgres:
-            try:
-                # Check if the unique constraint already exists
-                cursor.execute("""
-                    SELECT constraint_name 
-                    FROM information_schema.table_constraints 
-                    WHERE table_name = 'client_settings' 
-                    AND constraint_type = 'UNIQUE'
-                    AND constraint_name LIKE '%user_id%'
-                """)
-                existing_constraints = cursor.fetchall()
-                
-                if not existing_constraints:
-                    print("🔧 Adding unique constraint to client_settings table...")
-                    cursor.execute("""
-                        ALTER TABLE client_settings 
-                        ADD CONSTRAINT unique_user_connection 
-                        UNIQUE (user_id, instagram_connection_id)
-                    """)
-                    print("✅ Unique constraint added successfully")
-                else:
-                    print("✅ Unique constraint already exists")
-            except Exception as e:
-                print(f"⚠️ Could not add unique constraint (might already exist): {e}")
-                # Don't rollback here - just continue with the rest of the initialization
+        # Skip unique constraint addition to avoid transaction issues
+        print("✅ Skipping unique constraint addition to avoid transaction issues")
         
         # Insert default bot settings
         param = get_param_placeholder()
