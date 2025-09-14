@@ -1347,6 +1347,36 @@ def get_instagram_connection_by_id(instagram_user_id):
     finally:
         conn.close()
 
+def get_instagram_connection_by_page_id(page_id):
+    """Get Instagram connection by Instagram page ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        cursor.execute(f"""
+            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            FROM instagram_connections 
+            WHERE instagram_page_id = {placeholder} AND is_active = TRUE
+        """, (page_id,))
+        
+        row = cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'user_id': row[1],
+                'instagram_user_id': row[2],
+                'instagram_page_id': row[3],
+                'page_access_token': row[4],
+                'is_active': row[5]
+            }
+        return None
+    except Exception as e:
+        print(f"❌ Error getting Instagram connection by page ID: {e}")
+        return None
+    finally:
+        conn.close()
+
 # ---- AI Reply ----
 
 def get_ai_reply(history):
@@ -1447,6 +1477,21 @@ def webhook():
         print("📥 Webhook received POST request")
         print(f"📋 Request data: {request.json}")
         data = request.json
+        
+        # Debug: Show all available Instagram connections
+        print("🔍 Available Instagram connections:")
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("SELECT instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
+                connections = cursor.fetchall()
+                for conn_data in connections:
+                    print(f"  - User ID: {conn_data[0]}, Page ID: {conn_data[1]}, Active: {conn_data[2]}")
+            except Exception as e:
+                print(f"Error fetching connections: {e}")
+            finally:
+                conn.close()
 
         if 'entry' in data:
             for entry in data['entry']:
@@ -1469,11 +1514,20 @@ def webhook():
                                 recipient_id = event.get('recipient', {}).get('id')
                                 print(f"🎯 Message sent to Instagram account: {recipient_id}")
                                 
+                                # Also check the entry object for the page ID
+                                page_id = entry.get('id')
+                                print(f"📄 Page ID from entry: {page_id}")
+                                
                                 # Find the Instagram connection for this recipient
                                 instagram_connection = get_instagram_connection_by_id(recipient_id)
                                 
+                                # If not found by user ID, try by page ID
+                                if not instagram_connection and page_id:
+                                    print(f"🔍 Trying to find connection by page ID: {page_id}")
+                                    instagram_connection = get_instagram_connection_by_page_id(page_id)
+                                
                                 if not instagram_connection:
-                                    print(f"❌ No Instagram connection found for account {recipient_id}")
+                                    print(f"❌ No Instagram connection found for account {recipient_id} or page {page_id}")
                                     print(f"💡 This might be the original Chata account or an unregistered account")
                                     
                                     # Check if this is the original Chata account
