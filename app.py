@@ -209,7 +209,7 @@ def init_database():
                     id SERIAL PRIMARY KEY,
                     key VARCHAR(255) UNIQUE NOT NULL,
                     value TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -1215,11 +1215,11 @@ def disconnect_instagram(connection_id):
             flash("Connection not found or you don't have permission to disconnect it.", "error")
             return redirect(url_for('dashboard'))
         
-        # Delete the connection
-        cursor.execute(f"DELETE FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
-        
-        # Also delete associated client settings
+        # First delete associated client settings (to avoid foreign key constraint)
         cursor.execute(f"DELETE FROM client_settings WHERE instagram_connection_id = {placeholder}", (connection_id,))
+        
+        # Then delete the connection
+        cursor.execute(f"DELETE FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
         
         conn.commit()
         
