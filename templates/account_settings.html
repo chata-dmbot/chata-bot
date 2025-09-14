@@ -87,15 +87,15 @@
                     <div class="status-item">
                         <span class="status-label">Account Type:</span>
                         <span class="status-value">
-                            <span class="badge badge-{{ 'premium' if user.subscription_plan == 'premium' else 'basic' }}">
-                                {{ user.subscription_plan.title() }}
+                            <span class="badge badge-basic">
+                                Free
                             </span>
                         </span>
                     </div>
                     
                     <div class="status-item">
                         <span class="status-label">Member Since:</span>
-                        <span class="status-value">{{ user.created_at[:10] if user.created_at else 'N/A' }}</span>
+                        <span class="status-value">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</span>
                     </div>
                     
                     <div class="status-item">

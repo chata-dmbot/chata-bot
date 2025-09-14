@@ -344,10 +344,7 @@ def init_database():
                     print("✅ Unique constraint already exists")
             except Exception as e:
                 print(f"⚠️ Could not add unique constraint (might already exist): {e}")
-                # Rollback the transaction to continue with other operations
-                conn.rollback()
-                # Re-establish cursor after rollback
-                cursor = conn.cursor()
+                # Don't rollback here - just continue with the rest of the initialization
         
         # Insert default bot settings
         param = get_param_placeholder()
