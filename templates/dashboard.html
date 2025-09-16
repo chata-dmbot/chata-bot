@@ -130,6 +130,32 @@
                 </div>
             </div>
         </div>
+
+        {% if debug_enabled %}
+        <!-- Debug Tools Section -->
+        <div class="dashboard-card" style="margin-top: 2rem; border: 2px solid #ff6b6b;">
+            <div class="card-header" style="background-color: #ff6b6b; color: white;">
+                <h3><i class="fas fa-bug"></i> Debug Tools</h3>
+            </div>
+            <div class="card-content">
+                <p><strong>🔧 Debugging Tools:</strong> Use these tools to diagnose webhook and connection issues.</p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <a href="/debug/connections" class="btn btn-secondary" style="background-color: #4ecdc4;">
+                        <i class="fas fa-list"></i> View Connections
+                    </a>
+                    <a href="/debug/health-check" class="btn btn-secondary" style="background-color: #45b7d1;">
+                        <i class="fas fa-heartbeat"></i> Health Check
+                    </a>
+                    <a href="/debug/test-tokens" class="btn btn-secondary" style="background-color: #96ceb4;">
+                        <i class="fas fa-key"></i> Test Tokens
+                    </a>
+                    <a href="/debug/simulate-webhook" class="btn btn-secondary" style="background-color: #feca57;">
+                        <i class="fas fa-flask"></i> Simulate Webhook
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>

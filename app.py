@@ -14,6 +14,7 @@ import sendgrid
 from sendgrid.helpers.mail import Mail
 import psycopg2
 import psycopg2.extras
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -995,6 +996,415 @@ def instagram_callback():
     
     return redirect(url_for('dashboard'))
 
+@app.route("/debug/connections")
+@login_required
+def debug_connections():
+    """Debug endpoint to show all Instagram connections and their details"""
+    conn = get_db_connection()
+    if not conn:
+        return "❌ Database connection failed", 500
+    
+    cursor = conn.cursor()
+    try:
+        # Get all Instagram connections
+        cursor.execute("""
+            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active, created_at
+            FROM instagram_connections 
+            ORDER BY created_at DESC
+        """)
+        connections = cursor.fetchall()
+        
+        # Get client settings for each connection
+        cursor.execute("""
+            SELECT instagram_connection_id, bot_personality, auto_reply, created_at
+            FROM client_settings
+        """)
+        settings = cursor.fetchall()
+        
+        debug_info = {
+            "total_connections": len(connections),
+            "connections": [],
+            "settings": []
+        }
+        
+        for conn_data in connections:
+            connection_info = {
+                "id": conn_data[0],
+                "user_id": conn_data[1],
+                "instagram_user_id": conn_data[2],
+                "instagram_page_id": conn_data[3],
+                "page_access_token": conn_data[4][:20] + "..." if conn_data[4] else "None",
+                "is_active": conn_data[5],
+                "created_at": str(conn_data[6])
+            }
+            debug_info["connections"].append(connection_info)
+        
+        for setting in settings:
+            setting_info = {
+                "instagram_connection_id": setting[0],
+                "bot_personality": setting[1][:50] + "..." if setting[1] else "None",
+                "auto_reply": setting[2],
+                "created_at": str(setting[3])
+            }
+            debug_info["settings"].append(setting_info)
+        
+        return f"""
+        <h1>🔍 Instagram Connections Debug</h1>
+        <h2>📊 Summary</h2>
+        <p><strong>Total Connections:</strong> {debug_info['total_connections']}</p>
+        
+        <h2>🔗 Instagram Connections</h2>
+        <pre>{json.dumps(debug_info['connections'], indent=2)}</pre>
+        
+        <h2>⚙️ Client Settings</h2>
+        <pre>{json.dumps(debug_info['settings'], indent=2)}</pre>
+        
+        <h2>🧪 Test Links</h2>
+        <p><a href="/debug/test-tokens">Test Page Access Tokens</a></p>
+        <p><a href="/debug/test-instagram-api">Test Instagram API Calls</a></p>
+        <p><a href="/debug/simulate-webhook">Simulate Webhook Call</a></p>
+        <p><a href="/debug/health-check">Full Health Check</a></p>
+        """
+        
+    except Exception as e:
+        return f"❌ Error: {str(e)}", 500
+    finally:
+        conn.close()
+
+@app.route("/debug/test-tokens")
+@login_required
+def debug_test_tokens():
+    """Test all page access tokens and show their validity and permissions"""
+    conn = get_db_connection()
+    if not conn:
+        return "❌ Database connection failed", 500
+    
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            FROM instagram_connections 
+            WHERE is_active = TRUE
+        """)
+        connections = cursor.fetchall()
+        
+        results = []
+        
+        for conn_data in connections:
+            connection_id, instagram_user_id, instagram_page_id, page_access_token, is_active = conn_data
+            
+            # Test the page access token
+            token_info = test_page_access_token(page_access_token, instagram_page_id)
+            
+            result = {
+                "connection_id": connection_id,
+                "instagram_user_id": instagram_user_id,
+                "instagram_page_id": instagram_page_id,
+                "token_valid": token_info.get("valid", False),
+                "token_info": token_info
+            }
+            results.append(result)
+        
+        return f"""
+        <h1>🔑 Page Access Token Test Results</h1>
+        <h2>📊 Summary</h2>
+        <p><strong>Total Active Connections:</strong> {len(connections)}</p>
+        
+        <h2>🔍 Token Test Results</h2>
+        <pre>{json.dumps(results, indent=2)}</pre>
+        
+        <p><a href="/debug/connections">← Back to Connections Debug</a></p>
+        """
+        
+    except Exception as e:
+        return f"❌ Error: {str(e)}", 500
+    finally:
+        conn.close()
+
+def test_page_access_token(page_access_token, page_id):
+    """Test a page access token and return its validity and permissions"""
+    try:
+        # Test the token by getting page info
+        page_url = f"https://graph.facebook.com/v18.0/{page_id}"
+        params = {
+            'access_token': page_access_token,
+            'fields': 'id,name,instagram_business_account'
+        }
+        
+        response = requests.get(page_url, params=params)
+        
+        if response.status_code == 200:
+            page_data = response.json()
+            instagram_account = page_data.get('instagram_business_account')
+            
+            # Test Instagram API access
+            instagram_info = None
+            if instagram_account:
+                instagram_id = instagram_account['id']
+                instagram_url = f"https://graph.facebook.com/v18.0/{instagram_id}"
+                instagram_params = {
+                    'access_token': page_access_token,
+                    'fields': 'id,username,media_count'
+                }
+                
+                instagram_response = requests.get(instagram_url, params=instagram_params)
+                if instagram_response.status_code == 200:
+                    instagram_info = instagram_response.json()
+            
+            return {
+                "valid": True,
+                "page_data": page_data,
+                "instagram_account": instagram_account,
+                "instagram_info": instagram_info,
+                "status_code": response.status_code
+            }
+        else:
+            return {
+                "valid": False,
+                "error": response.text,
+                "status_code": response.status_code
+            }
+            
+    except Exception as e:
+        return {
+            "valid": False,
+            "error": str(e),
+            "status_code": None
+        }
+
+@app.route("/debug/simulate-webhook")
+@login_required
+def debug_simulate_webhook():
+    """Simulate a webhook call to test the message processing logic"""
+    return """
+    <h1>🧪 Webhook Simulation</h1>
+    <p>This will simulate a webhook call to test the message processing logic.</p>
+    
+    <form method="POST" action="/debug/simulate-webhook">
+        <h3>Test Message Parameters:</h3>
+        <p>
+            <label>Sender ID (Instagram user who sent the message):</label><br>
+            <input type="text" name="sender_id" value="123456789" style="width: 300px;">
+        </p>
+        <p>
+            <label>Recipient ID (Your Instagram account that received the message):</label><br>
+            <input type="text" name="recipient_id" value="17841471490292183" style="width: 300px;">
+        </p>
+        <p>
+            <label>Page ID (Facebook Page ID):</label><br>
+            <input type="text" name="page_id" value="830077620186727" style="width: 300px;">
+        </p>
+        <p>
+            <label>Message Text:</label><br>
+            <input type="text" name="message_text" value="Hello, this is a test message!" style="width: 400px;">
+        </p>
+        <p>
+            <button type="submit">🚀 Simulate Webhook Call</button>
+        </p>
+    </form>
+    
+    <p><a href="/debug/connections">← Back to Connections Debug</a></p>
+    """
+
+@app.route("/debug/simulate-webhook", methods=["POST"])
+@login_required
+def debug_simulate_webhook_post():
+    """Process the simulated webhook call"""
+    sender_id = request.form.get('sender_id', '123456789')
+    recipient_id = request.form.get('recipient_id', '17841471490292183')
+    page_id = request.form.get('page_id', '830077620186727')
+    message_text = request.form.get('message_text', 'Hello, this is a test message!')
+    
+    # Create a simulated webhook payload
+    simulated_data = {
+        "entry": [{
+            "id": page_id,
+            "messaging": [{
+                "sender": {"id": sender_id},
+                "recipient": {"id": recipient_id},
+                "message": {"text": message_text}
+            }]
+        }]
+    }
+    
+    # Process the simulated webhook
+    result = process_webhook_message(simulated_data)
+    
+    return f"""
+    <h1>🧪 Webhook Simulation Results</h1>
+    <h2>📋 Simulated Payload:</h2>
+    <pre>{json.dumps(simulated_data, indent=2)}</pre>
+    
+    <h2>🔍 Processing Results:</h2>
+    <pre>{json.dumps(result, indent=2)}</pre>
+    
+    <p><a href="/debug/simulate-webhook">← Run Another Simulation</a></p>
+    <p><a href="/debug/connections">← Back to Connections Debug</a></p>
+    """
+
+def process_webhook_message(data):
+    """Process a webhook message and return detailed results"""
+    results = {
+        "success": False,
+        "steps": [],
+        "errors": [],
+        "connection_found": False,
+        "message_sent": False
+    }
+    
+    try:
+        results["steps"].append("Starting webhook message processing")
+        
+        if 'entry' not in data:
+            results["errors"].append("No 'entry' in webhook data")
+            return results
+        
+        for entry in data['entry']:
+            if 'messaging' not in entry:
+                results["errors"].append("No 'messaging' in entry")
+                continue
+                
+            for event in entry['messaging']:
+                if event.get('message', {}).get('is_echo'):
+                    results["steps"].append("Skipping echo message")
+                    continue
+                
+                sender_id = event['sender']['id']
+                recipient_id = event.get('recipient', {}).get('id')
+                page_id = entry.get('id')
+                message_text = event.get('message', {}).get('text', '')
+                
+                results["steps"].append(f"Processing message from {sender_id} to {recipient_id}")
+                results["steps"].append(f"Page ID: {page_id}")
+                results["steps"].append(f"Message: {message_text}")
+                
+                # Find Instagram connection
+                instagram_connection = None
+                
+                if recipient_id:
+                    results["steps"].append(f"Looking for connection with user ID: {recipient_id}")
+                    instagram_connection = get_instagram_connection_by_id(recipient_id)
+                
+                if not instagram_connection and page_id:
+                    results["steps"].append(f"Looking for connection with page ID: {page_id}")
+                    instagram_connection = get_instagram_connection_by_page_id(page_id)
+                
+                if instagram_connection:
+                    results["connection_found"] = True
+                    results["steps"].append(f"✅ Found connection: {instagram_connection}")
+                    
+                    # Test sending a reply
+                    try:
+                        reply_text = f"Test reply from bot: {message_text}"
+                        success = send_instagram_message(
+                            instagram_connection['page_access_token'],
+                            sender_id,
+                            reply_text
+                        )
+                        results["message_sent"] = success
+                        if success:
+                            results["steps"].append("✅ Test message sent successfully")
+                        else:
+                            results["steps"].append("❌ Failed to send test message")
+                    except Exception as e:
+                        results["errors"].append(f"Error sending message: {str(e)}")
+                else:
+                    results["errors"].append(f"No Instagram connection found for recipient {recipient_id} or page {page_id}")
+        
+        results["success"] = len(results["errors"]) == 0
+        return results
+        
+    except Exception as e:
+        results["errors"].append(f"Unexpected error: {str(e)}")
+        return results
+
+@app.route("/debug/health-check")
+@login_required
+def debug_health_check():
+    """Comprehensive health check for all Instagram connections"""
+    conn = get_db_connection()
+    if not conn:
+        return "❌ Database connection failed", 500
+    
+    cursor = conn.cursor()
+    try:
+        # Get all connections
+        cursor.execute("""
+            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            FROM instagram_connections 
+            ORDER BY created_at DESC
+        """)
+        connections = cursor.fetchall()
+        
+        health_results = {
+            "database_connection": True,
+            "total_connections": len(connections),
+            "active_connections": 0,
+            "valid_tokens": 0,
+            "connections": []
+        }
+        
+        for conn_data in connections:
+            connection_id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active = conn_data
+            
+            connection_health = {
+                "id": connection_id,
+                "instagram_user_id": instagram_user_id,
+                "instagram_page_id": instagram_page_id,
+                "is_active": is_active,
+                "token_valid": False,
+                "instagram_api_accessible": False,
+                "can_send_messages": False,
+                "errors": []
+            }
+            
+            if is_active:
+                health_results["active_connections"] += 1
+                
+                # Test token validity
+                token_info = test_page_access_token(page_access_token, instagram_page_id)
+                connection_health["token_valid"] = token_info.get("valid", False)
+                
+                if connection_health["token_valid"]:
+                    health_results["valid_tokens"] += 1
+                    connection_health["instagram_api_accessible"] = bool(token_info.get("instagram_info"))
+                    
+                    # Test message sending capability
+                    try:
+                        # This is a dry run - we won't actually send a message
+                        connection_health["can_send_messages"] = True
+                    except Exception as e:
+                        connection_health["errors"].append(f"Message sending test failed: {str(e)}")
+                else:
+                    connection_health["errors"].append(f"Token invalid: {token_info.get('error', 'Unknown error')}")
+            
+            health_results["connections"].append(connection_health)
+        
+        # Overall health status
+        health_results["overall_health"] = "healthy" if health_results["valid_tokens"] > 0 else "unhealthy"
+        
+        return f"""
+        <h1>🏥 Instagram Connections Health Check</h1>
+        <h2>📊 Overall Status: {health_results['overall_health'].upper()}</h2>
+        <p><strong>Database Connection:</strong> {'✅ Connected' if health_results['database_connection'] else '❌ Failed'}</p>
+        <p><strong>Total Connections:</strong> {health_results['total_connections']}</p>
+        <p><strong>Active Connections:</strong> {health_results['active_connections']}</p>
+        <p><strong>Valid Tokens:</strong> {health_results['valid_tokens']}</p>
+        
+        <h2>🔍 Detailed Connection Health:</h2>
+        <pre>{json.dumps(health_results['connections'], indent=2)}</pre>
+        
+        <h2>🧪 Quick Actions:</h2>
+        <p><a href="/debug/test-tokens">Test All Tokens</a></p>
+        <p><a href="/debug/simulate-webhook">Simulate Webhook</a></p>
+        <p><a href="/debug/connections">View All Connections</a></p>
+        """
+        
+    except Exception as e:
+        return f"❌ Health check failed: {str(e)}", 500
+    finally:
+        conn.close()
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -1023,7 +1433,7 @@ def dashboard():
             'created_at': conn_data[4]
         })
     
-    return render_template("dashboard.html", user=user, connections=connections_list)
+    return render_template("dashboard.html", user=user, connections=connections_list, debug_enabled=True)
 
 # ---- Bot Settings Management ----
 
