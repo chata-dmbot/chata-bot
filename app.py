@@ -855,7 +855,7 @@ def instagram_callback():
                 break
         
         if not instagram_account:
-            print(f"❌ No Instagram Business account found in {len(accounts_data.get('data', []))} accounts")
+            print(f"ℹ️ No Instagram Business account found in {len(accounts_data.get('data', []))} accounts - trying alternative method...")
             
             # Let's try a different approach - get the specific Page ID from the token
             debug_token_url = "https://graph.facebook.com/v18.0/debug_token"
@@ -1525,12 +1525,13 @@ def webhook():
         if conn:
             cursor = conn.cursor()
             try:
-                cursor.execute("SELECT instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
+                cursor.execute("SELECT id, instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
                 connections = cursor.fetchall()
+                print(f"📊 Found {len(connections)} Instagram connections in database:")
                 for conn_data in connections:
-                    print(f"  - User ID: {conn_data[0]}, Page ID: {conn_data[1]}, Active: {conn_data[2]}")
+                    print(f"  - ID: {conn_data[0]}, User ID: {conn_data[1]}, Page ID: {conn_data[2]}, Active: {conn_data[3]}")
             except Exception as e:
-                print(f"Error fetching connections: {e}")
+                print(f"❌ Error fetching connections: {e}")
             finally:
                 conn.close()
 
@@ -1559,8 +1560,14 @@ def webhook():
                                 page_id = entry.get('id')
                                 print(f"📄 Page ID from entry: {page_id}")
                                 
-                                # Find the Instagram connection for this recipient
-                                instagram_connection = get_instagram_connection_by_id(recipient_id)
+                                # Find the Instagram connection for this recipient (the account that received the message)
+                                # We need to match by the Instagram user ID, not the page ID
+                                instagram_connection = None
+                                
+                                # First try to find by the recipient ID (Instagram user ID)
+                                if recipient_id:
+                                    print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
+                                    instagram_connection = get_instagram_connection_by_id(recipient_id)
                                 
                                 # If not found by user ID, try by page ID
                                 if not instagram_connection and page_id:
