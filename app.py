@@ -1318,6 +1318,31 @@ def process_webhook_message(data):
         results["errors"].append(f"Unexpected error: {str(e)}")
         return results
 
+def send_instagram_message(page_access_token, recipient_id, message_text):
+    """Send a message via Instagram API"""
+    try:
+        url = "https://graph.facebook.com/v18.0/me/messages"
+        params = {
+            'access_token': page_access_token
+        }
+        data = {
+            'recipient': {'id': recipient_id},
+            'message': {'text': message_text}
+        }
+        
+        response = requests.post(url, params=params, json=data)
+        
+        if response.status_code == 200:
+            print(f"✅ Message sent successfully to {recipient_id}")
+            return True
+        else:
+            print(f"❌ Failed to send message: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error sending message: {str(e)}")
+        return False
+
 @app.route("/debug/health-check")
 @login_required
 def debug_health_check():
