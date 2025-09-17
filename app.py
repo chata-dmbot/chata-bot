@@ -1151,11 +1151,22 @@ def test_page_access_token(page_access_token, page_id):
                 if instagram_response.status_code == 200:
                     instagram_info = instagram_response.json()
             
+            # Check token permissions
+            debug_url = "https://graph.facebook.com/v18.0/debug_token"
+            debug_params = {
+                'input_token': page_access_token,
+                'access_token': page_access_token
+            }
+            
+            debug_response = requests.get(debug_url, params=debug_params)
+            token_info = debug_response.json() if debug_response.status_code == 200 else None
+            
             return {
                 "valid": True,
                 "page_data": page_data,
                 "instagram_account": instagram_account,
                 "instagram_info": instagram_info,
+                "token_info": token_info,
                 "status_code": response.status_code
             }
         else:
@@ -1171,6 +1182,98 @@ def test_page_access_token(page_access_token, page_id):
             "error": str(e),
             "status_code": None
         }
+
+@app.route("/debug/check-permissions")
+@login_required
+def debug_check_permissions():
+    """Check what permissions the page access tokens actually have"""
+    conn = get_db_connection()
+    if not conn:
+        return "❌ Database connection failed", 500
+    
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            FROM instagram_connections 
+            WHERE is_active = TRUE
+        """)
+        connections = cursor.fetchall()
+        
+        results = []
+        
+        for conn_data in connections:
+            connection_id, instagram_user_id, instagram_page_id, page_access_token, is_active = conn_data
+            
+            # Check token permissions
+            debug_url = "https://graph.facebook.com/v18.0/debug_token"
+            debug_params = {
+                'input_token': page_access_token,
+                'access_token': page_access_token
+            }
+            
+            try:
+                debug_response = requests.get(debug_url, params=debug_params)
+                if debug_response.status_code == 200:
+                    token_data = debug_response.json()
+                    scopes = token_data.get('data', {}).get('scopes', [])
+                    app_id = token_data.get('data', {}).get('app_id')
+                    user_id = token_data.get('data', {}).get('user_id')
+                    expires_at = token_data.get('data', {}).get('expires_at')
+                    
+                    result = {
+                        "connection_id": connection_id,
+                        "instagram_user_id": instagram_user_id,
+                        "instagram_page_id": instagram_page_id,
+                        "app_id": app_id,
+                        "user_id": user_id,
+                        "expires_at": expires_at,
+                        "scopes": scopes,
+                        "has_messaging_scope": "pages_messaging" in scopes,
+                        "has_instagram_scope": "instagram_basic" in scopes or "instagram_manage_messages" in scopes,
+                        "token_valid": True
+                    }
+                else:
+                    result = {
+                        "connection_id": connection_id,
+                        "instagram_user_id": instagram_user_id,
+                        "instagram_page_id": instagram_page_id,
+                        "token_valid": False,
+                        "error": debug_response.text
+                    }
+            except Exception as e:
+                result = {
+                    "connection_id": connection_id,
+                    "instagram_user_id": instagram_user_id,
+                    "instagram_page_id": instagram_page_id,
+                    "token_valid": False,
+                    "error": str(e)
+                }
+            
+            results.append(result)
+        
+        return f"""
+        <h1>🔐 Page Access Token Permissions</h1>
+        <h2>📊 Summary</h2>
+        <p><strong>Total Active Connections:</strong> {len(connections)}</p>
+        
+        <h2>🔍 Token Permission Details:</h2>
+        <pre>{json.dumps(results, indent=2)}</pre>
+        
+        <h2>💡 Required Permissions for Instagram Messaging:</h2>
+        <ul>
+            <li><strong>pages_messaging</strong> - Required to send messages</li>
+            <li><strong>instagram_basic</strong> - Required for Instagram API access</li>
+            <li><strong>instagram_manage_messages</strong> - Required for Instagram messaging</li>
+        </ul>
+        
+        <p><a href="/debug/connections">← Back to Connections Debug</a></p>
+        """
+        
+    except Exception as e:
+        return f"❌ Error: {str(e)}", 500
+    finally:
+        conn.close()
 
 @app.route("/debug/simulate-webhook")
 @login_required
