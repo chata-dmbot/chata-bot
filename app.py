@@ -1299,7 +1299,8 @@ def process_webhook_message(data):
                         success = send_instagram_message(
                             instagram_connection['page_access_token'],
                             sender_id,
-                            reply_text
+                            reply_text,
+                            instagram_connection['instagram_user_id']
                         )
                         results["message_sent"] = success
                         if success:
@@ -1318,19 +1319,26 @@ def process_webhook_message(data):
         results["errors"].append(f"Unexpected error: {str(e)}")
         return results
 
-def send_instagram_message(page_access_token, recipient_id, message_text):
+def send_instagram_message(page_access_token, recipient_id, message_text, instagram_user_id=None):
     """Send a message via Instagram API"""
     try:
-        url = "https://graph.facebook.com/v18.0/me/messages"
-        params = {
-            'access_token': page_access_token
-        }
+        # Use the same approach as the original webhook
+        if instagram_user_id:
+            url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages?access_token={page_access_token}"
+        else:
+            # Fallback to /me/messages if no instagram_user_id provided
+            url = f"https://graph.facebook.com/v18.0/me/messages?access_token={page_access_token}"
+        
         data = {
             'recipient': {'id': recipient_id},
             'message': {'text': message_text}
         }
         
-        response = requests.post(url, params=params, json=data)
+        response = requests.post(url, json=data)
+        
+        print(f"📤 Sending message to {recipient_id} via {instagram_user_id or 'me'}")
+        print(f"🔗 URL: {url}")
+        print(f"📋 Payload: {data}")
         
         if response.status_code == 200:
             print(f"✅ Message sent successfully to {recipient_id}")
