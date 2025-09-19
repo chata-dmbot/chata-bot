@@ -1266,7 +1266,7 @@ def test_page_access_token(page_access_token, page_id):
                 instagram_id = instagram_account['id']
                 instagram_url = f"https://graph.facebook.com/v18.0/{instagram_id}"
                 instagram_params = {
-                    'access_token': page_access_token,
+                    'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET,
                     'fields': 'id,username,media_count'
                 }
                 
@@ -1278,7 +1278,7 @@ def test_page_access_token(page_access_token, page_id):
             debug_url = "https://graph.facebook.com/v18.0/debug_token"
             debug_params = {
                 'input_token': page_access_token,
-                'access_token': page_access_token
+                'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET
             }
             
             debug_response = requests.get(debug_url, params=debug_params)
@@ -1332,7 +1332,7 @@ def debug_check_permissions():
             debug_url = "https://graph.facebook.com/v18.0/debug_token"
             debug_params = {
                 'input_token': page_access_token,
-                'access_token': page_access_token
+                'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET
             }
             
             try:
@@ -1676,9 +1676,9 @@ def test_database_token():
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT ic.instagram_user_id, ic.page_access_token, ic.page_id, ic.username
+            SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
             FROM instagram_connections ic
-            WHERE ic.username = 'EgoInspiration'
+            WHERE ic.instagram_user_id = '17841471490292183'
             LIMIT 1
         """)
         
@@ -1688,7 +1688,7 @@ def test_database_token():
         if not connection:
             return jsonify({"error": "No EgoInspo connection found"}), 404
             
-        instagram_user_id, page_access_token, page_id, username = connection
+        instagram_user_id, page_access_token, instagram_page_id = connection
         
         # Test the token by getting Instagram account info
         test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}?fields=id,username,account_type&access_token={page_access_token}"
@@ -1760,8 +1760,8 @@ def test_database_token():
                         <h3>🔍 Token Information</h3>
                         <pre>{json.dumps({
                             "instagram_user_id": instagram_user_id,
-                            "page_id": page_id,
-                            "username": username,
+                            "instagram_page_id": instagram_page_id,
+                            "username": "EgoInspiration",
                             "token_preview": page_access_token[:20] + "..."
                         }, indent=2)}</pre>
                     </div>
@@ -1948,9 +1948,9 @@ def test_send_message():
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT ic.instagram_user_id, ic.page_access_token, ic.page_id, ic.username
+            SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
             FROM instagram_connections ic
-            WHERE ic.username = 'EgoInspiration'
+            WHERE ic.instagram_user_id = '17841471490292183'
             LIMIT 1
         """)
         
@@ -1968,7 +1968,7 @@ def test_send_message():
             </div>
             """, 404
             
-        instagram_user_id, page_access_token, page_id, username = connection
+        instagram_user_id, page_access_token, instagram_page_id = connection
         
         # Test sending a message (this will fail if the recipient isn't valid, but we can see the error)
         test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages"
@@ -2048,8 +2048,8 @@ def test_send_message():
                     <h3>🔍 Token Information</h3>
                     <pre>{json.dumps({
                         "instagram_user_id": instagram_user_id,
-                        "page_id": page_id,
-                        "username": username,
+                        "instagram_page_id": instagram_page_id,
+                        "username": "EgoInspiration",
                         "token_preview": page_access_token[:20] + "..."
                     }, indent=2)}</pre>
                 </div>
