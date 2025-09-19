@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
 import requests
 import openai
 import sqlite3
@@ -1064,6 +1064,8 @@ def debug_connections():
         <p><a href="/debug/test-instagram-api">Test Instagram API Calls</a></p>
         <p><a href="/debug/simulate-webhook">Simulate Webhook Call</a></p>
         <p><a href="/debug/health-check">Full Health Check</a></p>
+        <p><a href="/debug/test-database-token">Test Database Token Directly</a></p>
+        <p><a href="/debug/test-send-message" target="_blank">Test Send Message (POST)</a></p>
         """
         
     except Exception as e:
@@ -1534,12 +1536,119 @@ def debug_health_check():
         <p><a href="/debug/test-tokens">Test All Tokens</a></p>
         <p><a href="/debug/simulate-webhook">Simulate Webhook</a></p>
         <p><a href="/debug/connections">View All Connections</a></p>
+        <p><a href="/debug/test-database-token">Test Database Token Directly</a></p>
+        <p><a href="/debug/test-send-message" target="_blank">Test Send Message (POST)</a></p>
         """
         
     except Exception as e:
         return f"❌ Health check failed: {str(e)}", 500
     finally:
         conn.close()
+
+@app.route('/debug/test-database-token', methods=['GET'])
+def test_database_token():
+    """Test if database token can send messages directly"""
+    try:
+        # Get the EgoInspo connection (the one we know has correct permissions)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT ic.instagram_user_id, ic.page_access_token, ic.page_id, ic.username
+            FROM instagram_connections ic
+            WHERE ic.username = 'EgoInspiration'
+            LIMIT 1
+        """)
+        
+        connection = cursor.fetchone()
+        conn.close()
+        
+        if not connection:
+            return jsonify({"error": "No EgoInspo connection found"}), 404
+            
+        instagram_user_id, page_access_token, page_id, username = connection
+        
+        # Test the token by getting Instagram account info
+        test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}?fields=id,username,account_type&access_token={page_access_token}"
+        
+        response = requests.get(test_url)
+        
+        if response.status_code == 200:
+            account_info = response.json()
+            return jsonify({
+                "success": True,
+                "message": "Database token is valid and can access Instagram API",
+                "account_info": account_info,
+                "token_info": {
+                    "instagram_user_id": instagram_user_id,
+                    "page_id": page_id,
+                    "username": username,
+                    "token_preview": page_access_token[:20] + "..."
+                }
+            })
+        else:
+            return jsonify({
+                "error": "Database token failed to access Instagram API",
+                "status_code": response.status_code,
+                "response": response.text
+            }), 400
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/debug/test-send-message', methods=['POST'])
+def test_send_message():
+    """Test sending a message using the database token"""
+    try:
+        data = request.get_json()
+        test_message = data.get('message', 'Test message from debug endpoint')
+        
+        # Get the EgoInspo connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT ic.instagram_user_id, ic.page_access_token, ic.page_id, ic.username
+            FROM instagram_connections ic
+            WHERE ic.username = 'EgoInspiration'
+            LIMIT 1
+        """)
+        
+        connection = cursor.fetchone()
+        conn.close()
+        
+        if not connection:
+            return jsonify({"error": "No EgoInspo connection found"}), 404
+            
+        instagram_user_id, page_access_token, page_id, username = connection
+        
+        # Test sending a message (this will fail if the recipient isn't valid, but we can see the error)
+        test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages"
+        
+        payload = {
+            "recipient": {"id": "test_recipient_id"},
+            "message": {"text": test_message}
+        }
+        
+        response = requests.post(test_url, json=payload, headers={
+            'Authorization': f'Bearer {page_access_token}',
+            'Content-Type': 'application/json'
+        })
+        
+        return jsonify({
+            "test_url": test_url,
+            "payload": payload,
+            "status_code": response.status_code,
+            "response": response.text,
+            "token_info": {
+                "instagram_user_id": instagram_user_id,
+                "page_id": page_id,
+                "username": username
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/dashboard")
 @login_required
