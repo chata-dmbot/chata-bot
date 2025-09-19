@@ -471,7 +471,7 @@ def create_dummy_chata_user(cursor=None):
         # Create dummy user
         cursor.execute("""
             INSERT INTO users (email, password_hash)
-            VALUES (?, ?)
+            VALUES (%s, %s)
             RETURNING id
         """, ('chata@dummy.com', 'dummy_hash'))
         
@@ -2086,8 +2086,8 @@ def update_instagram_id():
         # Update any connection that has the old ID
         cursor.execute("""
             UPDATE instagram_connections 
-            SET instagram_user_id = ? 
-            WHERE instagram_user_id = ?
+            SET instagram_user_id = %s 
+            WHERE instagram_user_id = %s
         """, (new_id, old_id))
         
         rows_updated = cursor.rowcount
@@ -2696,18 +2696,18 @@ def save_message(instagram_user_id, message_text, bot_response):
     placeholder = get_param_placeholder()
     
     try:
-        cursor.execute(
+    cursor.execute(
             f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
             (instagram_user_id, message_text, bot_response)
-        )
-        conn.commit()
+    )
+    conn.commit()
         print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
     except Exception as e:
         print(f"❌ Error saving message: {e}")
         conn.rollback()
         raise
     finally:
-        conn.close()
+    conn.close()
 
 def get_last_messages(instagram_user_id, n=35):
     """Get conversation history for a specific Instagram user"""
@@ -2716,11 +2716,11 @@ def get_last_messages(instagram_user_id, n=35):
     placeholder = get_param_placeholder()
     
     try:
-        cursor.execute(
+    cursor.execute(
             f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
             (instagram_user_id, n)
-        )
-        rows = cursor.fetchall()
+    )
+    rows = cursor.fetchall()
         
         # Convert to OpenAI format
         messages = []
@@ -2737,7 +2737,7 @@ def get_last_messages(instagram_user_id, n=35):
         print(f"❌ Error retrieving messages: {e}")
         return []
     finally:
-        conn.close()
+    conn.close()
 
 # ---- Instagram Connection Helpers ----
 
@@ -2928,7 +2928,7 @@ def webhook():
                         sender_id = event['sender']['id']
                         if 'message' in event and 'text' in event['message']:
                             try:
-                                message_text = event['message']['text']
+                            message_text = event['message']['text']
                                 print(f"📨 Received a message from {sender_id}: {message_text}")
 
                                 # 🔍 DETECT WHICH INSTAGRAM ACCOUNT RECEIVED THE MESSAGE
@@ -2981,7 +2981,7 @@ def webhook():
                                 print(f"✅ Saved user message for {sender_id}")
                                 
                                 # Get conversation history
-                                history = get_last_messages(sender_id, n=35)
+                            history = get_last_messages(sender_id, n=35)
                                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
                                 # Generate AI reply with account-specific settings
@@ -2994,12 +2994,12 @@ def webhook():
 
                                 # Send reply via Instagram API using the correct access token
                                 url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages?access_token={access_token}"
-                                payload = {
-                                    "recipient": {"id": sender_id},
-                                    "message": {"text": reply_text}
-                                }
+                            payload = {
+                                "recipient": {"id": sender_id},
+                                "message": {"text": reply_text}
+                            }
 
-                                r = requests.post(url, json=payload)
+                            r = requests.post(url, json=payload)
                                 print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code}")
                                 if r.status_code != 200:
                                     print(f"❌ Error sending reply: {r.text}")
