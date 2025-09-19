@@ -1209,7 +1209,33 @@ def debug_connections():
                     <a href="/dashboard" class="nav-btn">🏠 Back to Dashboard</a>
                     <a href="/debug/health-check" class="nav-btn warning">🏥 Health Check</a>
                     <a href="/debug/check-permissions" class="nav-btn">🔐 Check Permissions</a>
+                    <button onclick="updateInstagramId()" class="nav-btn" style="background-color: #9b59b6;">🔄 Update Instagram ID</button>
                 </div>
+                
+                <script>
+                function updateInstagramId() {{
+                    if (confirm('This will update the Instagram User ID in the database. Continue?')) {{
+                        fetch('/debug/update-instagram-id', {{
+                            method: 'POST',
+                            headers: {{
+                                'Content-Type': 'application/json',
+                            }}
+                        }})
+                        .then(response => response.json())
+                        .then(data => {{
+                            if (data.success) {{
+                                alert('✅ ' + data.message + '\\n\\nUpdated from ' + data.old_id + ' to ' + data.new_id);
+                                location.reload();
+                            }} else {{
+                                alert('❌ Error: ' + data.error);
+                            }}
+                        }})
+                        .catch(error => {{
+                            alert('❌ Error: ' + error);
+                        }});
+                    }}
+                }}
+                </script>
                 
                 <div class="section">
                     <h2>📊 Current Status</h2>
@@ -1928,6 +1954,68 @@ def test_database_token():
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/debug/update-instagram-id", methods=["POST"])
+@login_required
+def update_instagram_id():
+    """Update Instagram User ID in database from business account ID to correct user ID"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check current data
+        cursor.execute("SELECT id, instagram_user_id, instagram_page_id FROM instagram_connections")
+        connections = cursor.fetchall()
+        
+        current_data = []
+        for conn_info in connections:
+            current_data.append({
+                "id": conn_info[0],
+                "instagram_user_id": conn_info[1],
+                "instagram_page_id": conn_info[2]
+            })
+        
+        # Update the Instagram User ID from business account ID to user ID
+        old_id = "17841471490292183"  # Business account ID
+        new_id = "71457471009"        # Correct user ID
+        
+        cursor.execute("""
+            UPDATE instagram_connections 
+            SET instagram_user_id = ? 
+            WHERE instagram_user_id = ?
+        """, (new_id, old_id))
+        
+        rows_updated = cursor.rowcount
+        
+        # Get updated data
+        cursor.execute("SELECT id, instagram_user_id, instagram_page_id FROM instagram_connections")
+        updated_connections = cursor.fetchall()
+        
+        updated_data = []
+        for conn_info in updated_connections:
+            updated_data.append({
+                "id": conn_info[0],
+                "instagram_user_id": conn_info[1],
+                "instagram_page_id": conn_info[2]
+            })
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Updated {rows_updated} row(s)",
+            "old_id": old_id,
+            "new_id": new_id,
+            "current_data": current_data,
+            "updated_data": updated_data
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @app.route('/debug/test-send-message', methods=['GET', 'POST'])
 @login_required
