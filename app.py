@@ -1266,7 +1266,7 @@ def test_page_access_token(page_access_token, page_id):
                 instagram_id = instagram_account['id']
                 instagram_url = f"https://graph.facebook.com/v18.0/{instagram_id}"
                 instagram_params = {
-                    'access_token': FACEBOOK_APP_ID + '|' + FACEBOOK_APP_SECRET,
+                    'access_token': page_access_token,
                     'fields': 'id,username,media_count'
                 }
                 
@@ -1691,7 +1691,7 @@ def test_database_token():
         instagram_user_id, page_access_token, instagram_page_id = connection
         
         # Test the token by getting Instagram account info
-        test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}?fields=id,username,account_type&access_token={page_access_token}"
+        test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}?fields=id,username&access_token={page_access_token}"
         
         response = requests.get(test_url)
         
@@ -1974,7 +1974,7 @@ def test_send_message():
         test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages"
         
         payload = {
-            "recipient": {"id": "test_recipient_id"},
+            "recipient": {"id": "17841414162745169"},
             "message": {"text": test_message}
         }
         
