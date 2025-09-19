@@ -2148,7 +2148,7 @@ def test_send_message():
                     <pre>{json.dumps({
                         "instagram_user_id": instagram_user_id,
                         "instagram_page_id": instagram_page_id,
-                        "username": "EgoInspiration",
+                        "username": "chata_bot" if test_both else "EgoInspiration",
                         "token_preview": page_access_token[:20] + "..."
                     }, indent=2)}</pre>
                 </div>
