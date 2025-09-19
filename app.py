@@ -325,18 +325,21 @@ def init_database():
         param = get_param_placeholder()
         if is_postgres:
             # PostgreSQL syntax
-            cursor.execute(f"""
-                INSERT INTO settings (key, value) VALUES ({param}, {param})
-                ON CONFLICT (key) DO NOTHING
-            """, ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
-            cursor.execute(f"""
-                INSERT INTO settings (key, value) VALUES ({param}, {param})
-                ON CONFLICT (key) DO NOTHING
-            """, ('temperature', '0.7'))
-            cursor.execute(f"""
-                INSERT INTO settings (key, value) VALUES ({param}, {param})
-                ON CONFLICT (key) DO NOTHING
-            """, ('max_tokens', '150'))
+            # Insert default settings if they don't exist
+            cursor.execute(f"SELECT id FROM settings WHERE key = {param}", ('bot_personality',))
+            if not cursor.fetchone():
+                cursor.execute(f"INSERT INTO settings (key, value) VALUES ({param}, {param})", 
+                              ('bot_personality', 'You are a helpful and friendly Instagram bot.'))
+            
+            cursor.execute(f"SELECT id FROM settings WHERE key = {param}", ('temperature',))
+            if not cursor.fetchone():
+                cursor.execute(f"INSERT INTO settings (key, value) VALUES ({param}, {param})", 
+                              ('temperature', '0.7'))
+            
+            cursor.execute(f"SELECT id FROM settings WHERE key = {param}", ('max_tokens',))
+            if not cursor.fetchone():
+                cursor.execute(f"INSERT INTO settings (key, value) VALUES ({param}, {param})", 
+                              ('max_tokens', '150'))
         else:
             # SQLite syntax
             cursor.execute(f"INSERT OR IGNORE INTO settings (key, value) VALUES ({param}, {param})", 
