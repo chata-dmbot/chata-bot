@@ -129,8 +129,8 @@ def init_database():
                 CREATE TABLE IF NOT EXISTS instagram_connections (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES users(id),
-                    instagram_user_id VARCHAR(255) NOT NULL,
-                    instagram_page_id VARCHAR(255) NOT NULL,
+                    instagram_user_id VARCHAR(255) NOT NULL,  -- This is actually the Facebook Page ID for messaging API
+                    instagram_page_id VARCHAR(255) NOT NULL,  -- This is the Instagram Business Account ID
                     page_access_token TEXT NOT NULL,
                     is_active BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -235,8 +235,8 @@ def init_database():
                 CREATE TABLE IF NOT EXISTS instagram_connections (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER REFERENCES users(id),
-                    instagram_user_id TEXT NOT NULL,
-                    instagram_page_id TEXT NOT NULL,
+                    instagram_user_id TEXT NOT NULL,  -- This is actually the Facebook Page ID for messaging API
+                    instagram_page_id TEXT NOT NULL,  -- This is the Instagram Business Account ID
                     page_access_token TEXT NOT NULL,
                     is_active BOOLEAN DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -390,7 +390,7 @@ def run_database_migrations():
             )
         """)
         
-        # Migration 1: Fix Instagram User ID from business account ID to user ID
+        # Migration 1: Fix Instagram User ID from business account ID to Facebook Page ID
         migration_name = "fix_instagram_user_id_2024"
         cursor.execute("SELECT id FROM migrations WHERE migration_name = %s", (migration_name,))
         if not cursor.fetchone():
@@ -429,11 +429,35 @@ def run_database_migrations():
         else:
             print(f"✅ Migration '{migration_name}' already executed, skipping...")
         
-        # Migration 2: Ensure we have a dummy user for hardcoded Chata bot
+        # Migration 2: Update EgoInspo to use correct Facebook Page ID
+        migration_name = "update_egoinspo_page_id_2024"
+        cursor.execute("SELECT id FROM migrations WHERE migration_name = %s", (migration_name,))
+        if not cursor.fetchone():
+            print("🔄 Migration 2: Updating EgoInspo to use correct Facebook Page ID...")
+            
+            # Update EgoInspo to use the correct Facebook Page ID (830077620186727)
+            cursor.execute("""
+                UPDATE instagram_connections 
+                SET instagram_user_id = '830077620186727' 
+                WHERE instagram_user_id = '17841471490292183' OR instagram_user_id = '71457471009'
+            """)
+            
+            rows_updated = cursor.rowcount
+            if rows_updated > 0:
+                print(f"✅ Updated {rows_updated} connection(s) to use correct Facebook Page ID for EgoInspo")
+            else:
+                print("✅ No EgoInspo connections found to update")
+            
+            cursor.execute("INSERT INTO migrations (migration_name) VALUES (%s)", (migration_name,))
+            print(f"✅ Migration '{migration_name}' completed and marked as executed")
+        else:
+            print(f"✅ Migration '{migration_name}' already executed, skipping...")
+        
+        # Migration 3: Ensure we have a dummy user for hardcoded Chata bot
         migration_name = "create_dummy_chata_user_2024"
         cursor.execute("SELECT id FROM migrations WHERE migration_name = %s", (migration_name,))
         if not cursor.fetchone():
-            print("🔄 Migration 2: Creating dummy Chata user...")
+            print("🔄 Migration 3: Creating dummy Chata user...")
             create_dummy_chata_user(cursor)
             
             # Mark migration as completed
@@ -2096,13 +2120,13 @@ def debug_discover_instagram_id():
         correct_instagram_user_id = discover_instagram_user_id(page_access_token, page_id)
         
         if correct_instagram_user_id:
-        return jsonify({
-            "success": True,
-            "current_id": "17841471490292183",
-            "discovered_id": "830077620186727",
-            "page_id": page_id,
-            "message": f"✅ Should use Facebook Page ID: 830077620186727 (same pattern as Chata's 745508148639483)"
-        })
+            return jsonify({
+                "success": True,
+                "current_id": "17841471490292183",
+                "discovered_id": "830077620186727",
+                "page_id": page_id,
+                "message": f"✅ Should use Facebook Page ID: 830077620186727 (same pattern as Chata's 745508148639483)"
+            })
         else:
             return jsonify({
                 "success": False,
