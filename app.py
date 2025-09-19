@@ -458,7 +458,7 @@ def create_dummy_chata_user(cursor=None):
     
     try:
         # Check if dummy user already exists
-        cursor.execute("SELECT id FROM users WHERE email = 'chata@dummy.com'")
+        cursor.execute("SELECT id FROM users WHERE email = %s", ('chata@dummy.com',))
         existing_user = cursor.fetchone()
         
         if existing_user:
@@ -468,7 +468,7 @@ def create_dummy_chata_user(cursor=None):
         # Create dummy user
         cursor.execute("""
             INSERT INTO users (email, password_hash)
-            VALUES (?, ?)
+            VALUES (%s, %s)
             RETURNING id
         """, ('chata@dummy.com', 'dummy_hash'))
         
@@ -481,7 +481,7 @@ def create_dummy_chata_user(cursor=None):
                 user_id, instagram_user_id, instagram_page_id, 
                 page_access_token, is_active
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (instagram_user_id) DO NOTHING
         """, (
             user_id, 
@@ -496,7 +496,7 @@ def create_dummy_chata_user(cursor=None):
             INSERT INTO client_settings (
                 user_id, instagram_connection_id, bot_personality
             )
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
             ON CONFLICT (user_id, instagram_connection_id) DO NOTHING
         """, (
             user_id,
