@@ -397,18 +397,28 @@ def run_database_migrations():
             print("🔄 Migration 1: Fixing Instagram User ID...")
             
             # Check if we have the old business account ID
-            cursor.execute("SELECT id, instagram_user_id FROM instagram_connections WHERE instagram_user_id = '17841471490292183'")
+            cursor.execute("SELECT id, instagram_user_id, instagram_page_id, page_access_token FROM instagram_connections WHERE instagram_user_id = '17841471490292183'")
             old_connections = cursor.fetchall()
             
             if old_connections:
                 print(f"📋 Found {len(old_connections)} connection(s) with old business account ID")
                 
-                # Update to correct user ID
-                cursor.execute("""
-                    UPDATE instagram_connections 
-                    SET instagram_user_id = '71457471009' 
-                    WHERE instagram_user_id = '17841471490292183'
-                """)
+                for connection in old_connections:
+                    connection_id, old_user_id, page_id, page_access_token = connection
+                    print(f"🔍 Discovering correct Instagram User ID for connection {connection_id}...")
+                    
+                    # Use the discovery function to get the correct Instagram User ID
+                    correct_user_id = discover_instagram_user_id(page_access_token, page_id)
+                    
+                    if correct_user_id:
+                        cursor.execute("""
+                            UPDATE instagram_connections 
+                            SET instagram_user_id = %s 
+                            WHERE id = %s
+                        """, (correct_user_id, connection_id))
+                        print(f"✅ Updated connection {connection_id} to use correct user ID: {correct_user_id}")
+                    else:
+                        print(f"❌ Failed to discover correct user ID for connection {connection_id}, keeping old ID")
                 
                 rows_updated = cursor.rowcount
                 print(f"✅ Updated {rows_updated} connection(s) to use correct user ID")
@@ -2054,6 +2064,59 @@ def test_database_token():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/debug/discover-instagram-id", methods=["GET", "POST"])
+@login_required
+def debug_discover_instagram_id():
+    """Debug endpoint to discover the correct Instagram User ID for EgoInspo"""
+    if request.method == "GET":
+        return render_template("debug_discover_instagram_id.html")
+    
+    try:
+        # Get EgoInspo connection from database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM instagram_connections WHERE instagram_user_id = '71457471009'")
+        connection = cursor.fetchone()
+        conn.close()
+        
+        if not connection:
+            return jsonify({
+                "success": False,
+                "error": "EgoInspo connection not found in database"
+            })
+        
+        # Extract connection details
+        connection_id = connection[0]
+        page_access_token = connection[4]  # page_access_token column
+        page_id = connection[3]  # instagram_page_id column
+        
+        print(f"🔍 Discovering Instagram User ID for EgoInspo...")
+        print(f"Page ID: {page_id}")
+        print(f"Page Access Token: {page_access_token[:20]}...")
+        
+        # Discover the correct Instagram User ID
+        correct_instagram_user_id = discover_instagram_user_id(page_access_token, page_id)
+        
+        if correct_instagram_user_id:
+            return jsonify({
+                "success": True,
+                "current_id": "71457471009",
+                "discovered_id": correct_instagram_user_id,
+                "page_id": page_id,
+                "message": f"✅ Discovered correct Instagram User ID: {correct_instagram_user_id}"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to discover Instagram User ID"
+            })
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Error: {str(e)}"
+        })
+
 @app.route("/debug/update-instagram-id", methods=["POST"])
 @login_required
 def update_instagram_id():
@@ -2740,6 +2803,50 @@ def get_last_messages(instagram_user_id, n=35):
         conn.close()
 
 # ---- Instagram Connection Helpers ----
+
+def discover_instagram_user_id(page_access_token, page_id):
+    """
+    Discover the correct Instagram User ID from a Facebook Page using the Page Access Token.
+    This is the proper way to get the Instagram User ID that works with the messaging API.
+    """
+    try:
+        print(f"🔍 Discovering Instagram User ID for Page ID: {page_id}")
+        
+        # First, get the Instagram Business Account ID from the Page
+        url = f"https://graph.facebook.com/v18.0/{page_id}?fields=instagram_business_account&access_token={page_access_token}"
+        response = requests.get(url)
+        
+        if response.status_code != 200:
+            print(f"❌ Failed to get Instagram Business Account: {response.text}")
+            return None
+            
+        data = response.json()
+        if 'instagram_business_account' not in data:
+            print(f"❌ No Instagram Business Account found for Page {page_id}")
+            return None
+            
+        instagram_business_account_id = data['instagram_business_account']['id']
+        print(f"✅ Found Instagram Business Account ID: {instagram_business_account_id}")
+        
+        # Now get the Instagram User ID from the Business Account
+        # This is the ID that works with the messaging API
+        url = f"https://graph.facebook.com/v18.0/{instagram_business_account_id}?fields=id,username&access_token={page_access_token}"
+        response = requests.get(url)
+        
+        if response.status_code != 200:
+            print(f"❌ Failed to get Instagram User details: {response.text}")
+            return None
+            
+        data = response.json()
+        instagram_user_id = data['id']
+        username = data.get('username', 'Unknown')
+        
+        print(f"✅ Discovered Instagram User ID: {instagram_user_id} (Username: {username})")
+        return instagram_user_id
+        
+    except Exception as e:
+        print(f"❌ Error discovering Instagram User ID: {e}")
+        return None
 
 def get_instagram_connection_by_id(instagram_user_id):
     """Get Instagram connection by Instagram user ID"""
