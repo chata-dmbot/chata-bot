@@ -366,10 +366,83 @@ def init_database():
         except:
             pass
 
+def create_dummy_chata_user():
+    """Create a dummy user and Instagram connection for the hardcoded Chata bot"""
+    print("🔧 Creating dummy Chata user...")
+    
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to get database connection for dummy user creation")
+        return None
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if dummy user already exists
+        cursor.execute("SELECT id FROM users WHERE email = 'chata@dummy.com'")
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            print("✅ Dummy Chata user already exists")
+            return existing_user[0]
+        
+        # Create dummy user
+        cursor.execute("""
+            INSERT INTO users (email, password_hash)
+            VALUES (?, ?)
+            RETURNING id
+        """, ('chata@dummy.com', 'dummy_hash'))
+        
+        user_id = cursor.fetchone()[0]
+        print(f"✅ Created dummy user with ID: {user_id}")
+        
+        # Create Instagram connection for hardcoded Chata bot
+        cursor.execute("""
+            INSERT INTO instagram_connections (
+                user_id, instagram_user_id, instagram_page_id, 
+                page_access_token, is_active
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (instagram_user_id) DO NOTHING
+        """, (
+            user_id, 
+            INSTAGRAM_USER_ID, 
+            "hardcoded_chata_page",
+            ACCESS_TOKEN,
+            True
+        ))
+        
+        # Create default settings for Chata bot
+        cursor.execute("""
+            INSERT INTO client_settings (
+                user_id, instagram_connection_id, bot_personality
+            )
+            VALUES (?, ?, ?)
+            ON CONFLICT (user_id, instagram_connection_id) DO NOTHING
+        """, (
+            user_id,
+            None,  # Global settings for hardcoded bot
+            "You are Chata, a helpful AI assistant for Instagram messaging."
+        ))
+        
+        conn.commit()
+        print(f"✅ Created dummy Chata user (ID: {user_id}) with hardcoded Instagram connection")
+        return user_id
+        
+    except Exception as e:
+        print(f"❌ Error creating dummy Chata user: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
 # Initialize database on app startup
 print("🚀 Starting Chata application...")
 if init_database():
     print("✅ Database initialized successfully")
+    
+    # Create dummy user for hardcoded Chata bot
+    create_dummy_chata_user()
     
     # Show current Instagram connections for debugging
     try:
@@ -1963,6 +2036,7 @@ def test_send_message():
             # Test with original Chata bot first
             instagram_user_id = INSTAGRAM_USER_ID
             page_access_token = ACCESS_TOKEN
+            instagram_page_id = "hardcoded_chata_page"  # Dummy value for hardcoded bot
             test_name = "Original Chata Bot"
         else:
             # Get the EgoInspo connection
