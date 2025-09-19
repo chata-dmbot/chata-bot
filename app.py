@@ -1049,23 +1049,144 @@ def debug_connections():
             debug_info["settings"].append(setting_info)
         
         return f"""
-        <h1>🔍 Instagram Connections Debug</h1>
-        <h2>📊 Summary</h2>
-        <p><strong>Total Connections:</strong> {debug_info['total_connections']}</p>
-        
-        <h2>🔗 Instagram Connections</h2>
-        <pre>{json.dumps(debug_info['connections'], indent=2)}</pre>
-        
-        <h2>⚙️ Client Settings</h2>
-        <pre>{json.dumps(debug_info['settings'], indent=2)}</pre>
-        
-        <h2>🧪 Test Links</h2>
-        <p><a href="/debug/test-tokens">Test Page Access Tokens</a></p>
-        <p><a href="/debug/test-instagram-api">Test Instagram API Calls</a></p>
-        <p><a href="/debug/simulate-webhook">Simulate Webhook Call</a></p>
-        <p><a href="/debug/health-check">Full Health Check</a></p>
-        <p><a href="/debug/test-database-token">Test Database Token Directly</a></p>
-        <p><a href="/debug/test-send-message" target="_blank">Test Send Message (POST)</a></p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>🔍 Instagram Debug Center</title>
+            <style>
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    background: #1a1a1a; 
+                    color: #fff; 
+                    margin: 0; 
+                    padding: 20px; 
+                }}
+                .container {{ max-width: 1200px; margin: 0 auto; }}
+                .header {{ 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                }}
+                .nav-buttons {{ 
+                    display: flex; 
+                    gap: 10px; 
+                    margin: 20px 0; 
+                    flex-wrap: wrap;
+                }}
+                .nav-btn {{ 
+                    background: #4CAF50; 
+                    color: white; 
+                    padding: 12px 20px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold;
+                    transition: background 0.3s;
+                }}
+                .nav-btn:hover {{ background: #45a049; }}
+                .nav-btn.danger {{ background: #f44336; }}
+                .nav-btn.danger:hover {{ background: #da190b; }}
+                .nav-btn.warning {{ background: #ff9800; }}
+                .nav-btn.warning:hover {{ background: #e68900; }}
+                .section {{ 
+                    background: #2a2a2a; 
+                    padding: 20px; 
+                    border-radius: 10px; 
+                    margin: 20px 0; 
+                }}
+                .status {{ 
+                    padding: 10px; 
+                    border-radius: 5px; 
+                    margin: 10px 0; 
+                }}
+                .status.success {{ background: #4CAF50; }}
+                .status.error {{ background: #f44336; }}
+                .status.warning {{ background: #ff9800; }}
+                pre {{ 
+                    background: #1a1a1a; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    overflow-x: auto; 
+                    border: 1px solid #444;
+                }}
+                .test-grid {{ 
+                    display: grid; 
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+                    gap: 20px; 
+                    margin: 20px 0; 
+                }}
+                .test-card {{ 
+                    background: #333; 
+                    padding: 20px; 
+                    border-radius: 10px; 
+                    border: 1px solid #555;
+                }}
+                .test-card h3 {{ color: #4CAF50; margin-top: 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔍 Instagram Debug Center</h1>
+                    <p>Comprehensive testing and debugging tools for Instagram bot functionality</p>
+                </div>
+                
+                <div class="nav-buttons">
+                    <a href="/dashboard" class="nav-btn">🏠 Back to Dashboard</a>
+                    <a href="/debug/health-check" class="nav-btn warning">🏥 Health Check</a>
+                    <a href="/debug/check-permissions" class="nav-btn">🔐 Check Permissions</a>
+                </div>
+                
+                <div class="section">
+                    <h2>📊 Current Status</h2>
+                    <div class="status success">
+                        <strong>Total Connections:</strong> {debug_info['total_connections']}
+                    </div>
+                </div>
+                
+                <div class="test-grid">
+                    <div class="test-card">
+                        <h3>🔑 Token Testing</h3>
+                        <p>Test if your database tokens can access Instagram API</p>
+                        <a href="/debug/test-database-token" class="nav-btn">Test Database Token</a>
+                        <a href="/debug/test-tokens" class="nav-btn">Test All Tokens</a>
+                    </div>
+                    
+                    <div class="test-card">
+                        <h3>💬 Message Testing</h3>
+                        <p>Test message sending capabilities</p>
+                        <a href="/debug/test-send-message" class="nav-btn" target="_blank">Test Send Message</a>
+                        <a href="/debug/simulate-webhook" class="nav-btn">Simulate Webhook</a>
+                    </div>
+                    
+                    <div class="test-card">
+                        <h3>🔍 Connection Details</h3>
+                        <p>View detailed connection information</p>
+                        <details>
+                            <summary>📱 Instagram Connections</summary>
+                            <pre>{json.dumps(debug_info['connections'], indent=2)}</pre>
+                        </details>
+                        <details>
+                            <summary>⚙️ Client Settings</summary>
+                            <pre>{json.dumps(debug_info['settings'], indent=2)}</pre>
+                        </details>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>📋 Testing Checklist</h2>
+                    <ol>
+                        <li><strong>Step 1:</strong> <a href="/debug/test-database-token">Test Database Token</a> - Verify token can access Instagram API</li>
+                        <li><strong>Step 2:</strong> <a href="/debug/test-send-message" target="_blank">Test Send Message</a> - Verify message sending works</li>
+                        <li><strong>Step 3:</strong> <a href="/debug/check-permissions">Check Permissions</a> - Verify all required permissions</li>
+                        <li><strong>Step 4:</strong> <a href="/debug/simulate-webhook">Simulate Webhook</a> - Test webhook processing</li>
+                        <li><strong>Step 5:</strong> <a href="/debug/health-check">Full Health Check</a> - Overall system status</li>
+                    </ol>
+                </div>
+            </div>
+        </body>
+        </html>
         """
         
     except Exception as e:
@@ -1546,6 +1667,7 @@ def debug_health_check():
         conn.close()
 
 @app.route('/debug/test-database-token', methods=['GET'])
+@login_required
 def test_database_token():
     """Test if database token can send messages directly"""
     try:
@@ -1575,33 +1697,251 @@ def test_database_token():
         
         if response.status_code == 200:
             account_info = response.json()
-            return jsonify({
-                "success": True,
-                "message": "Database token is valid and can access Instagram API",
-                "account_info": account_info,
-                "token_info": {
-                    "instagram_user_id": instagram_user_id,
-                    "page_id": page_id,
-                    "username": username,
-                    "token_preview": page_access_token[:20] + "..."
-                }
-            })
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>🔑 Test Database Token - Results</title>
+                <style>
+                    body {{ 
+                        font-family: Arial, sans-serif; 
+                        background: #1a1a1a; 
+                        color: #fff; 
+                        margin: 0; 
+                        padding: 20px; 
+                    }}
+                    .container {{ max-width: 1000px; margin: 0 auto; }}
+                    .header {{ 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 20px;
+                        border-radius: 10px;
+                        margin-bottom: 20px;
+                        text-align: center;
+                    }}
+                    .result {{ 
+                        background: #2a2a2a; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        margin: 20px 0; 
+                    }}
+                    .success {{ background: #4CAF50; }}
+                    .error {{ background: #f44336; }}
+                    pre {{ 
+                        background: #1a1a1a; 
+                        padding: 15px; 
+                        border-radius: 5px; 
+                        overflow-x: auto; 
+                        border: 1px solid #444;
+                    }}
+                    .btn {{ 
+                        background: #4CAF50; 
+                        color: white; 
+                        padding: 12px 20px; 
+                        text-decoration: none; 
+                        border-radius: 5px; 
+                        display: inline-block;
+                        margin: 10px 5px;
+                    }}
+                    .btn:hover {{ background: #45a049; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔑 Test Database Token - Results</h1>
+                    </div>
+                    
+                    <div class="result success">
+                        <h2>✅ Success!</h2>
+                        <p>Database token is valid and can access Instagram API</p>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>🔍 Token Information</h3>
+                        <pre>{json.dumps({
+                            "instagram_user_id": instagram_user_id,
+                            "page_id": page_id,
+                            "username": username,
+                            "token_preview": page_access_token[:20] + "..."
+                        }, indent=2)}</pre>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>📱 Instagram Account Info</h3>
+                        <pre>{json.dumps(account_info, indent=2)}</pre>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="/debug/test-send-message" class="btn">💬 Test Send Message</a>
+                        <a href="/debug/connections" class="btn">🏠 Back to Debug Center</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
         else:
-            return jsonify({
-                "error": "Database token failed to access Instagram API",
-                "status_code": response.status_code,
-                "response": response.text
-            }), 400
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>🔑 Test Database Token - Error</title>
+                <style>
+                    body {{ 
+                        font-family: Arial, sans-serif; 
+                        background: #1a1a1a; 
+                        color: #fff; 
+                        margin: 0; 
+                        padding: 20px; 
+                    }}
+                    .container {{ max-width: 1000px; margin: 0 auto; }}
+                    .header {{ 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 20px;
+                        border-radius: 10px;
+                        margin-bottom: 20px;
+                        text-align: center;
+                    }}
+                    .result {{ 
+                        background: #2a2a2a; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        margin: 20px 0; 
+                    }}
+                    .error {{ background: #f44336; }}
+                    pre {{ 
+                        background: #1a1a1a; 
+                        padding: 15px; 
+                        border-radius: 5px; 
+                        overflow-x: auto; 
+                        border: 1px solid #444;
+                    }}
+                    .btn {{ 
+                        background: #4CAF50; 
+                        color: white; 
+                        padding: 12px 20px; 
+                        text-decoration: none; 
+                        border-radius: 5px; 
+                        display: inline-block;
+                        margin: 10px 5px;
+                    }}
+                    .btn:hover {{ background: #45a049; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔑 Test Database Token - Error</h1>
+                    </div>
+                    
+                    <div class="result error">
+                        <h2>❌ Error</h2>
+                        <p>Database token failed to access Instagram API</p>
+                        <p><strong>Status Code:</strong> {response.status_code}</p>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>🔍 Error Details</h3>
+                        <pre>{response.text}</pre>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="/debug/check-permissions" class="btn">🔐 Check Permissions</a>
+                        <a href="/debug/connections" class="btn">🏠 Back to Debug Center</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, 400
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/debug/test-send-message', methods=['POST'])
+@app.route('/debug/test-send-message', methods=['GET', 'POST'])
+@login_required
 def test_send_message():
     """Test sending a message using the database token"""
+    if request.method == 'GET':
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>💬 Test Send Message</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    background: #1a1a1a; 
+                    color: #fff; 
+                    margin: 0; 
+                    padding: 20px; 
+                }
+                .container { max-width: 800px; margin: 0 auto; }
+                .header { 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                }
+                .form-group { margin: 20px 0; }
+                label { display: block; margin-bottom: 5px; font-weight: bold; }
+                input, textarea { 
+                    width: 100%; 
+                    padding: 10px; 
+                    border-radius: 5px; 
+                    border: 1px solid #555; 
+                    background: #333; 
+                    color: #fff; 
+                }
+                .btn { 
+                    background: #4CAF50; 
+                    color: white; 
+                    padding: 12px 20px; 
+                    border: none; 
+                    border-radius: 5px; 
+                    cursor: pointer; 
+                    font-size: 16px;
+                }
+                .btn:hover { background: #45a049; }
+                .result { 
+                    background: #2a2a2a; 
+                    padding: 20px; 
+                    border-radius: 10px; 
+                    margin: 20px 0; 
+                }
+                pre { 
+                    background: #1a1a1a; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    overflow-x: auto; 
+                    border: 1px solid #444;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>💬 Test Send Message</h1>
+                    <p>Test if your database token can send messages to Instagram</p>
+                </div>
+                
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="message">Test Message:</label>
+                        <textarea id="message" name="message" rows="3" placeholder="Enter a test message...">Hello! This is a test message from the debug endpoint.</textarea>
+                    </div>
+                    <button type="submit" class="btn">🚀 Test Send Message</button>
+                </form>
+                
+                <div style="margin-top: 20px;">
+                    <a href="/debug/connections" style="color: #4CAF50;">← Back to Debug Center</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    
     try:
-        data = request.get_json()
-        test_message = data.get('message', 'Test message from debug endpoint')
+        test_message = request.form.get('message', 'Test message from debug endpoint')
         
         # Get the EgoInspo connection
         conn = get_db_connection()
@@ -1618,7 +1958,15 @@ def test_send_message():
         conn.close()
         
         if not connection:
-            return jsonify({"error": "No EgoInspo connection found"}), 404
+            return f"""
+            <div class="container">
+                <div class="result" style="background: #f44336;">
+                    <h2>❌ Error</h2>
+                    <p>No EgoInspo connection found in database</p>
+                </div>
+                <a href="/debug/connections" style="color: #4CAF50;">← Back to Debug Center</a>
+            </div>
+            """, 404
             
         instagram_user_id, page_access_token, page_id, username = connection
         
@@ -1635,20 +1983,108 @@ def test_send_message():
             'Content-Type': 'application/json'
         })
         
-        return jsonify({
-            "test_url": test_url,
-            "payload": payload,
-            "status_code": response.status_code,
-            "response": response.text,
-            "token_info": {
-                "instagram_user_id": instagram_user_id,
-                "page_id": page_id,
-                "username": username
-            }
-        })
+        result_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>💬 Test Send Message - Results</title>
+            <style>
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    background: #1a1a1a; 
+                    color: #fff; 
+                    margin: 0; 
+                    padding: 20px; 
+                }}
+                .container {{ max-width: 1000px; margin: 0 auto; }}
+                .header {{ 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                }}
+                .result {{ 
+                    background: #2a2a2a; 
+                    padding: 20px; 
+                    border-radius: 10px; 
+                    margin: 20px 0; 
+                }}
+                .success {{ background: #4CAF50; }}
+                .error {{ background: #f44336; }}
+                .warning {{ background: #ff9800; }}
+                pre {{ 
+                    background: #1a1a1a; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    overflow-x: auto; 
+                    border: 1px solid #444;
+                }}
+                .btn {{ 
+                    background: #4CAF50; 
+                    color: white; 
+                    padding: 12px 20px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    display: inline-block;
+                    margin: 10px 5px;
+                }}
+                .btn:hover {{ background: #45a049; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>💬 Test Send Message - Results</h1>
+                </div>
+                
+                <div class="result {'success' if response.status_code == 200 else 'error'}">
+                    <h2>{'✅ Success' if response.status_code == 200 else '❌ Error'}</h2>
+                    <p><strong>Status Code:</strong> {response.status_code}</p>
+                    <p><strong>Message:</strong> {test_message}</p>
+                </div>
+                
+                <div class="result">
+                    <h3>🔍 Token Information</h3>
+                    <pre>{json.dumps({
+                        "instagram_user_id": instagram_user_id,
+                        "page_id": page_id,
+                        "username": username,
+                        "token_preview": page_access_token[:20] + "..."
+                    }, indent=2)}</pre>
+                </div>
+                
+                <div class="result">
+                    <h3>🌐 API Call Details</h3>
+                    <pre>{json.dumps({
+                        "url": test_url,
+                        "payload": payload,
+                        "status_code": response.status_code,
+                        "response": response.text
+                    }, indent=2)}</pre>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="/debug/test-send-message" class="btn">🔄 Test Again</a>
+                    <a href="/debug/connections" class="btn">🏠 Back to Debug Center</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return result_html
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return f"""
+        <div class="container">
+            <div class="result" style="background: #f44336;">
+                <h2>❌ Exception Error</h2>
+                <p>{str(e)}</p>
+            </div>
+            <a href="/debug/connections" style="color: #4CAF50;">← Back to Debug Center</a>
+        </div>
+        """, 500
 
 @app.route("/dashboard")
 @login_required
