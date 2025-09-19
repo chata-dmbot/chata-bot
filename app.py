@@ -1926,6 +1926,11 @@ def test_send_message():
                 
                 <form method="POST">
                     <div class="form-group">
+                        <label for="recipient_id">Recipient Instagram User ID:</label>
+                        <input type="text" id="recipient_id" name="recipient_id" value="17841414162745169" placeholder="Enter Instagram user ID...">
+                        <small style="color: #888;">This must be an Instagram tester added to your app</small>
+                    </div>
+                    <div class="form-group">
                         <label for="message">Test Message:</label>
                         <textarea id="message" name="message" rows="3" placeholder="Enter a test message...">Hello! This is a test message from the debug endpoint.</textarea>
                     </div>
@@ -1942,6 +1947,7 @@ def test_send_message():
     
     try:
         test_message = request.form.get('message', 'Test message from debug endpoint')
+        recipient_id = request.form.get('recipient_id', '17841414162745169')
         
         # Get the EgoInspo connection
         conn = get_db_connection()
@@ -1974,7 +1980,7 @@ def test_send_message():
         test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages"
         
         payload = {
-            "recipient": {"id": "17841414162745169"},
+            "recipient": {"id": recipient_id},
             "message": {"text": test_message}
         }
         
@@ -2041,6 +2047,7 @@ def test_send_message():
                 <div class="result {'success' if response.status_code == 200 else 'error'}">
                     <h2>{'✅ Success' if response.status_code == 200 else '❌ Error'}</h2>
                     <p><strong>Status Code:</strong> {response.status_code}</p>
+                    <p><strong>Recipient ID:</strong> {recipient_id}</p>
                     <p><strong>Message:</strong> {test_message}</p>
                 </div>
                 
