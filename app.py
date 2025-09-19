@@ -1487,7 +1487,7 @@ def debug_simulate_webhook():
         </p>
         <p>
             <label>Recipient ID (Your Instagram account that received the message):</label><br>
-            <input type="text" name="recipient_id" value="17841471490292183" style="width: 300px;">
+            <input type="text" name="recipient_id" value="71457471009" style="width: 300px;">
         </p>
         <p>
             <label>Page ID (Facebook Page ID):</label><br>
@@ -1510,7 +1510,7 @@ def debug_simulate_webhook():
 def debug_simulate_webhook_post():
     """Process the simulated webhook call"""
     sender_id = request.form.get('sender_id', '123456789')
-    recipient_id = request.form.get('recipient_id', '17841471490292183')
+    recipient_id = request.form.get('recipient_id', '71457471009')
     page_id = request.form.get('page_id', '830077620186727')
     message_text = request.form.get('message_text', 'Hello, this is a test message!')
     
@@ -1751,7 +1751,7 @@ def test_database_token():
         cursor.execute("""
             SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
             FROM instagram_connections ic
-            WHERE ic.instagram_user_id = '17841471490292183'
+            WHERE ic.instagram_user_id = '71457471009'
             LIMIT 1
         """)
         
@@ -2046,7 +2046,7 @@ def test_send_message():
             cursor.execute("""
                 SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
                 FROM instagram_connections ic
-                WHERE ic.instagram_user_id = '17841471490292183'
+                WHERE ic.instagram_user_id = '71457471009'
                 LIMIT 1
             """)
             
