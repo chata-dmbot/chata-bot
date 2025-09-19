@@ -458,7 +458,7 @@ def create_dummy_chata_user(cursor=None):
     
     try:
         # Check if dummy user already exists
-        cursor.execute("SELECT id FROM users WHERE email = %s", ('chata@dummy.com',))
+        cursor.execute("SELECT id FROM users WHERE email = 'chata@dummy.com'")
         existing_user = cursor.fetchone()
         
         if existing_user:
@@ -468,7 +468,7 @@ def create_dummy_chata_user(cursor=None):
         # Create dummy user
         cursor.execute("""
             INSERT INTO users (email, password_hash)
-            VALUES (%s, %s)
+            VALUES (?, ?)
             RETURNING id
         """, ('chata@dummy.com', 'dummy_hash'))
         
@@ -476,33 +476,47 @@ def create_dummy_chata_user(cursor=None):
         print(f"✅ Created dummy user with ID: {user_id}")
         
         # Create Instagram connection for hardcoded Chata bot
-        cursor.execute("""
-            INSERT INTO instagram_connections (
-                user_id, instagram_user_id, instagram_page_id, 
-                page_access_token, is_active
-            )
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (instagram_user_id) DO NOTHING
-        """, (
-            user_id, 
-            INSTAGRAM_USER_ID, 
-            "hardcoded_chata_page",
-            ACCESS_TOKEN,
-            True
-        ))
+        # First check if connection already exists
+        cursor.execute("SELECT id FROM instagram_connections WHERE instagram_user_id = %s", (INSTAGRAM_USER_ID,))
+        existing_connection = cursor.fetchone()
+        
+        if not existing_connection:
+            cursor.execute("""
+                INSERT INTO instagram_connections (
+                    user_id, instagram_user_id, instagram_page_id, 
+                    page_access_token, is_active
+                )
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                user_id, 
+                INSTAGRAM_USER_ID, 
+                "hardcoded_chata_page",
+                ACCESS_TOKEN,
+                True
+            ))
+            print(f"✅ Created Instagram connection for hardcoded Chata bot")
+        else:
+            print(f"✅ Instagram connection for hardcoded Chata bot already exists")
         
         # Create default settings for Chata bot
-        cursor.execute("""
-            INSERT INTO client_settings (
-                user_id, instagram_connection_id, bot_personality
-            )
-            VALUES (%s, %s, %s)
-            ON CONFLICT (user_id, instagram_connection_id) DO NOTHING
-        """, (
-            user_id,
-            None,  # Global settings for hardcoded bot
-            "You are Chata, a helpful AI assistant for Instagram messaging."
-        ))
+        # First check if settings already exist
+        cursor.execute("SELECT id FROM client_settings WHERE user_id = %s AND instagram_connection_id IS NULL", (user_id,))
+        existing_settings = cursor.fetchone()
+        
+        if not existing_settings:
+            cursor.execute("""
+                INSERT INTO client_settings (
+                    user_id, instagram_connection_id, bot_personality
+                )
+                VALUES (%s, %s, %s)
+            """, (
+                user_id,
+                None,  # Global settings for hardcoded bot
+                "You are Chata, a helpful AI assistant for Instagram messaging."
+            ))
+            print(f"✅ Created default settings for hardcoded Chata bot")
+        else:
+            print(f"✅ Default settings for hardcoded Chata bot already exist")
         
         if should_close:
             conn.commit()
