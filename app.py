@@ -1934,6 +1934,13 @@ def test_send_message():
                         <label for="message">Test Message:</label>
                         <textarea id="message" name="message" rows="3" placeholder="Enter a test message...">Hello! This is a test message from the debug endpoint.</textarea>
                     </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="test_both" name="test_both" value="true">
+                            <span>Test with Original Chata Bot (instead of EgoInspo)</span>
+                        </label>
+                        <small style="color: #888;">Check this to test with the original hardcoded Chata bot token</small>
+                    </div>
                     <button type="submit" class="btn">🚀 Test Send Message</button>
                 </form>
                 
@@ -1949,32 +1956,42 @@ def test_send_message():
         test_message = request.form.get('message', 'Test message from debug endpoint')
         recipient_id = request.form.get('recipient_id', '17841414162745169')
         
-        # Get the EgoInspo connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        # Test with both EgoInspo and original Chata bot
+        test_both = request.form.get('test_both', 'false') == 'true'
         
-        cursor.execute("""
-            SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
-            FROM instagram_connections ic
-            WHERE ic.instagram_user_id = '17841471490292183'
-            LIMIT 1
-        """)
-        
-        connection = cursor.fetchone()
-        conn.close()
-        
-        if not connection:
-            return f"""
-            <div class="container">
-                <div class="result" style="background: #f44336;">
-                    <h2>❌ Error</h2>
-                    <p>No EgoInspo connection found in database</p>
-                </div>
-                <a href="/debug/connections" style="color: #4CAF50;">← Back to Debug Center</a>
-            </div>
-            """, 404
+        if test_both:
+            # Test with original Chata bot first
+            instagram_user_id = INSTAGRAM_USER_ID
+            page_access_token = ACCESS_TOKEN
+            test_name = "Original Chata Bot"
+        else:
+            # Get the EgoInspo connection
+            conn = get_db_connection()
+            cursor = conn.cursor()
             
-        instagram_user_id, page_access_token, instagram_page_id = connection
+            cursor.execute("""
+                SELECT ic.instagram_user_id, ic.page_access_token, ic.instagram_page_id
+                FROM instagram_connections ic
+                WHERE ic.instagram_user_id = '17841471490292183'
+                LIMIT 1
+            """)
+            
+            connection = cursor.fetchone()
+            conn.close()
+            
+            if not connection:
+                return f"""
+                <div class="container">
+                    <div class="result" style="background: #f44336;">
+                        <h2>❌ Error</h2>
+                        <p>No EgoInspo connection found in database</p>
+                    </div>
+                    <a href="/debug/connections" style="color: #4CAF50;">← Back to Debug Center</a>
+                </div>
+                """, 404
+                
+            instagram_user_id, page_access_token, instagram_page_id = connection
+            test_name = "EgoInspo Bot"
         
         # Test sending a message (this will fail if the recipient isn't valid, but we can see the error)
         test_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages"
@@ -2046,6 +2063,7 @@ def test_send_message():
                 
                 <div class="result {'success' if response.status_code == 200 else 'error'}">
                     <h2>{'✅ Success' if response.status_code == 200 else '❌ Error'}</h2>
+                    <p><strong>Bot Tested:</strong> {test_name}</p>
                     <p><strong>Status Code:</strong> {response.status_code}</p>
                     <p><strong>Recipient ID:</strong> {recipient_id}</p>
                     <p><strong>Message:</strong> {test_message}</p>
