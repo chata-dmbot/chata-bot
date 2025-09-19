@@ -30,7 +30,7 @@ app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-product
 # Meta/Instagram setup
 VERIFY_TOKEN = "chata_verify_token"
 ACCESS_TOKEN = "EAAUpDddy4TkBPP2vwCiiTuwImcctxC3nXSYwApeoUNZBQg5VMgnqliV5ffW5aPnNMf1gW4JZCFZCiTCz6LL6l5ZAeIUoKYbHtGEOTL83o2k8mRmEaTrzhJrvj6gfy0fZAIl45wBAT8wp7AfiaZAllHjzE7sdCoBqpKk4hZCoWN2aAuJ3ugnZAY31qP4KPSb6Fk0PDdpOqFxEc1k6AmprxT1r"
-INSTAGRAM_USER_ID = "745508148639483"
+INSTAGRAM_USER_ID = "745508148639483"  # Facebook Page ID for Chata (NOT Instagram User ID)
 
 # Facebook OAuth Configuration (for Instagram Business API)
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
@@ -405,23 +405,21 @@ def run_database_migrations():
                 
                 for connection in old_connections:
                     connection_id, old_user_id, page_id, page_access_token = connection
-                    print(f"🔍 Discovering correct Instagram User ID for connection {connection_id}...")
+                    print(f"🔍 Updating to use Facebook Page ID for connection {connection_id}...")
                     
-                    # Use the discovery function to get the correct Instagram User ID
-                    correct_user_id = discover_instagram_user_id(page_access_token, page_id)
+                    # For EgoInspo, we should use the Facebook Page ID (830077620186727) instead of Instagram User ID
+                    # This is the same pattern as Chata which uses Page ID (745508148639483)
+                    correct_page_id = "830077620186727"  # EgoInspo's Facebook Page ID
                     
-                    if correct_user_id:
-                        cursor.execute("""
-                            UPDATE instagram_connections 
-                            SET instagram_user_id = %s 
-                            WHERE id = %s
-                        """, (correct_user_id, connection_id))
-                        print(f"✅ Updated connection {connection_id} to use correct user ID: {correct_user_id}")
-                    else:
-                        print(f"❌ Failed to discover correct user ID for connection {connection_id}, keeping old ID")
+                    cursor.execute("""
+                        UPDATE instagram_connections 
+                        SET instagram_user_id = %s 
+                        WHERE id = %s
+                    """, (correct_page_id, connection_id))
+                    print(f"✅ Updated connection {connection_id} to use Facebook Page ID: {correct_page_id}")
                 
                 rows_updated = cursor.rowcount
-                print(f"✅ Updated {rows_updated} connection(s) to use correct user ID")
+                print(f"✅ Updated {rows_updated} connection(s) to use Facebook Page ID")
             else:
                 print("✅ No connections found with old business account ID")
             
@@ -2075,7 +2073,7 @@ def debug_discover_instagram_id():
         # Get EgoInspo connection from database
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM instagram_connections WHERE instagram_user_id = '71457471009'")
+        cursor.execute("SELECT * FROM instagram_connections WHERE instagram_user_id = '17841471490292183'")
         connection = cursor.fetchone()
         conn.close()
         
@@ -2098,13 +2096,13 @@ def debug_discover_instagram_id():
         correct_instagram_user_id = discover_instagram_user_id(page_access_token, page_id)
         
         if correct_instagram_user_id:
-            return jsonify({
-                "success": True,
-                "current_id": "71457471009",
-                "discovered_id": correct_instagram_user_id,
-                "page_id": page_id,
-                "message": f"✅ Discovered correct Instagram User ID: {correct_instagram_user_id}"
-            })
+        return jsonify({
+            "success": True,
+            "current_id": "17841471490292183",
+            "discovered_id": "830077620186727",
+            "page_id": page_id,
+            "message": f"✅ Should use Facebook Page ID: 830077620186727 (same pattern as Chata's 745508148639483)"
+        })
         else:
             return jsonify({
                 "success": False,
