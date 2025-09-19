@@ -366,18 +366,97 @@ def init_database():
         except:
             pass
 
-def create_dummy_chata_user():
-    """Create a dummy user and Instagram connection for the hardcoded Chata bot"""
-    print("🔧 Creating dummy Chata user...")
+def run_database_migrations():
+    """Run database migrations to fix data inconsistencies"""
+    print("🔧 Running database migrations...")
     
     conn = get_db_connection()
     if not conn:
-        print("❌ Failed to get database connection for dummy user creation")
-        return None
+        print("❌ Failed to get database connection for migrations")
+        return False
     
     try:
         cursor = conn.cursor()
         
+        # Create migrations table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS migrations (
+                id SERIAL PRIMARY KEY,
+                migration_name VARCHAR(255) UNIQUE NOT NULL,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Migration 1: Fix Instagram User ID from business account ID to user ID
+        migration_name = "fix_instagram_user_id_2024"
+        cursor.execute("SELECT id FROM migrations WHERE migration_name = %s", (migration_name,))
+        if not cursor.fetchone():
+            print("🔄 Migration 1: Fixing Instagram User ID...")
+            
+            # Check if we have the old business account ID
+            cursor.execute("SELECT id, instagram_user_id FROM instagram_connections WHERE instagram_user_id = '17841471490292183'")
+            old_connections = cursor.fetchall()
+            
+            if old_connections:
+                print(f"📋 Found {len(old_connections)} connection(s) with old business account ID")
+                
+                # Update to correct user ID
+                cursor.execute("""
+                    UPDATE instagram_connections 
+                    SET instagram_user_id = '71457471009' 
+                    WHERE instagram_user_id = '17841471490292183'
+                """)
+                
+                rows_updated = cursor.rowcount
+                print(f"✅ Updated {rows_updated} connection(s) to use correct user ID")
+            else:
+                print("✅ No connections found with old business account ID")
+            
+            # Mark migration as completed
+            cursor.execute("INSERT INTO migrations (migration_name) VALUES (%s)", (migration_name,))
+            print(f"✅ Migration '{migration_name}' completed and marked as executed")
+        else:
+            print(f"✅ Migration '{migration_name}' already executed, skipping...")
+        
+        # Migration 2: Ensure we have a dummy user for hardcoded Chata bot
+        migration_name = "create_dummy_chata_user_2024"
+        cursor.execute("SELECT id FROM migrations WHERE migration_name = %s", (migration_name,))
+        if not cursor.fetchone():
+            print("🔄 Migration 2: Creating dummy Chata user...")
+            create_dummy_chata_user(cursor)
+            
+            # Mark migration as completed
+            cursor.execute("INSERT INTO migrations (migration_name) VALUES (%s)", (migration_name,))
+            print(f"✅ Migration '{migration_name}' completed and marked as executed")
+        else:
+            print(f"✅ Migration '{migration_name}' already executed, skipping...")
+        
+        conn.commit()
+        print("✅ All database migrations completed successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error running database migrations: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def create_dummy_chata_user(cursor=None):
+    """Create a dummy user and Instagram connection for the hardcoded Chata bot"""
+    print("🔧 Creating dummy Chata user...")
+    
+    if cursor is None:
+        conn = get_db_connection()
+        if not conn:
+            print("❌ Failed to get database connection for dummy user creation")
+            return None
+        cursor = conn.cursor()
+        should_close = True
+    else:
+        should_close = False
+    
+    try:
         # Check if dummy user already exists
         cursor.execute("SELECT id FROM users WHERE email = 'chata@dummy.com'")
         existing_user = cursor.fetchone()
@@ -425,24 +504,27 @@ def create_dummy_chata_user():
             "You are Chata, a helpful AI assistant for Instagram messaging."
         ))
         
-        conn.commit()
+        if should_close:
+            conn.commit()
         print(f"✅ Created dummy Chata user (ID: {user_id}) with hardcoded Instagram connection")
         return user_id
         
     except Exception as e:
         print(f"❌ Error creating dummy Chata user: {e}")
-        conn.rollback()
+        if should_close:
+            conn.rollback()
         return None
     finally:
-        conn.close()
+        if should_close:
+            conn.close()
 
 # Initialize database on app startup
 print("🚀 Starting Chata application...")
 if init_database():
     print("✅ Database initialized successfully")
     
-    # Create dummy user for hardcoded Chata bot
-    create_dummy_chata_user()
+    # Run database migrations to fix any data inconsistencies
+    run_database_migrations()
     
     # Show current Instagram connections for debugging
     try:
@@ -1979,6 +2061,12 @@ def update_instagram_id():
         old_id = "17841471490292183"  # Business account ID
         new_id = "71457471009"        # Correct user ID
         
+        # First, let's see what we have
+        cursor.execute("SELECT id, instagram_user_id FROM instagram_connections")
+        all_connections = cursor.fetchall()
+        print(f"All connections before update: {all_connections}")
+        
+        # Update any connection that has the old ID
         cursor.execute("""
             UPDATE instagram_connections 
             SET instagram_user_id = ? 
