@@ -2215,24 +2215,72 @@ def debug_fix_chata_id():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # First, let's see what we currently have
+        # Define the target IDs and token for Chata
+        target_instagram_user_id = "17841475462924688"  # What webhook receives
+        target_instagram_page_id = "745508148639483"    # Facebook Page ID that works with the token
+        chata_access_token = ACCESS_TOKEN  # Use the hardcoded ACCESS_TOKEN from app.py
+        
+        # 1. Try to find the Chata connection by its Instagram User ID
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id, instagram_user_id, instagram_page_id FROM instagram_connections WHERE instagram_page_id = 'hardcoded_chata_page'")
-        current = cursor.fetchone()
+        cursor.execute(f"SELECT id, instagram_user_id, instagram_page_id FROM instagram_connections WHERE instagram_user_id = {placeholder}", (target_instagram_user_id,))
+        existing_connection = cursor.fetchone()
         
-        if not current:
-            return f"❌ No hardcoded_chata_page connection found in database"
+        connection_id = None
+        current_user_id = "N/A"
+        current_page_id = "N/A"
+        action_taken = ""
         
-        connection_id = current[0]
-        current_user_id = current[1]
-        current_page_id = current[2]
-        
-        # Update both the Instagram User ID and Page ID
-        new_user_id = "17841475462924688"  # Instagram User ID that webhook receives
-        new_page_id = "745508148639483"  # Facebook Page ID that works with the token
-        
-        cursor.execute(f"UPDATE instagram_connections SET instagram_user_id = {placeholder}, instagram_page_id = {placeholder} WHERE id = {placeholder}", 
-                     (new_user_id, new_page_id, connection_id))
+        if existing_connection:
+            connection_id = existing_connection[0]
+            current_user_id = existing_connection[1]
+            current_page_id = existing_connection[2]
+            
+            # If found, update its page_id and ensure user_id and tokens are correct
+            cursor.execute(f"""
+                UPDATE instagram_connections
+                SET instagram_user_id = {placeholder},
+                    instagram_page_id = {placeholder},
+                    page_access_token = {placeholder},
+                    access_token = {placeholder},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {placeholder}
+            """, (target_instagram_user_id, target_instagram_page_id, chata_access_token, chata_access_token, connection_id))
+            action_taken = "Updated existing Chata connection"
+        else:
+            # If not found, we need to create it. First, ensure dummy user exists.
+            cursor.execute(f"SELECT id FROM users WHERE email = {placeholder}", ("chata@dummy.com",))
+            dummy_user = cursor.fetchone()
+            dummy_user_id = None
+            
+            if not dummy_user:
+                # Create dummy user if it doesn't exist
+                cursor.execute(f"""
+                    INSERT INTO users (email, password_hash, created_at, updated_at)
+                    VALUES ({placeholder}, {placeholder}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    RETURNING id
+                """, ("chata@dummy.com", "dummy_hash"))  # Password hash is not used for this bot
+                dummy_user_id = cursor.fetchone()[0]
+                print("Created dummy user for Chata.")
+            else:
+                dummy_user_id = dummy_user[0]
+                print("Found existing dummy user for Chata.")
+            
+            # Insert new instagram_connections entry for Chata bot
+            cursor.execute(f"""
+                INSERT INTO instagram_connections (
+                    user_id, instagram_user_id, instagram_page_id, page_access_token, access_token,
+                    instagram_username, instagram_profile_picture_url, created_at, updated_at
+                ) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                          {placeholder}, {placeholder}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING id
+            """, (
+                dummy_user_id, target_instagram_user_id, target_instagram_page_id, chata_access_token, chata_access_token,
+                "chata_bot", "https://example.com/chata_profile.jpg"
+            ))
+            connection_id = cursor.fetchone()[0]
+            current_user_id = "N/A (newly created)"
+            current_page_id = "N/A (newly created)"
+            action_taken = "Created new Chata connection"
         
         conn.commit()
         
@@ -2245,7 +2293,7 @@ def debug_fix_chata_id():
         conn.close()
         
         return f"""
-        ✅ SUCCESS! Chata's IDs have been updated.
+        ✅ SUCCESS! Chata's IDs have been {action_taken}.
         <br><br>
         <strong>Before:</strong><br>
         • Instagram User ID: {current_user_id}<br>
