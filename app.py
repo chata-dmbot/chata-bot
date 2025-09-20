@@ -2215,21 +2215,21 @@ def debug_fix_chata_id():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Update the Page ID for Chata connection
-        instagram_user_id = "17841475462924688"  # Keep this Instagram User ID (what webhook receives)
-        new_page_id = "745508148639483"  # Update to the Facebook Page ID that works with the token
-        
-        # Find the Chata connection by Instagram User ID
+        # First, let's see what we currently have
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id FROM instagram_connections WHERE instagram_user_id = {placeholder}", (instagram_user_id,))
-        existing = cursor.fetchone()
+        cursor.execute(f"SELECT id, instagram_user_id, instagram_page_id FROM instagram_connections WHERE instagram_page_id = 'hardcoded_chata_page'")
+        current = cursor.fetchone()
         
-        if not existing:
-            return f"❌ No connection found with Instagram User ID: {instagram_user_id}"
+        if not current:
+            return f"❌ No hardcoded_chata_page connection found in database"
         
-        connection_id = existing[0]
+        connection_id = current[0]
+        current_user_id = current[1]
+        current_page_id = current[2]
         
-        # Update the Page ID (instagram_page_id column)
+        # Update the Page ID to the working Facebook Page ID
+        new_page_id = "745508148639483"  # Facebook Page ID that works with the token
+        
         cursor.execute(f"UPDATE instagram_connections SET instagram_page_id = {placeholder} WHERE id = {placeholder}", 
                      (new_page_id, connection_id))
         
@@ -2246,9 +2246,13 @@ def debug_fix_chata_id():
         return f"""
         ✅ SUCCESS! Chata's Page ID has been updated.
         <br><br>
-        <strong>Details:</strong><br>
-        • Instagram User ID: {updated_user_id} (unchanged)<br>
-        • Page ID: {updated_page_id} (updated)<br>
+        <strong>Before:</strong><br>
+        • Instagram User ID: {current_user_id}<br>
+        • Page ID: {current_page_id}<br>
+        <br>
+        <strong>After:</strong><br>
+        • Instagram User ID: {updated_user_id}<br>
+        • Page ID: {updated_page_id}<br>
         • Connection ID: {connection_id}<br>
         <br>
         📱 <strong>Now try sending a message to Chata - it should respond!</strong>
