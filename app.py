@@ -2208,6 +2208,54 @@ def debug_discover_instagram_id():
             "error": f"Error: {str(e)}"
         })
 
+@app.route("/debug/fix-chata-id")
+def debug_fix_chata_id():
+    """Debug endpoint to fix Chata's Instagram User ID"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # The correct ID that the webhook is actually receiving
+        correct_chata_id = "17841475462924688"
+        old_chata_id = "745508148639483"
+        
+        # Check if the old ID exists
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT id FROM instagram_connections WHERE instagram_user_id = {placeholder}", (old_chata_id,))
+        existing = cursor.fetchone()
+        
+        if not existing:
+            return f"❌ No connection found with old ID: {old_chata_id}"
+        
+        connection_id = existing[0]
+        
+        # Update the Instagram User ID
+        cursor.execute(f"UPDATE instagram_connections SET instagram_user_id = {placeholder} WHERE id = {placeholder}", 
+                     (correct_chata_id, connection_id))
+        
+        conn.commit()
+        
+        # Verify the update
+        cursor.execute(f"SELECT instagram_user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+        updated_id = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return f"""
+        ✅ SUCCESS! Chata's ID has been updated.
+        <br><br>
+        <strong>Details:</strong><br>
+        • Old ID: {old_chata_id}<br>
+        • New ID: {correct_chata_id}<br>
+        • Connection ID: {connection_id}<br>
+        • Verified: {updated_id}<br>
+        <br>
+        📱 <strong>Now try sending a message to Chata - it should respond!</strong>
+        """
+        
+    except Exception as e:
+        return f"❌ Error updating database: {e}"
+
 @app.route("/debug/update-instagram-id", methods=["POST"])
 @login_required
 def update_instagram_id():
