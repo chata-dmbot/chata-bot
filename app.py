@@ -2215,40 +2215,41 @@ def debug_fix_chata_id():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # The correct ID that the webhook is actually receiving
-        correct_chata_id = "745508148639483"  # Facebook Page ID that works with the token
-        old_chata_id = "17841475462924688"  # Instagram Business Account ID that doesn't work
+        # Update the Page ID for Chata connection
+        instagram_user_id = "17841475462924688"  # Keep this Instagram User ID (what webhook receives)
+        new_page_id = "745508148639483"  # Update to the Facebook Page ID that works with the token
         
-        # Check if the old ID exists
+        # Find the Chata connection by Instagram User ID
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id FROM instagram_connections WHERE instagram_user_id = {placeholder}", (old_chata_id,))
+        cursor.execute(f"SELECT id FROM instagram_connections WHERE instagram_user_id = {placeholder}", (instagram_user_id,))
         existing = cursor.fetchone()
         
         if not existing:
-            return f"❌ No connection found with old ID: {old_chata_id}"
+            return f"❌ No connection found with Instagram User ID: {instagram_user_id}"
         
         connection_id = existing[0]
         
-        # Update the Instagram User ID
-        cursor.execute(f"UPDATE instagram_connections SET instagram_user_id = {placeholder} WHERE id = {placeholder}", 
-                     (correct_chata_id, connection_id))
+        # Update the Page ID (instagram_page_id column)
+        cursor.execute(f"UPDATE instagram_connections SET instagram_page_id = {placeholder} WHERE id = {placeholder}", 
+                     (new_page_id, connection_id))
         
         conn.commit()
         
         # Verify the update
-        cursor.execute(f"SELECT instagram_user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
-        updated_id = cursor.fetchone()[0]
+        cursor.execute(f"SELECT instagram_user_id, instagram_page_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+        result = cursor.fetchone()
+        updated_user_id = result[0]
+        updated_page_id = result[1]
         
         conn.close()
         
         return f"""
-        ✅ SUCCESS! Chata's ID has been updated.
+        ✅ SUCCESS! Chata's Page ID has been updated.
         <br><br>
         <strong>Details:</strong><br>
-        • Old ID: {old_chata_id}<br>
-        • New ID: {correct_chata_id}<br>
+        • Instagram User ID: {updated_user_id} (unchanged)<br>
+        • Page ID: {updated_page_id} (updated)<br>
         • Connection ID: {connection_id}<br>
-        • Verified: {updated_id}<br>
         <br>
         📱 <strong>Now try sending a message to Chata - it should respond!</strong>
         """
