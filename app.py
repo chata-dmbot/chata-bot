@@ -2216,8 +2216,8 @@ def debug_fix_chata_id():
         cursor = conn.cursor()
         
         # The correct ID that the webhook is actually receiving
-        correct_chata_id = "17841475462924688"
-        old_chata_id = "745508148639483"
+        correct_chata_id = "745508148639483"  # Facebook Page ID that works with the token
+        old_chata_id = "17841475462924688"  # Instagram Business Account ID that doesn't work
         
         # Check if the old ID exists
         placeholder = get_param_placeholder()
