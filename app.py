@@ -2227,11 +2227,12 @@ def debug_fix_chata_id():
         current_user_id = current[1]
         current_page_id = current[2]
         
-        # Update the Page ID to the working Facebook Page ID
+        # Update both the Instagram User ID and Page ID
+        new_user_id = "17841475462924688"  # Instagram User ID that webhook receives
         new_page_id = "745508148639483"  # Facebook Page ID that works with the token
         
-        cursor.execute(f"UPDATE instagram_connections SET instagram_page_id = {placeholder} WHERE id = {placeholder}", 
-                     (new_page_id, connection_id))
+        cursor.execute(f"UPDATE instagram_connections SET instagram_user_id = {placeholder}, instagram_page_id = {placeholder} WHERE id = {placeholder}", 
+                     (new_user_id, new_page_id, connection_id))
         
         conn.commit()
         
@@ -2244,7 +2245,7 @@ def debug_fix_chata_id():
         conn.close()
         
         return f"""
-        ✅ SUCCESS! Chata's Page ID has been updated.
+        ✅ SUCCESS! Chata's IDs have been updated.
         <br><br>
         <strong>Before:</strong><br>
         • Instagram User ID: {current_user_id}<br>
