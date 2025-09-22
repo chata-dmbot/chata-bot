@@ -369,6 +369,41 @@ def init_database():
         except:
             pass
 
+def fix_chata_instagram_id():
+    """Fix Chata's Instagram User ID to the correct value"""
+    try:
+        print("🔧 Fixing Chata's Instagram User ID...")
+        conn = get_db_connection()
+        if not conn:
+            print("❌ Could not connect to database for Chata fix")
+            return False
+        
+        cursor = conn.cursor()
+        
+        # Check current state
+        cursor.execute("SELECT instagram_user_id FROM instagram_connections WHERE id = 4")
+        current_id = cursor.fetchone()
+        
+        if current_id and current_id[0] != "17841475462924688":
+            print(f"🔧 Updating Chata's Instagram User ID from {current_id[0]} to 17841475462924688")
+            cursor.execute("""
+                UPDATE instagram_connections 
+                SET instagram_user_id = '17841475462924688', 
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE id = 4
+            """)
+            conn.commit()
+            print("✅ Chata's Instagram User ID updated successfully!")
+        else:
+            print("✅ Chata's Instagram User ID is already correct")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error fixing Chata's Instagram User ID: {e}")
+        return False
+
 def run_database_migrations():
     """Run database migrations to fix data inconsistencies"""
     print("🔧 Running database migrations...")
@@ -574,6 +609,9 @@ if init_database():
     
     # Run database migrations to fix any data inconsistencies
     run_database_migrations()
+    
+    # Fix Chata's Instagram User ID if needed
+    fix_chata_instagram_id()
     
     # Show current Instagram connections for debugging
     try:
