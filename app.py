@@ -384,11 +384,11 @@ def fix_chata_instagram_id():
         cursor.execute("SELECT instagram_user_id FROM instagram_connections WHERE id = 4")
         current_id = cursor.fetchone()
         
-        if current_id and current_id[0] != "17841475462924688":
-            print(f"🔧 Updating Chata's Instagram User ID from {current_id[0]} to 17841475462924688")
+        if current_id and current_id[0] != "745508148639483":
+            print(f"🔧 Updating Chata's Instagram User ID from {current_id[0]} to 745508148639483")
             cursor.execute("""
                 UPDATE instagram_connections 
-                SET instagram_user_id = '17841475462924688', 
+                SET instagram_user_id = '745508148639483', 
                     updated_at = CURRENT_TIMESTAMP 
                 WHERE id = 4
             """)
