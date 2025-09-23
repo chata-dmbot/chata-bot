@@ -384,11 +384,11 @@ def fix_chata_instagram_id():
         cursor.execute("SELECT instagram_user_id FROM instagram_connections WHERE id = 4")
         current_id = cursor.fetchone()
         
-        if current_id and current_id[0] != "745508148639483":
-            print(f"🔧 Updating Chata's Instagram User ID from {current_id[0]} to 745508148639483")
+        if current_id and current_id[0] != "17841475462924688":
+            print(f"🔧 Updating Chata's Instagram User ID from {current_id[0]} to 17841475462924688")
             cursor.execute("""
                 UPDATE instagram_connections 
-                SET instagram_user_id = '745508148639483', 
+                SET instagram_user_id = '17841475462924688', 
                     updated_at = CURRENT_TIMESTAMP 
                 WHERE id = 4
             """)
@@ -1813,14 +1813,14 @@ def process_webhook_message(data):
         results["errors"].append(f"Unexpected error: {str(e)}")
         return results
 
-def send_instagram_message(page_access_token, recipient_id, message_text, instagram_user_id=None):
+def send_instagram_message(page_access_token, recipient_id, message_text, instagram_page_id=None):
     """Send a message via Instagram API"""
     try:
         # Use the same approach as the original webhook
-        if instagram_user_id:
-            url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages?access_token={page_access_token}"
+        if instagram_page_id:
+            url = f"https://graph.facebook.com/v18.0/{instagram_page_id}/messages?access_token={page_access_token}"
         else:
-            # Fallback to /me/messages if no instagram_user_id provided
+            # Fallback to /me/messages if no instagram_page_id provided
             url = f"https://graph.facebook.com/v18.0/me/messages?access_token={page_access_token}"
         
         data = {
@@ -3269,7 +3269,9 @@ def webhook():
                                 print(f"✅ Saved bot response for {sender_id}")
 
                                 # Send reply via Instagram API using the correct access token
-                                url = f"https://graph.facebook.com/v18.0/{instagram_user_id}/messages?access_token={access_token}"
+                                # Use instagram_page_id for sending messages (Facebook Page ID)
+                                page_id = instagram_connection['instagram_page_id'] if instagram_connection else INSTAGRAM_USER_ID
+                                url = f"https://graph.facebook.com/v18.0/{page_id}/messages?access_token={access_token}"
                                 payload = {
                                     "recipient": {"id": sender_id},
                                     "message": {"text": reply_text}
