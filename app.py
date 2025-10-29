@@ -678,45 +678,34 @@ def instagram_callback():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # Handle test mode for local testing
-    if session.get('test_mode') and session.get('user_id') == 'test_user_123':
-        # Mock user data for testing
-        from datetime import datetime
-        user = {
-            'id': 'test_user_123',
-            'email': 'omooi.kota@gmail.com',
-            'created_at': datetime(2024, 1, 1)  # Use datetime object, not string
-        }
-        connections_list = []  # Empty connections for test
-    else:
-        # Normal user flow
-        user = get_user_by_id(session['user_id'])
-        if not user:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('login'))
-        
-        # Get user's Instagram connections
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
-            FROM instagram_connections 
-            WHERE user_id = {placeholder} 
-            ORDER BY created_at DESC
-        """, (user['id'],))
-        connections = cursor.fetchall()
-        conn.close()
-        
-        connections_list = []
-        for conn_data in connections:
-            connections_list.append({
-                'id': conn_data[0],
-                'instagram_user_id': conn_data[1],
-                'instagram_page_id': conn_data[2],
-                'is_active': conn_data[3],
-                'created_at': conn_data[4]
-            })
+    # Normal user flow
+    user = get_user_by_id(session['user_id'])
+    if not user:
+        flash('User not found. Please log in again.', 'error')
+        return redirect(url_for('login'))
+    
+    # Get user's Instagram connections
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+        FROM instagram_connections 
+        WHERE user_id = {placeholder} 
+        ORDER BY created_at DESC
+    """, (user['id'],))
+    connections = cursor.fetchall()
+    conn.close()
+    
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
+            'is_active': conn_data[3],
+            'created_at': conn_data[4]
+        })
     
     return render_template("dashboard.html", user=user, connections=connections_list)
 
@@ -1672,14 +1661,7 @@ from flask import render_template
 def home():
     return render_template("index.html")
 
-# TEMPORARY TEST ROUTE - REMOVE BEFORE DEPLOYMENT
-@app.route("/test-dashboard")
-def test_dashboard():
-    """Temporary route to bypass login and access dashboard for testing"""
-    # Set a test user session
-    session['user_id'] = 'test_user_123'
-    session['test_mode'] = True  # Flag to identify this is a test session
-    return redirect(url_for('dashboard'))
+
 
 @app.route("/faq")
 def faq():
