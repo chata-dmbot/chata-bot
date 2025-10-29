@@ -1,3 +1,17 @@
+.env
+*.env
+__pycache__/
+*.pyc
+chata.db
+.venv/
+env/
+.DS_Store
+*.log
+
+# Node/tailwind artifacts in WEBSITE design (kept out of Python deploy)
+WEBSITE design/node_modules/
+WEBSITE design/.vite/
+WEBSITE design/dist/
 # Python
 __pycache__/
 *.py[cod]

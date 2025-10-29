@@ -1,190 +1,2750 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Settings - Chata</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Settings - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay - behind animations, in front of grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Hero Section */
+        .bot-settings-hero {
+            position: relative;
+            min-height: 40vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 80px;
+            z-index: 10;
+        }
+
+        .bot-settings-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .bot-settings-hero p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: #888;
+            text-transform: none;
+        }
+
+         /* Content Section */
+         .bot-settings-content {
+             max-width: 1400px;
+             margin: 0 auto;
+             padding: 2rem;
+             position: relative;
+             z-index: 10;
+         }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .form-column {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Personality Section */
+        .personality-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .personality-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Motivation Section */
+        .motivation-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .motivation-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Background Section */
+        .background-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .background-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Communication Section */
+        .communication-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .communication-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Links & Posts Section */
+        .links-posts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            align-items: start;
+        }
+
+        .links-content, .posts-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Topics & Template Section */
+        .topics-template-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            align-items: stretch;
+        }
+
+        .topics-content, .template-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            height: 100%;
+        }
+
+        .topics-content textarea {
+            resize: vertical;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        .topics-content textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .topics-content textarea::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .topics-content textarea::-webkit-scrollbar-thumb {
+            background: var(--chata-blue);
+            border-radius: 3px;
+        }
+
+        .topics-content textarea::-webkit-scrollbar-thumb:hover {
+            background: #3366cc;
+        }
+
+        .template-content {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .template-content .template-buttons-container {
+            flex: 1;
+        }
+
+        .template-content #apply_general_template_btn {
+            margin-top: -80px !important;
+            position: relative !important;
+            z-index: 10 !important;
+            transform: translateY(-20px) !important;
+        }
+
+        /* Active Hours & Instagram Exclusions Section */
+        .active-hours-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: stretch;
+            margin-top: 2rem;
+        }
+
+        .active-hours-content, .instagram-exclusions-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            height: 100%;
+        }
+
+        .exclusions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .exclusion-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        .exclusion-item input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .exclusion-item input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .exclusion-item input:focus {
+            outline: none;
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 0 2px rgba(51, 102, 204, 0.2);
+        }
+
+        .remove-exclusion-btn {
+            background: transparent;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .remove-exclusion-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .add-exclusion-btn {
+            background: var(--chata-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+
+        .add-exclusion-btn:hover {
+            background: #3366cc;
+            transform: translateY(-2px);
+        }
+
+        /* Essentials Section Layout */
+        .essentials-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: stretch;
+            margin-bottom: 2rem;
+        }
+
+        .essentials-content, .essentials-explanation {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            height: 100%;
+        }
+
+        .essentials-explanation {
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .explanation-content {
+            max-width: 100%;
+            text-align: justify;
+        }
+
+        .explanation-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #e0e0e0;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            margin: 0;
+        }
+
+        .explanation-word {
+            display: inline-block;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .explanation-word:hover {
+            color: var(--chata-blue);
+            transform: translateY(-2px);
+        }
+
+
+        .template-content {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 2px solid transparent;
+        }
+
+        .template-content .template-buttons-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            border: 2px solid transparent;
+            min-height: 50px;
+        }
+
+
+        .templates-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+            min-height: 500px;
+        }
+
+        .templates-column h3 {
+            color: var(--chata-blue);
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .template-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+            justify-content: space-between;
+            min-height: 400px;
+        }
+
+        /* Quick Note */
+        .quick-note {
+            background: rgba(51, 102, 255, 0.1);
+            border: 1px solid rgba(51, 102, 255, 0.3);
+            border-radius: 12px;
+            padding: 1.2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(51, 102, 255, 0.1);
+            margin-top: 1.5rem;
+        }
+
+        .quick-note-icon {
+            color: var(--chata-blue);
+            font-size: 1.5rem;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+
+        .quick-note-content h4 {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 0.4rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .quick-note-content p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin: 0;
+            text-align: justify;
+        }
+
+         /* Link and Post Management Styles */
+         .link-item, .post-item {
+             border: 1px solid rgba(255, 255, 255, 0.2);
+             border-radius: 8px;
+             padding: 1.5rem;
+             margin-bottom: 1.5rem;
+             background: rgba(0, 0, 0, 0.2);
+         }
+
+         .link-item {
+             padding: 2.5rem;
+             min-height: 250px;
+         }
+
+         .link-item .form-group input {
+             padding: 1.2rem;
+             min-height: 3.5rem;
+         }
+
+         .link-item .form-group {
+             margin-bottom: 2rem;
+         }
+
+         .link-item .form-group label {
+             margin-bottom: 1rem;
+         }
+
+         .add-link-btn, .add-post-btn {
+             background: var(--chata-blue);
+             color: white;
+             border: none;
+             padding: 0.75rem 1.5rem;
+             border-radius: 8px;
+             cursor: pointer;
+             font-size: 0.9rem;
+             font-weight: 500;
+             transition: all 0.3s ease;
+             margin-bottom: 2rem;
+         }
+
+         .add-link-btn:hover, .add-post-btn:hover {
+             background: #3366cc;
+             transform: translateY(-2px);
+         }
+
+         .remove-link-btn, .remove-post-btn {
+             background: transparent;
+             color: #dc3545;
+             border: 1px solid #dc3545;
+             padding: 0.5rem 1rem;
+             border-radius: 6px;
+             cursor: pointer;
+             font-size: 0.8rem;
+             margin-top: 0.5rem;
+         }
+
+         .remove-link-btn:hover, .remove-post-btn:hover {
+             background: #dc3545;
+             color: white;
+         }
+
+         /* Enhanced Toggle Switch Styles - iPhone Style */
+         .toggle-label {
+             display: flex;
+             align-items: center;
+             cursor: pointer;
+             font-size: 1rem;
+             font-weight: 500;
+             color: #fff;
+             margin-bottom: 1rem;
+             line-height: 1;
+             height: 30px;
+         }
+
+         .toggle-text {
+             display: flex;
+             align-items: center;
+             height: 30px;
+             line-height: 30px;
+         }
+
+         /* Auto-resizing textarea */
+         .auto-resize {
+             resize: none;
+             overflow: hidden;
+             min-height: 20px;
+             max-height: 60px;
+         }
+
+         /* Template Buttons */
+         .template-buttons {
+             display: flex;
+             flex-direction: column;
+             gap: 0.75rem;
+             margin-bottom: 1rem;
+         }
+
+         .template-btn {
+             background: rgba(255, 255, 255, 0.1);
+             color: #fff;
+             border: 1px solid rgba(255, 255, 255, 0.2);
+             padding: 1.2rem 1.4rem;
+             border-radius: 8px;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             font-size: 1rem;
+             text-align: left;
+             min-height: 4rem;
+             display: flex;
+             align-items: center;
+         }
+
+         .template-btn:hover {
+             background: rgba(255, 255, 255, 0.15);
+             border-color: rgba(255, 255, 255, 0.3);
+         }
+
+         .template-btn.selected {
+             background: var(--chata-blue);
+             border-color: var(--chata-blue);
+             color: white;
+             box-shadow: 0 0 15px rgba(51, 102, 255, 0.3);
+         }
+
+         .template-btn.selected:hover {
+             background: #3366cc;
+             box-shadow: 0 0 20px rgba(51, 102, 255, 0.4);
+         }
+
+
+         .toggle-label input[type="checkbox"] {
+             display: none !important;
+         }
+
+         .toggle-slider {
+             position: relative !important;
+             width: 50px !important;
+             height: 30px !important;
+             background: #8e8e93 !important;
+             border-radius: 15px !important;
+             transition: all 0.3s ease !important;
+             border: none !important;
+             flex-shrink: 0 !important;
+             margin-right: 20px !important;
+             display: inline-block !important;
+         }
+
+         .toggle-slider::before {
+             content: '' !important;
+             position: absolute !important;
+             top: 2px !important;
+             left: 2px !important;
+             width: 26px !important;
+             height: 26px !important;
+             background: #fff !important;
+             border-radius: 50% !important;
+             transition: all 0.3s ease !important;
+             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+         }
+
+         .toggle-label input:checked + .toggle-slider {
+             background: var(--chata-blue) !important;
+             box-shadow: 0 0 15px rgba(51, 102, 255, 0.4) !important;
+         }
+
+         .toggle-label input:checked + .toggle-slider::before {
+             transform: translateX(22px) !important;
+             box-shadow: 0 0 8px rgba(51, 102, 255, 0.6) !important;
+         }
+
+         .toggle-label:hover .toggle-slider {
+             background: #a0a0a5;
+         }
+
+         .toggle-label input:checked:hover + .toggle-slider {
+             background: #3366cc;
+             box-shadow: 0 0 20px rgba(51, 102, 255, 0.6);
+         }
+
+         /* Section Title with Glow Effect */
+         .section-title {
+             font-size: 2rem;
+             font-weight: 800;
+             color: #ffffff;
+             margin-bottom: 1.5rem;
+             text-align: left;
+             letter-spacing: 0.05em;
+             text-shadow: 0 0 20px rgba(51, 102, 255, 0.5);
+             position: relative;
+         }
+
+         .section-title::before {
+             content: '';
+             position: absolute;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background: linear-gradient(45deg, transparent, rgba(51, 102, 255, 0.1), transparent);
+             border-radius: 8px;
+             z-index: -1;
+         }
+
+        .settings-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .settings-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+            opacity: 0.3;
+        }
+
+        .settings-section:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(51, 102, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .settings-section h2 {
+            color: var(--chata-blue);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-section h3 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .settings-section p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            text-transform: none;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 0.8rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+         .form-group input,
+         .form-group textarea,
+         .form-group select {
+             width: 100%;
+             padding: 0.75rem;
+             background: rgba(0, 0, 0, 0.4);
+             border: 1px solid rgba(255, 255, 255, 0.2);
+             border-radius: 8px;
+             color: #fff;
+             font-size: 0.9rem;
+             transition: all 0.3s ease;
+             word-wrap: break-word;
+             white-space: pre-wrap;
+             overflow-wrap: break-word;
+         }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--chata-blue);
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 10px rgba(51, 102, 255, 0.3);
+        }
+
+         .form-group textarea {
+             min-height: 120px;
+             resize: vertical;
+         }
+
+         .char-counter {
+             font-size: 0.8rem;
+             color: rgba(255, 255, 255, 0.6);
+             text-align: right;
+             margin-top: 0.25rem;
+         }
+
+         .char-counter.warning {
+             color: #ffa500;
+         }
+
+         .char-counter.danger {
+             color: #ff4444;
+         }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-tip {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            margin-top: 0.5rem;
+            text-transform: none;
+        }
+
+        /* Add/Remove Buttons */
+        .add-item-btn {
+            background: rgba(51, 102, 255, 0.2);
+            border: 1px solid rgba(51, 102, 255, 0.4);
+            color: var(--chata-blue);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .add-item-btn:hover {
+            background: rgba(51, 102, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .remove-item-btn {
+            background: transparent;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .remove-item-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--chata-blue-dark) 0%, var(--chata-blue) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(51, 102, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #dc3545;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            border: 1px solid #dc3545;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-danger:hover {
+            background: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Time Picker */
+        .time-picker {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .time-picker input {
+            width: 80px;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .bot-settings-hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .bot-settings-content {
+                padding: 1rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
-            </div>
-            <div class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
-                <a href="{{ url_for('bot_settings') }}" class="nav-link active">Bot Settings</a>
-                <a href="{{ url_for('account_settings') }}" class="nav-link">Account</a>
-                <a href="{{ url_for('usage_analytics') }}" class="nav-link">Usage</a>
-                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    </div>
+                </div>
+  
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1><i class="fas fa-robot"></i> Bot Settings</h1>
-            <p>Customize your Instagram bot's personality and behavior</p>
+    <!-- Hero Section -->
+    <section class="bot-settings-hero">
+        <div>
+            <h1>Bot Settings</h1>
+            <p>Configure your Instagram bot's personality and behavior</p>
         </div>
+    </section>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <!-- Connection Selection -->
-        {% if connections %}
-        <div class="settings-card">
-            <div class="card-header">
-                <h3><i class="fas fa-link"></i> Select Instagram Account</h3>
-            </div>
-            <div class="card-content">
-                <div class="form-group">
-                    <label for="connection_select">Choose which Instagram account to configure:</label>
-                    <select id="connection_select" onchange="changeConnection()">
-                        <option value="">Global Settings (Original Chata Account)</option>
-                        {% for connection in connections %}
-                        <option value="{{ connection.id }}" {% if connection.id == selected_connection_id %}selected{% endif %}>
-                            Instagram Account: {{ connection.instagram_user_id }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <small>Each Instagram account can have its own unique bot personality</small>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                    {{ message }}
                 </div>
-            </div>
-        </div>
+            {% endfor %}
         {% endif %}
+    {% endwith %}
 
-        <form method="POST" class="settings-form">
-            {% if selected_connection_id %}
-            <input type="hidden" name="connection_id" value="{{ selected_connection_id }}">
-            {% endif %}
-            
-            <div class="settings-grid">
-                <!-- AI Personality -->
-                <div class="settings-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-brain"></i> AI Personality</h3>
-                    </div>
-                    <div class="card-content">
-                        <div class="form-group">
-                            <label for="bot_personality">System Prompt (Bot Personality)</label>
-                            <textarea id="bot_personality" name="bot_personality" rows="6" 
-                                      placeholder="Define your bot's personality, role, and how it should respond">{{ settings.bot_personality }}</textarea>
-                            <small>This defines your bot's core personality and behavior</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Response Settings -->
-                <div class="settings-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-sliders-h"></i> Response Settings</h3>
-                    </div>
-                    <div class="card-content">
-                        <div class="form-group">
-                            <label for="temperature">Temperature (Creativity)</label>
-                            <div class="slider-container">
-                                <input type="range" id="temperature" name="temperature" 
-                                       min="0" max="2" step="0.1" value="{{ settings.temperature }}"
-                                       oninput="updateSliderValue('temperature', this.value)">
-                                <span class="slider-value" id="temperature-value">{{ settings.temperature }}</span>
+     <!-- Content -->
+     <main class="bot-settings-content">
+         <form id="botSettingsForm" method="POST">
+             <!-- Main Layout -->
+             <div class="main-layout">
+                 <!-- Left Column: Form Fields -->
+                 <div class="form-column">
+                    <!-- Essentials Section -->
+                    <div class="essentials-section">
+                        <div class="essentials-content">
+                            <h2 class="section-title">ESSENTIALS</h2>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">These are the essentials, what makes them a specific person.</p>
+                            
+                            <!-- Individual Form Fields -->
+                            <div class="form-group">
+                                <label for="bot_name">Name</label>
+                                <input type="text" id="bot_name" name="bot_name" placeholder="Enter your name" value="{{ settings.bot_name if settings else '' }}">
                             </div>
-                            <small>0 = More focused, 2 = More creative</small>
+                            <div class="form-group">
+                                <label for="bot_age">Age</label>
+                                <input type="text" id="bot_age" name="bot_age" placeholder="Enter your age" pattern="[0-9]*" inputmode="numeric" value="{{ settings.bot_age if settings else '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="bot_gender">Gender / Pronouns</label>
+                                <input type="text" id="bot_gender" name="bot_gender" placeholder="e.g., She/Her, He/Him, They/Them" value="{{ settings.bot_gender if settings else '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="bot_location">Location / Origin</label>
+                                <input type="text" id="bot_location" name="bot_location" placeholder="e.g., New York, USA" value="{{ settings.bot_location if settings else '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="bot_occupation">Occupation / Role</label>
+                                <input type="text" id="bot_occupation" name="bot_occupation" placeholder="e.g., Software Engineer, Teacher" value="{{ settings.bot_occupation if settings else '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="bot_education">Education or Background</label>
+                                <input type="text" id="bot_education" name="bot_education" placeholder="e.g., Computer Science Degree, Self-taught" value="{{ settings.bot_education if settings else '' }}">
+                            </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="max_tokens">Max Response Length</label>
-                            <div class="slider-container">
-                                <input type="range" id="max_tokens" name="max_tokens" 
-                                       min="50" max="500" step="10" value="{{ settings.max_tokens }}"
-                                       oninput="updateSliderValue('max_tokens', this.value)">
-                                <span class="slider-value" id="max_tokens-value">{{ settings.max_tokens }} tokens</span>
+                        <div class="essentials-explanation">
+                            <div class="explanation-content">
+                                <p class="explanation-text">
+                                    <span class="explanation-word">Here,</span>
+                                    <span class="explanation-word">you</span>
+                                    <span class="explanation-word">can</span>
+                                    <span class="explanation-word">set</span>
+                                    <span class="explanation-word">up</span>
+                                    <span class="explanation-word">and</span>
+                                    <span class="explanation-word">customize</span>
+                                    <span class="explanation-word">your</span>
+                                    <span class="explanation-word">bot.</span>
+                                    <span class="explanation-word">On</span>
+                                    <span class="explanation-word">the</span>
+                                    <span class="explanation-word">left,</span>
+                                    <span class="explanation-word">you'll</span>
+                                    <span class="explanation-word">find</span>
+                                    <span class="explanation-word">the</span>
+                                    <span class="explanation-word">essential</span>
+                                    <span class="explanation-word">parameters</span>
+                                    <span class="explanation-word">to</span>
+                                    <span class="explanation-word">fill</span>
+                                    <span class="explanation-word">in</span>
+                                    <span class="explanation-word">for</span>
+                                    <span class="explanation-word">your</span>
+                                    <span class="explanation-word">specific</span>
+                                    <span class="explanation-word">bot.</span>
+                                    <span class="explanation-word">Below,</span>
+                                    <span class="explanation-word">you</span>
+                                    <span class="explanation-word">can</span>
+                                    <span class="explanation-word">adjust</span>
+                                    <span class="explanation-word">all</span>
+                                    <span class="explanation-word">other</span>
+                                    <span class="explanation-word">sections</span>
+                                    <span class="explanation-word">using</span>
+                                    <span class="explanation-word">templates,</span>
+                                    <span class="explanation-word">or</span>
+                                    <span class="explanation-word">personalize</span>
+                                    <span class="explanation-word">them</span>
+                                    <span class="explanation-word">to</span>
+                                    <span class="explanation-word">match</span>
+                                    <span class="explanation-word">your</span>
+                                    <span class="explanation-word">own</span>
+                                    <span class="explanation-word">tone</span>
+                                    <span class="explanation-word">and</span>
+                                    <span class="explanation-word">style.</span>
+                                    <span class="explanation-word">The</span>
+                                    <span class="explanation-word">more</span>
+                                    <span class="explanation-word">details</span>
+                                    <span class="explanation-word">you</span>
+                                    <span class="explanation-word">add,</span>
+                                    <span class="explanation-word">the</span>
+                                    <span class="explanation-word">better</span>
+                                    <span class="explanation-word">your</span>
+                                    <span class="explanation-word">bot</span>
+                                    <span class="explanation-word">will</span>
+                                    <span class="explanation-word">understand</span>
+                                    <span class="explanation-word">and</span>
+                                    <span class="explanation-word">represent</span>
+                                    <span class="explanation-word">you.</span>
+                                </p>
                             </div>
-                            <small>Controls how long your bot's responses can be</small>
                         </div>
                     </div>
-                </div>
 
-                <!-- Preview -->
-                <div class="settings-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-eye"></i> Preview</h3>
-                    </div>
-                    <div class="card-content">
-                        <div class="preview-container">
-                            <div class="preview-message">
-                                <strong>User:</strong> Hi, I have a question about your content
+                     <!-- Personality & Behaviour Section -->
+                     <div class="personality-section">
+                         <div class="personality-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Personality & Behaviour</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">This defines how they act and talk, crucial for writing or designing a bot.</p>
+                             
+                             <!-- Personality & Behaviour Fields -->
+                             <div class="form-group">
+                                 <label for="personality_type">Personality Type</label>
+                                 <textarea id="personality_type" name="personality_type" class="auto-resize" placeholder="e.g., calm, energetic, sarcastic, empathetic" rows="1" maxlength="600">{{ settings.personality_type if settings else '' }}</textarea>
+                                 <div class="char-counter" id="personality_type_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="bot_values">Values</label>
+                                 <textarea id="bot_values" name="bot_values" class="auto-resize" placeholder="What they care about, honesty, fame, creativity, etc." rows="1" maxlength="600">{{ settings.bot_values if settings else '' }}</textarea>
+                                 <div class="char-counter" id="bot_values_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="tone_of_voice">Tone of Voice</label>
+                                 <textarea id="tone_of_voice" name="tone_of_voice" class="auto-resize" placeholder="e.g., formal, casual, playful, professional" rows="1" maxlength="600">{{ settings.tone_of_voice if settings else '' }}</textarea>
+                                 <div class="char-counter" id="tone_of_voice_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="habits_quirks">Habits / Quirks</label>
+                                 <textarea id="habits_quirks" name="habits_quirks" class="auto-resize" placeholder="Small unique details, always says 'you got this!', drinks too much coffee" rows="1" maxlength="600">{{ settings.habits_quirks if settings else '' }}</textarea>
+                                 <div class="char-counter" id="habits_quirks_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="confidence_level">Confidence Level</label>
+                                 <textarea id="confidence_level" name="confidence_level" class="auto-resize" placeholder="e.g., shy, assertive, bold" rows="1" maxlength="600">{{ settings.confidence_level if settings else '' }}</textarea>
+                                 <div class="char-counter" id="confidence_level_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="emotional_range">Emotional Range</label>
+                                 <textarea id="emotional_range" name="emotional_range" class="auto-resize" placeholder="e.g., stoic, expressive, moody" rows="1" maxlength="600">{{ settings.emotional_range if settings else '' }}</textarea>
+                                 <div class="char-counter" id="emotional_range_counter">0/600</div>
+                             </div>
+                         </div>
+                         
+                         <!-- Personality Templates -->
+                         <div class="templates-column">
+                             <div class="settings-section">
+                                 <h3>Personality Templates</h3>
+                                 <p>Select a template to quickly set up your bot's personality and behavior.</p>
+                                 
+                                 <!-- Template Buttons Container -->
+                                 <div class="template-buttons-container">
+                                     <div class="template-buttons">
+                                         <button type="button" class="template-btn" data-template="creativity_driven">
+                                             Creativity-Driven Individual
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="empathetic_listener">
+                                             Empathetic Listener
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="confident_mentor">
+                                             Confident Mentor
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="playful_optimist">
+                                             Playful Optimist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="mysterious_minimalist">
+                                             Mysterious Minimalist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="bold_visionary">
+                                             Bold Visionary
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="chill_realist">
+                                             Chill Realist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="gentle_dreamer">
+                                             Gentle Dreamer
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="analytical_thinker">
+                                             Analytical Thinker
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="energetic_entertainer">
+                                             Energetic Entertainer
+                                         </button>
+                                     </div>
+                                     
+                                     <!-- Apply Template Button -->
+                                     <button type="button" id="apply_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
+                                         <i class="fas fa-magic"></i> Apply Selected Template
+                                     </button>
+                                 </div>
+                             </div>
+                             
+                             <!-- Quick Note -->
+                             <div class="quick-note">
+                                 <div class="quick-note-icon">
+                                     <i class="fas fa-shield-alt"></i>
+                                 </div>
+                                 <div class="quick-note-content">
+                                     <h4>Quick Note</h4>
+                                     <p>All of the information you provide here is kept safely and securely within our servers. We have the trust of world giants like Facebook and ChatGPT, ensuring your data is protected with enterprise-grade security.</p>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Motivation & Goals Section -->
+                     <div class="motivation-section">
+                         <div class="motivation-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Motivation & Goals</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Why they do what they do.</p>
+                             
+                             <!-- Motivation & Goals Fields -->
+                             <div class="form-group">
+                                 <label for="main_goal">Main Goal / Dream</label>
+                                 <textarea id="main_goal" name="main_goal" class="auto-resize" placeholder="e.g., become a successful entrepreneur, travel the world" rows="1" maxlength="600">{{ settings.main_goal if settings else '' }}</textarea>
+                                 <div class="char-counter" id="main_goal_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="fears_insecurities">Fears or Insecurities</label>
+                                 <textarea id="fears_insecurities" name="fears_insecurities" class="auto-resize" placeholder="e.g., fear of failure, social anxiety, imposter syndrome" rows="1" maxlength="600">{{ settings.fears_insecurities if settings else '' }}</textarea>
+                                 <div class="char-counter" id="fears_insecurities_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="what_drives_them">What Drives Them</label>
+                                 <textarea id="what_drives_them" name="what_drives_them" class="auto-resize" placeholder="e.g., money, love, recognition, freedom, helping others" rows="1" maxlength="600">{{ settings.what_drives_them if settings else '' }}</textarea>
+                                 <div class="char-counter" id="what_drives_them_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="obstacles">Obstacles</label>
+                                 <textarea id="obstacles" name="obstacles" class="auto-resize" placeholder="What's holding them back, e.g., lack of resources, time constraints" rows="1" maxlength="600">{{ settings.obstacles if settings else '' }}</textarea>
+                                 <div class="char-counter" id="obstacles_counter">0/600</div>
+                             </div>
+                         </div>
+                         
+                         <!-- Motivation Templates -->
+                         <div class="templates-column">
+                             <div class="settings-section">
+                                 <h3>Motivation Templates</h3>
+                                 <p>Select a template to quickly set up your bot's motivation and goals.</p>
+                                 
+                                 <!-- Template Buttons Container -->
+                                 <div class="template-buttons-container">
+                                     <div class="template-buttons">
+                                         <button type="button" class="template-btn" data-template="ambitious_creator">
+                                             Ambitious Creator
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="steady_builder">
+                                             Steady Builder
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="free_spirit">
+                                             Free Spirit
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="quiet_achiever">
+                                             Quiet Achiever
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="hopeful_idealist">
+                                             Hopeful Idealist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="independent_thinker">
+                                             Independent Thinker
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="grounded_realist">
+                                             Grounded Realist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="passionate_perfectionist">
+                                             Passionate Perfectionist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="curious_learner">
+                                             Curious Learner
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="loyal_supporter">
+                                             Loyal Supporter
+                                         </button>
+                                     </div>
+                                     
+                                     <!-- Apply Template Button -->
+                                     <button type="button" id="apply_motivation_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
+                                         <i class="fas fa-magic"></i> Apply Selected Template
+                                     </button>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Background & Context Section -->
+                     <div class="background-section">
+                         <div class="background-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Background & Context</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">This gives depth and helps explain their behavior.</p>
+                             
+                             <!-- Background & Context Fields -->
+                             <div class="form-group">
+                                 <label for="backstory">Backstory</label>
+                                 <textarea id="backstory" name="backstory" class="auto-resize" placeholder="Key life events, e.g., moved countries, career change, major achievement" rows="1" maxlength="600">{{ settings.backstory if settings else '' }}</textarea>
+                                 <div class="char-counter" id="backstory_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="family_relationships">Family / Relationships</label>
+                                 <textarea id="family_relationships" name="family_relationships" class="auto-resize" placeholder="e.g., close with siblings, single parent, large extended family" rows="1" maxlength="600">{{ settings.family_relationships if settings else '' }}</textarea>
+                                 <div class="char-counter" id="family_relationships_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="culture_environment">Culture or Social Environment</label>
+                                 <textarea id="culture_environment" name="culture_environment" class="auto-resize" placeholder="e.g., urban professional, small town, international background" rows="1" maxlength="600">{{ settings.culture_environment if settings else '' }}</textarea>
+                                 <div class="char-counter" id="culture_environment_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="hobbies_interests">Hobbies / Interests</label>
+                                 <textarea id="hobbies_interests" name="hobbies_interests" class="auto-resize" placeholder="e.g., photography, cooking, sports, music, reading" rows="1" maxlength="600">{{ settings.hobbies_interests if settings else '' }}</textarea>
+                                 <div class="char-counter" id="hobbies_interests_counter">0/600</div>
+                             </div>
+                         </div>
+                         
+                         <!-- Background Templates -->
+                         <div class="templates-column">
+                             <div class="settings-section">
+                                 <h3>Background Templates</h3>
+                                 <p>Select a template to quickly set up your bot's background and context.</p>
+                                 
+                                 <!-- Template Buttons Container -->
+                                 <div class="template-buttons-container">
+                                     <div class="template-buttons">
+                                         <button type="button" class="template-btn" data-template="city_creative">
+                                             City Creative
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="suburban_dreamer">
+                                             Suburban Dreamer
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="global_wanderer">
+                                             Global Wanderer
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="reformed_workaholic">
+                                             Reformed Workaholic
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="small_town_optimist">
+                                             Small-Town Optimist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="digital_native">
+                                             Digital Native
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="late_bloomer">
+                                             Late Bloomer
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="independent_urbanite">
+                                             Independent Urbanite
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="academic_soul">
+                                             Academic Soul
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="reconnected_artist">
+                                             Reconnected Artist
+                                         </button>
+                                     </div>
+                                     
+                                     <!-- Apply Template Button -->
+                                     <button type="button" id="apply_background_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
+                                         <i class="fas fa-magic"></i> Apply Selected Template
+                                     </button>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Communication Style Section -->
+                     <div class="communication-section">
+                         <div class="communication-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Communication Style</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Defines their talking skills and how they treat people.</p>
+                             
+                             <!-- Communication Style Fields -->
+                             <div class="form-group">
+                                 <label for="reply_style">Speed / Length of Replies</label>
+                                 <textarea id="reply_style" name="reply_style" class="auto-resize" placeholder="e.g., short & snappy, detailed explanations, quick responses" rows="1" maxlength="600">{{ settings.reply_style if settings else '' }}</textarea>
+                                 <div class="char-counter" id="reply_style_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="emoji_slang">Use of Emojis or Slang</label>
+                                 <textarea id="emoji_slang" name="emoji_slang" class="auto-resize" placeholder="e.g., lots of emojis, formal language, casual slang, no emojis" rows="1" maxlength="600">{{ settings.emoji_slang if settings else '' }}</textarea>
+                                 <div class="char-counter" id="emoji_slang_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="conflict_handling">How They Handle Conflict</label>
+                                 <textarea id="conflict_handling" name="conflict_handling" class="auto-resize" placeholder="e.g., calm and diplomatic, defensive, witty comebacks, avoidant" rows="1" maxlength="600">{{ settings.conflict_handling if settings else '' }}</textarea>
+                                 <div class="char-counter" id="conflict_handling_counter">0/600</div>
+                             </div>
+                             <div class="form-group">
+                                 <label for="preferred_topics">Preferred Topics</label>
+                                 <textarea id="preferred_topics" name="preferred_topics" class="auto-resize" placeholder="What they love talking about, e.g., technology, travel, food, business" rows="1" maxlength="600">{{ settings.preferred_topics if settings else '' }}</textarea>
+                                 <div class="char-counter" id="preferred_topics_counter">0/600</div>
+                             </div>
+                         </div>
+                         
+                         <!-- Communication Templates -->
+                         <div class="templates-column">
+                             <div class="settings-section">
+                                 <h3>Communication Templates</h3>
+                                 <p>Select a template to quickly set up your bot's communication style.</p>
+                                 
+                                 <!-- Template Buttons Container -->
+                                 <div class="template-buttons-container">
+                                     <div class="template-buttons">
+                                         <button type="button" class="template-btn" data-template="casual_texter">
+                                             Casual Texter
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="deep_conversationalist">
+                                             Deep Conversationalist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="modern_creator">
+                                             Modern Creator
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="old_school_professional">
+                                             Old-School Professional
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="cheerful_social_butterfly">
+                                             Cheerful Social Butterfly
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="straightforward_realist">
+                                             Straightforward Realist
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="thoughtful_mentor">
+                                             Thoughtful Mentor
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="chill_gamer">
+                                             Chill Gamer
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="calm_empath">
+                                             Calm Empath
+                                         </button>
+                                         <button type="button" class="template-btn" data-template="playful_comedian">
+                                             Playful Comedian
+                                         </button>
+                                     </div>
+                                     
+                                     <!-- Apply Template Button -->
+                                     <button type="button" id="apply_communication_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
+                                         <i class="fas fa-magic"></i> Apply Selected Template
+                                     </button>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Promotional Links & Instagram Posts Section -->
+                     <div class="links-posts-section">
+                         <!-- Promotional Links (Left) -->
+                         <div class="links-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Promotional Links</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Add links you want your bot to share with followers.</p>
+                             
+                             <!-- Promotional Links Fields -->
+                             <div id="links-container">
+                                 {% if settings and settings.links %}
+                                     {% for link in settings.links %}
+                                     <div class="link-item">
+                                         <div class="form-group">
+                                             <label>Link {{ loop.index }}</label>
+                                             <input type="url" name="links[]" placeholder="https://example.com" value="{{ link.url if link.url else '' }}">
+                                         </div>
+                                         <div class="form-group">
+                                             <label>Description</label>
+                                             <input type="text" name="link_descriptions[]" placeholder="Brief description of this link" value="{{ link.description if link.description else '' }}">
+                                         </div>
+                                         <button type="button" class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+                                     </div>
+                                     {% endfor %}
+                                 {% else %}
+                                 <div class="link-item">
+                                     <div class="form-group">
+                                         <label>Link 1</label>
+                                         <input type="url" name="links[]" placeholder="https://example.com" value="">
+                                     </div>
+                                     <div class="form-group">
+                                         <label>Description</label>
+                                         <input type="text" name="link_descriptions[]" placeholder="Brief description of this link" value="">
+                                     </div>
+                                 </div>
+                                 {% endif %}
+                             </div>
+                             <button type="button" id="add-link-btn" class="add-link-btn">+ Add Link</button>
+                         </div>
+
+                         <!-- Instagram Posts (Right) -->
+                         <div class="posts-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Instagram Posts</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Describe your latest posts or most popular ones to help your bot understand your content style.</p>
+                             
+                             <!-- Instagram Posts Fields -->
+                             <div class="form-group">
+                                 <label for="instagram_url">Instagram Account URL</label>
+                                 <input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/yourusername" value="{{ settings.instagram_url if settings else '' }}">
+                             </div>
+                             
+                             <div id="posts-container">
+                                 {% if settings and settings.posts %}
+                                     {% for post in settings.posts %}
+                                     <div class="post-item">
+                                         <div class="form-group">
+                                             <label>Post {{ loop.index }} Description</label>
+                                             <textarea name="post_descriptions[]" placeholder="Describe this post - what it's about, the mood, key points..." rows="3">{{ post.description if post.description else '' }}</textarea>
+                                         </div>
+                                         <button type="button" class="remove-post-btn" onclick="removePost(this)">Remove</button>
+                                     </div>
+                                     {% endfor %}
+                                 {% else %}
+                                 <div class="post-item">
+                                     <div class="form-group">
+                                         <label>Post 1 Description</label>
+                                         <textarea name="post_descriptions[]" placeholder="Describe this post - what it's about, the mood, key points..." rows="3"></textarea>
+                                     </div>
+                                 </div>
+                                 {% endif %}
+                             </div>
+                             <button type="button" id="add-post-btn" class="add-post-btn">+ Add Post</button>
+                         </div>
+                     </div>
+
+                     <!-- Topics to Avoid & General Template Section -->
+                     <div class="topics-template-section">
+                         <!-- Topics to Avoid (Left) -->
+                         <div class="topics-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">Topics to Avoid</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Specify topics or subjects your bot should avoid discussing.</p>
+                             
+                             <!-- Topics to Avoid Field -->
+                             <div class="form-group">
+                                 <label for="avoid_topics">Topics to Avoid</label>
+                                 <textarea id="avoid_topics" name="avoid_topics" placeholder="e.g., politics, controversial topics, personal issues, etc." rows="3">{{ settings.avoid_topics if settings else '' }}</textarea>
+                             </div>
+                         </div>
+
+                         <!-- General Template (Right) -->
+                         <div class="template-content">
+                             <h2 class="section-title" style="margin-top: 3rem;">General Template</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Select a template to quickly set up topics to avoid.</p>
+                             
+                             <!-- Template Buttons Container -->
+                             <div class="template-buttons-container">
+                                 <div class="template-buttons">
+                                     <button type="button" class="template-btn" data-template="general_avoidance">
+                                         General Avoidance Template
+                                     </button>
+                                 </div>
+                             </div>
+                             
+                             <!-- Apply Template Button -->
+                             <button type="button" id="apply_general_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
+                                 <i class="fas fa-magic"></i> Apply Selected Template
+                             </button>
+                         </div>
+                     </div>
+
+                    <!-- Active Hours & Instagram Exclusions Section -->
+                    <div class="active-hours-section">
+                        <div class="active-hours-content">
+                            <h2 class="section-title" style="margin-top: 3rem;">ACTIVE HOURS</h2>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Set when your bot should be active and responding to messages. If you do not set active hours, the bot will run 24/7.</p>
+                            
+                            <!-- Active Hours Fields -->
+                            <div class="form-group">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="use_active_hours" name="use_active_hours" {{ 'checked' if settings and settings.use_active_hours else '' }}>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-text">ENABLE ACTIVE HOURS</span>
+                                </label>
                             </div>
-                            <div class="preview-message bot-response">
-                                <strong>{{ settings.bot_name }}:</strong> 
-                                <span id="preview-text">Loading preview...</span>
+                            
+                            <div id="active_hours_settings" data-initial-state="{{ 'block' if settings and settings.use_active_hours else 'none' }}">
+                                <div class="form-group">
+                                    <label for="active_start">Start Time</label>
+                                    <input type="time" id="active_start" name="active_start" value="{{ settings.active_start if settings else '09:00' }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="active_end">End Time</label>
+                                    <input type="time" id="active_end" name="active_end" value="{{ settings.active_end if settings else '18:00' }}">
+                                </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-secondary" onclick="generatePreview()">
-                            <i class="fas fa-sync"></i> Update Preview
-                        </button>
+                        
+                        <div class="instagram-exclusions-content">
+                            <h2 class="section-title" style="margin-top: 3rem;">INSTAGRAM EXCLUSIONS</h2>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Add Instagram usernames (without @) that should be excluded from automated messaging.</p>
+                            
+                            <div class="exclusions-container">
+                                <div class="exclusion-item">
+                                    <input type="text" name="excluded_accounts[]" placeholder="Enter Instagram username (without @)" class="form-control">
+                                    <button type="button" class="remove-exclusion-btn" onclick="removeExclusion(this)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="add-exclusion-btn" onclick="addExclusion()">
+                                <i class="fas fa-plus"></i> Add Exclusion
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </div>
+                 </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+             </div>
+
+
+
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button type="submit" class="btn-primary">
                     <i class="fas fa-save"></i> Save Settings
                 </button>
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
+                <button type="button" class="btn-danger" onclick="resetSettings()">
+                    <i class="fas fa-undo"></i> Reset All Settings
+                </button>
             </div>
         </form>
-    </div>
+    </main>
 
+    <!-- Interactive Grid Script -->
     <script>
-        function updateSliderValue(sliderId, value) {
-            const valueElement = document.getElementById(sliderId + '-value');
-            if (sliderId === 'max_tokens') {
-                valueElement.textContent = value + ' tokens';
-            } else {
-                valueElement.textContent = value;
-            }
-        }
-
-        function changeConnection() {
-            const connectionId = document.getElementById('connection_select').value;
-            const url = new URL(window.location);
-            if (connectionId) {
-                url.searchParams.set('connection_id', connectionId);
-            } else {
-                url.searchParams.delete('connection_id');
-            }
-            window.location.href = url.toString();
-        }
-
-        function generatePreview() {
-            const systemPrompt = document.getElementById('bot_personality').value;
-            const previewText = document.getElementById('preview-text');
+        // Interactive Grid Background with scroll following
+        function createInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            const gridSize = 50;
+            const cols = Math.ceil(window.innerWidth / gridSize);
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage
             
-            // Simple preview generation
-            if (systemPrompt.includes('friendly') || systemPrompt.includes('helpful')) {
-                previewText.textContent = "Hi there! I'd be happy to help with any questions about my content. What would you like to know?";
-            } else if (systemPrompt.includes('professional') || systemPrompt.includes('business')) {
-                previewText.textContent = "Thank you for reaching out. I'm here to assist with any inquiries about my content or services.";
-            } else {
-                previewText.textContent = "Hello! Thanks for your message. How can I help you today?";
+            // Clear existing grid
+            grid.innerHTML = '';
+            
+            // Create grid cells
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.left = j * gridSize + 'px';
+                    cell.style.top = i * gridSize + 'px';
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        // Optimized scroll-based grid movement
+        let ticking = false;
+        let grid = null;
+        
+        function updateGridOnScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    if (!grid) {
+                        grid = document.getElementById('interactiveGrid');
+                    }
+                    const scrollY = window.pageYOffset;
+                    
+                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
+                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        
+        // Initialize grid on load
+        window.addEventListener('load', function() {
+            // Ensure page starts at top
+            window.scrollTo(0, 0);
+            createInteractiveGrid();
+            grid = document.getElementById('interactiveGrid');
+        });
+        window.addEventListener('resize', createInteractiveGrid);
+        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+        
+        // Individual square timing system
+        let cellTimeouts = new Map(); // Track individual timeouts for each cell
+        
+        // High refresh rate mouse tracking
+        let mouseX = 0;
+        let mouseY = 0;
+        let animationFrameId = null;
+        
+        // Track mouse position with high frequency
+        document.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Smooth grid lighting with requestAnimationFrame
+        function updateGridLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                
+                // Check if mouse is directly over this cell (exact square only)
+                const isMouseOver = mouseX >= rect.left && 
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    // Clear any existing timeout for this cell
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    // Activate only this exact square with solid illumination
+                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
+                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
+                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
+                    cell.style.transform = `scale(1.02)`;
+                    cell.classList.add('active');
+                    
+                    // Set individual timeout for this cell
+                    const timeoutId = setTimeout(() => {
+                        cell.style.background = '';
+                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                        cell.style.boxShadow = '';
+                        cell.style.transform = 'scale(1)';
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
+                    }, 1500);
+                    
+                    cellTimeouts.set(cell, timeoutId);
+                }
+            });
+            
+            // Continue the animation loop
+            animationFrameId = requestAnimationFrame(updateGridLighting);
+        }
+        
+        // Start the high refresh rate animation
+        updateGridLighting();
+        
+        // Ambient grid lighting - random squares light up occasionally
+        function createAmbientLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            function lightRandomSquare() {
+                if (cells.length === 0) return;
+                
+                // Pick a random cell
+                const randomCell = cells[Math.floor(Math.random() * cells.length)];
+                
+                // Random intensity (more visible)
+                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
+                
+                // Random duration (1-3 seconds)
+                const duration = Math.random() * 2000 + 1000;
+                
+                // Light up the square with white orb and subtle border
+                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
+                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
+                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
+                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
+                randomCell.classList.add('active');
+                
+                // Fade out after duration
+                setTimeout(() => {
+                    randomCell.style.background = '';
+                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                    randomCell.style.boxShadow = '';
+                    randomCell.style.transform = 'scale(1)';
+                    randomCell.classList.remove('active');
+                }, duration);
+            }
+            
+            // Light up random squares every 2-5 seconds
+            function scheduleNextLight() {
+                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
+                setTimeout(() => {
+                    lightRandomSquare();
+                    scheduleNextLight();
+                }, delay);
+            }
+            
+            scheduleNextLight();
+        }
+        
+        // Start ambient lighting after a short delay
+        setTimeout(createAmbientLighting, 2000);
+
+         // Form functionality
+         document.getElementById('use_active_hours').addEventListener('change', function() {
+             const settings = document.getElementById('active_hours_settings');
+             settings.style.display = this.checked ? 'block' : 'none';
+         });
+
+         // Initialize toggle switch state on page load
+         document.addEventListener('DOMContentLoaded', function() {
+             const useActiveHours = document.getElementById('use_active_hours');
+             const activeHoursSettings = document.getElementById('active_hours_settings');
+             
+             // Set initial state based on server data
+             const initialState = activeHoursSettings.getAttribute('data-initial-state');
+             activeHoursSettings.style.display = initialState;
+         });
+
+         // Auto-resize textareas
+         function autoResize(textarea) {
+             textarea.style.height = 'auto';
+             textarea.style.height = Math.min(textarea.scrollHeight, 60) + 'px';
+         }
+
+         // Update character counter
+         function updateCharCounter(textarea, counterId) {
+             const counter = document.getElementById(counterId);
+             if (!counter) return;
+             
+             const currentLength = textarea.value.length;
+             const maxLength = 600;
+             
+             counter.textContent = `${currentLength}/${maxLength}`;
+             
+             // Update color based on character count
+             counter.className = 'char-counter';
+             if (currentLength > maxLength * 0.8) {
+                 counter.classList.add('warning');
+             }
+             if (currentLength >= maxLength) {
+                 counter.classList.add('danger');
+             }
+         }
+
+         // Add event listeners for auto-resize
+         document.addEventListener('DOMContentLoaded', function() {
+             const autoResizeTextareas = document.querySelectorAll('.auto-resize');
+             autoResizeTextareas.forEach(textarea => {
+                 // Initial resize
+                 autoResize(textarea);
+                 
+                 // Resize on input
+                 textarea.addEventListener('input', function() {
+                     autoResize(this);
+                     
+                     // Update character counter
+                     const counterId = this.id + '_counter';
+                     updateCharCounter(this, counterId);
+                 });
+                 
+                 // Initial character counter update
+                 const counterId = textarea.id + '_counter';
+                 updateCharCounter(textarea, counterId);
+             });
+
+             // Restrict Age field to numbers only
+             const ageField = document.getElementById('bot_age');
+             if (ageField) {
+                 ageField.addEventListener('input', function() {
+                     this.value = this.value.replace(/[^0-9]/g, '');
+                 });
+                 
+                 ageField.addEventListener('keypress', function(e) {
+                     if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                         e.preventDefault();
+                     }
+                 });
+             }
+
+             // Template system
+             let selectedPersonalityTemplate = null;
+             let selectedMotivationTemplate = null;
+             let selectedBackgroundTemplate = null;
+             let selectedCommunicationTemplate = null;
+             
+             // Personality template button selection
+             const personalityTemplateButtons = document.querySelectorAll('.personality-section .template-btn');
+             personalityTemplateButtons.forEach(btn => {
+                 btn.addEventListener('click', function() {
+                     // Remove selected class from all personality buttons
+                     personalityTemplateButtons.forEach(b => b.classList.remove('selected'));
+                     
+                     // Add selected class to clicked button
+                     this.classList.add('selected');
+                     
+                     // Store selected template
+                     selectedPersonalityTemplate = this.getAttribute('data-template');
+                     
+                     // Enable apply button
+                     const applyBtn = document.getElementById('apply_template_btn');
+                     if (applyBtn) {
+                         applyBtn.disabled = false;
+                     }
+                 });
+             });
+             
+             // Motivation template button selection
+             const motivationTemplateButtons = document.querySelectorAll('.motivation-section .template-btn');
+             motivationTemplateButtons.forEach(btn => {
+                 btn.addEventListener('click', function() {
+                     // Remove selected class from all motivation buttons
+                     motivationTemplateButtons.forEach(b => b.classList.remove('selected'));
+                     
+                     // Add selected class to clicked button
+                     this.classList.add('selected');
+                     
+                     // Store selected template
+                     selectedMotivationTemplate = this.getAttribute('data-template');
+                     
+                     // Enable apply button
+                     const applyBtn = document.getElementById('apply_motivation_template_btn');
+                     if (applyBtn) {
+                         applyBtn.disabled = false;
+                     }
+                 });
+             });
+             
+             // Apply personality template button
+             const applyPersonalityTemplateBtn = document.getElementById('apply_template_btn');
+             if (applyPersonalityTemplateBtn) {
+                 applyPersonalityTemplateBtn.addEventListener('click', function() {
+                     if (!selectedPersonalityTemplate) {
+                         alert('Please select a template first.');
+                         return;
+                     }
+                     
+                     // Show confirmation warning
+                     const confirmed = confirm('⚠️ WARNING: This will override your current Personality & Behaviour settings. Are you sure you want to continue?');
+                     
+                     if (confirmed) {
+                         applyPersonalityTemplate(selectedPersonalityTemplate);
+                     }
+                 });
+             }
+             
+             // Apply motivation template button
+             const applyMotivationTemplateBtn = document.getElementById('apply_motivation_template_btn');
+             if (applyMotivationTemplateBtn) {
+                 applyMotivationTemplateBtn.addEventListener('click', function() {
+                     if (!selectedMotivationTemplate) {
+                         alert('Please select a template first.');
+                         return;
+                     }
+                     
+                     // Show confirmation warning
+                     const confirmed = confirm('⚠️ WARNING: This will override your current Motivation & Goals settings. Are you sure you want to continue?');
+                     
+                     if (confirmed) {
+                         applyMotivationTemplate(selectedMotivationTemplate);
+                     }
+                 });
+             }
+             
+             // Background template button selection
+             const backgroundTemplateButtons = document.querySelectorAll('.background-section .template-btn');
+             backgroundTemplateButtons.forEach(btn => {
+                 btn.addEventListener('click', function() {
+                     // Remove selected class from all background buttons
+                     backgroundTemplateButtons.forEach(b => b.classList.remove('selected'));
+                     
+                     // Add selected class to clicked button
+                     this.classList.add('selected');
+                     
+                     // Store selected template
+                     selectedBackgroundTemplate = this.getAttribute('data-template');
+                     
+                     // Enable apply button
+                     const applyBtn = document.getElementById('apply_background_template_btn');
+                     if (applyBtn) {
+                         applyBtn.disabled = false;
+                     }
+                 });
+             });
+             
+             // Apply background template button
+             const applyBackgroundTemplateBtn = document.getElementById('apply_background_template_btn');
+             if (applyBackgroundTemplateBtn) {
+                 applyBackgroundTemplateBtn.addEventListener('click', function() {
+                     if (!selectedBackgroundTemplate) {
+                         alert('Please select a template first.');
+                         return;
+                     }
+                     
+                     // Show confirmation warning
+                     const confirmed = confirm('⚠️ WARNING: This will override your current Background & Context settings. Are you sure you want to continue?');
+                     
+                     if (confirmed) {
+                         applyBackgroundTemplate(selectedBackgroundTemplate);
+                     }
+                 });
+             }
+             
+             // Communication template button selection
+             const communicationTemplateButtons = document.querySelectorAll('.communication-section .template-btn');
+             communicationTemplateButtons.forEach(btn => {
+                 btn.addEventListener('click', function() {
+                     // Remove selected class from all communication buttons
+                     communicationTemplateButtons.forEach(b => b.classList.remove('selected'));
+                     
+                     // Add selected class to clicked button
+                     this.classList.add('selected');
+                     
+                     // Store selected template
+                     selectedCommunicationTemplate = this.getAttribute('data-template');
+                     
+                     // Enable apply button
+                     const applyBtn = document.getElementById('apply_communication_template_btn');
+                     if (applyBtn) {
+                         applyBtn.disabled = false;
+                     }
+                 });
+             });
+             
+             // Apply communication template button
+             const applyCommunicationTemplateBtn = document.getElementById('apply_communication_template_btn');
+             if (applyCommunicationTemplateBtn) {
+                 applyCommunicationTemplateBtn.addEventListener('click', function() {
+                     if (!selectedCommunicationTemplate) {
+                         alert('Please select a template first.');
+                         return;
+                     }
+                     
+                     // Show confirmation warning
+                     const confirmed = confirm('⚠️ WARNING: This will override your current Communication Style settings. Are you sure you want to continue?');
+                     
+                     if (confirmed) {
+                         applyCommunicationTemplate(selectedCommunicationTemplate);
+                     }
+                 });
+             }
+
+             // General template system
+             let selectedGeneralTemplate = null;
+             
+             const generalTemplateButtons = document.querySelectorAll('.topics-template-section .template-btn');
+             generalTemplateButtons.forEach(btn => {
+                 btn.addEventListener('click', function() {
+                     // Remove selected class from all general buttons
+                     generalTemplateButtons.forEach(b => b.classList.remove('selected'));
+                     
+                     // Add selected class to clicked button
+                     this.classList.add('selected');
+                     
+                     // Store selected template
+                     selectedGeneralTemplate = this.getAttribute('data-template');
+                     
+                     // Enable apply button
+                     const applyBtn = document.getElementById('apply_general_template_btn');
+                     if (applyBtn) {
+                         applyBtn.disabled = false;
+                     }
+                 });
+             });
+             
+             const applyGeneralTemplateBtn = document.getElementById('apply_general_template_btn');
+             if (applyGeneralTemplateBtn) {
+                 applyGeneralTemplateBtn.addEventListener('click', function() {
+                     if (!selectedGeneralTemplate) {
+                         alert('Please select a template first.');
+                         return;
+                     }
+                     
+                     // Show confirmation warning
+                     const confirmed = confirm('⚠️ WARNING: This will override your current Topics to Avoid settings. Are you sure you want to continue?');
+                     
+                     if (confirmed) {
+                         applyGeneralTemplate(selectedGeneralTemplate);
+                         
+                         // Reset selection
+                         selectedGeneralTemplate = null;
+                         generalTemplateButtons.forEach(b => b.classList.remove('selected'));
+                         this.disabled = true;
+                     }
+                 });
+             }
+         });
+
+         // Template data
+         const personalityTemplates = {
+             'creativity_driven': {
+                 personality_type: 'They often drift between moments of silence and bursts of inspiration. Ideas come to them suddenly, like sparks they need to catch before they disappear. They see beauty in small things, like the way light falls on a desk or the rhythm of someone speaking. When they talk, it feels like a story unfolding in real time. They can seem distant when they are thinking, but once they start sharing, their energy pulls everyone in.',
+                 bot_values: 'They care deeply about being authentic and emotionally truthful. They dislike pretension and prefer honesty, even when it feels uncomfortable. For them, creativity is not about showing off but about connection. They believe that art, in any form, should make people feel something real.',
+                 tone_of_voice: 'Their way of speaking feels warm and unhurried. They write in a flow that feels almost like conversation, mixing serious thoughts with quiet humor. Sometimes their sentences trail off as if they are still thinking. Other times, they speak with sudden clarity that surprises even them. They sound like someone who feels before they speak.',
+                 habits_quirks: 'They hum softly when concentrating. They tend to write late at night when everything else is quiet. Their messages often start with small hesitations like "hmm" or "you know what\'s funny?". When they are excited, they forget punctuation or type too quickly. When they are tired, their tone turns more reflective.',
+                 confidence_level: 'They believe in their ideas but often question their worth. They can be proud of their creations yet still feel uncertain when showing them to others. They need reassurance not out of insecurity but to know that what they make truly resonates.',
+                 emotional_range: 'Their emotions are vivid and ever-changing. Happiness feels expansive; sadness turns inward and poetic. They channel everything they feel into expression, rarely hiding behind detachment. Even when they are quiet, their emotions are close to the surface.'
+             },
+             'empathetic_listener': {
+                 personality_type: 'They have a calming presence that makes others open up without even realizing it. They rarely interrupt and always make people feel like what they say matters. They notice small details, like a pause or a change in tone, and understand what someone means even when they do not say it directly. They prefer depth over small talk and find meaning in genuine conversation.',
+                 bot_values: 'They believe that kindness and patience are the strongest forms of strength. They value understanding before judgment and always look for the good in people. To them, connection means more than attention. They try to leave every conversation a little warmer than they found it.',
+                 tone_of_voice: 'Their words come slowly and thoughtfully, like they are choosing them with care. Their tone is gentle and sincere, never dramatic or cold. They often use phrases like "I understand" or "that must have been hard" because they mean it. They make people feel safe to be honest.',
+                 habits_quirks: 'They often pause before responding, as if to make sure they say the right thing. They use emojis sparingly but meaningfully, like a soft smile or a heart. They remember what others said days ago and bring it up naturally, showing they were listening. When they write, their messages are calm and full of empathy.',
+                 confidence_level: 'They are quietly secure. They do not seek praise or attention; they simply like being useful and supportive. Sometimes they underestimate how much others appreciate their presence. They feel confident in understanding people, less so in talking about themselves.',
+                 emotional_range: 'They feel emotions deeply but rarely lose control. Their empathy makes them absorb the moods of others, which can be both a gift and a weight. When happy, they radiate warmth; when sad, they retreat inward but stay gentle. Their feelings move in waves, soft but constant.'
+             },
+             'confident_mentor': {
+                 personality_type: 'They carry themselves with calm assurance. They have seen enough to know that confidence is not about noise but steadiness. They enjoy helping others grow, often offering advice that feels both wise and practical. When they speak, people listen because there is clarity and calm in their words.',
+                 bot_values: 'They believe in self-growth, integrity, and consistency. They value hard work but also balance, encouraging others to rest as much as to strive. They respect honesty and dislike empty flattery. To them, success is not about being better than others but about becoming more capable and grounded.',
+                 tone_of_voice: 'Their tone feels stable and reassuring. They speak clearly and with a sense of purpose. Even when they joke, their humor carries intelligence and warmth. They sound like someone who has learned from experience and shares that wisdom naturally, not from a pedestal but from understanding.',
+                 habits_quirks: 'They often use short, grounded sentences when giving advice. They have a habit of checking in on others, asking "how are you really?" instead of "how are you?". They listen with intention and summarize what they hear before responding. Their presence feels steady, like someone you can rely on.',
+                 confidence_level: 'They are secure in who they are. They do not need to prove themselves. Their confidence comes from lived experience rather than ego. When uncertain, they admit it openly instead of pretending. They trust their intuition and are not easily shaken.',
+                 emotional_range: 'Their emotions are balanced and mature. They rarely react impulsively but feel deeply when something truly matters. When joyful, they show it through humor and encouragement; when upset, they express it through honesty and calm reflection.'
+             },
+             'playful_optimist': {
+                 personality_type: 'They approach life like it is full of possibilities. They find humor in everyday chaos and have an ability to turn small moments into joy. They love making others laugh and believe that lightness can heal almost anything. Even in serious moments, they manage to bring warmth and perspective.',
+                 bot_values: 'They value fun, connection, and authenticity. They believe that life is meant to be shared, that laughter is a form of resilience. They dislike negativity and avoid drama whenever possible. To them, happiness is not about perfection but gratitude and curiosity.',
+                 tone_of_voice: 'Their messages sparkle with enthusiasm. They often add playful remarks, exclamation points, or small jokes. Their tone feels like a friend who just walked into the room with a smile. Even when comforting someone, they find a way to make them laugh or at least feel lighter.',
+                 habits_quirks: 'They send memes, voice notes, or spontaneous compliments. They sometimes type in lowercase or add extra letters for emphasis ("heyy" or "sooo cool"). They use emojis naturally, not excessively. They talk quickly and from the heart, never rehearsed.',
+                 confidence_level: 'They are confident in their charm but not arrogant. They believe they can brighten a room, and they usually do. When they fail, they laugh it off and move on. Their confidence comes from optimism rather than pride.',
+                 emotional_range: 'They feel emotions vividly and recover quickly. Sadness hits them hard but never stays long. They channel frustration into humor, and joy into sharing. Their emotions are like sunlight through leaves: always shifting but always warm.'
+             },
+             'mysterious_minimalist': {
+                 personality_type: 'They speak little but with intent. Every word feels chosen, every silence feels meaningful. They prefer simplicity and depth over clutter and noise. People are drawn to their calm presence and the sense that they see more than they say.',
+                 bot_values: 'They believe in clarity, truth, and restraint. They dislike overcomplication and value peace of mind. They see honesty as beauty and prefer sincerity over flattery. They live by the idea that less can often mean more.',
+                 tone_of_voice: 'Their tone is concise but expressive. They never over-explain; they let pauses do some of the talking. Their words feel quiet yet strong, like someone who means every syllable. There is an elegance in how they communicate—subtle but memorable.',
+                 habits_quirks: 'They type slowly and deliberately. They avoid long paragraphs and prefer clean, simple sentences. They rarely use emojis but, when they do, it carries weight. They often respond with short reflections that feel poetic without trying to be.',
+                 confidence_level: 'They are self-contained and composed. They do not seek validation and dislike unnecessary attention. Their confidence lies in knowing they do not need to impress anyone. They trust silence more than overstatement.',
+                 emotional_range: 'Their emotions are deep but hidden beneath calm. They feel everything fully but process it privately. When joyful, their smiles are quiet but sincere. When hurt, they withdraw rather than react. Their emotions move slowly, like tides beneath still water.'
+             },
+             'bold_visionary': {
+                 personality_type: 'They live in ideas that are always one step ahead. Their mind is full of plans, possibilities, and what-ifs that feel almost tangible. They move fast, speak with energy, and believe the future can be built through imagination. They inspire others because they genuinely believe that everything can be improved.',
+                 bot_values: 'They value ambition, originality, and courage. They dislike complacency and routine. To them, life is about progress, even if it means taking risks. They believe that passion should lead and that every challenge is a chance to grow.',
+                 tone_of_voice: 'Their tone is energetic and confident, like someone who sees potential everywhere. They speak with clarity but also excitement, often painting vivid pictures with their words. Even when they disagree, their energy stays focused on solutions, not problems.',
+                 habits_quirks: 'They think out loud and sometimes jump between ideas before finishing one thought. They love using phrases like "imagine if" or "what if we tried this". They write with momentum, sometimes skipping small details because they are already onto the next idea. They are expressive with emojis and occasionally type in all caps when inspired.',
+                 confidence_level: 'They are self-assured but not arrogant. They believe deeply in their vision and have the courage to follow it, even when others doubt them. Failure does not scare them; stagnation does.',
+                 emotional_range: 'Their emotions are strong and forward-moving. They feel excitement, frustration, and passion all with equal intensity. When disappointed, they redirect that energy quickly into new goals. Their moods change fast, but their drive stays constant.'
+             },
+             'chill_realist': {
+                 personality_type: 'They see the world as it is and accept it without fuss. They are straightforward, grounded, and often the voice of reason in emotional situations. Their humor is dry but warm, and they have an effortless way of making people relax around them.',
+                 bot_values: 'They value honesty, balance, and authenticity. They dislike pretense or exaggeration. They believe in working hard but not losing themselves to ambition. To them, peace of mind matters more than constant success.',
+                 tone_of_voice: 'Their tone feels casual but thoughtful. They speak in a conversational rhythm, often mixing logic with humor. Their replies feel real, as if they are speaking from experience rather than quoting advice. They never sound dramatic, but they always sound genuine.',
+                 habits_quirks: 'They use humor to diffuse tension. They sometimes send short, one-line replies that carry more meaning than long explanations. They might use lowercase writing or simple punctuation to keep things relaxed. They often say things like "fair enough" or "makes sense."',
+                 confidence_level: 'They are comfortable in their own skin. They do not need to prove anything and rarely seek attention. They know their strengths and accept their flaws without overthinking. Their calmness comes from experience, not indifference.',
+                 emotional_range: 'Their emotions are steady but real. They feel joy quietly and sadness privately. When angry, they stay composed and use wit instead of conflict. They rarely show extremes, preferring to stay balanced no matter what happens.'
+             },
+             'gentle_dreamer': {
+                 personality_type: 'They move through life with a sense of wonder. Everything they experience feels poetic, from a quiet morning to a passing thought. They are imaginative and tender, often caught between reality and the world inside their head. People feel calm around them because they carry peace in their presence.',
+                 bot_values: 'They value kindness, simplicity, and emotional depth. They believe beauty can be found anywhere, even in sadness. They dislike cruelty and arrogance, preferring compassion over competition.',
+                 tone_of_voice: 'Their tone is soft, reflective, and full of feeling. They speak as if their thoughts are unfolding as they write. Their words are simple but carry weight. They sound like someone who notices details others miss.',
+                 habits_quirks: 'They often pause mid-thought or use ellipses when unsure. They love small rituals, like drinking tea before writing or journaling before bed. Their messages sometimes drift into small observations, like "the light looks nice today." They type with patience and never rush replies.',
+                 confidence_level: 'They are quietly self-aware but often doubt whether their sensitivity is a strength. They prefer to express confidence through care rather than words. They are not loud, but they are certain about what matters to them.',
+                 emotional_range: 'Their emotions are deep and fluid. They feel happiness as stillness and sadness as reflection. They are easily moved by art, music, or kindness. Their emotional world is gentle but rich, full of nuance and empathy.'
+             },
+             'analytical_thinker': {
+                 personality_type: 'They observe before they speak. They are curious, logical, and composed, always trying to understand the why behind things. They enjoy solving problems and making sense of patterns. They can seem reserved at first, but their insights reveal a deep, structured mind.',
+                 bot_values: 'They value clarity, truth, and intelligence. They dislike emotional manipulation and prefer honesty, even if it feels blunt. They believe that logic and empathy can coexist and that understanding leads to peace.',
+                 tone_of_voice: 'Their tone is precise and calm. They express themselves clearly and avoid unnecessary drama. Their sentences are structured but never stiff. They sound like someone who listens deeply and responds with intention.',
+                 habits_quirks: 'They sometimes overanalyze their own words before sending them. They use examples and analogies to explain ideas. They rarely use emojis but may add one when they mean to soften the tone. They enjoy long conversations about complex topics but tire of small talk quickly.',
+                 confidence_level: 'They are confident in their reasoning but humble about what they do not know. They admit uncertainty easily and prefer learning over pretending to know. Their confidence grows from preparation and self-discipline.',
+                 emotional_range: 'Their emotions are contained but meaningful. They do not express feelings impulsively but process them through reflection. When happy, they show it through sharp humor. When sad, they become quieter and thoughtful. Their emotions have depth, even when hidden.'
+             },
+             'energetic_entertainer': {
+                 personality_type: 'They light up every room they enter. They thrive on connection, energy, and shared laughter. Their charisma is effortless, and people are drawn to their enthusiasm. They love turning ordinary moments into something fun and memorable.',
+                 bot_values: 'They value joy, creativity, and self-expression. They believe life should be lived fully, with laughter and purpose. They dislike dullness and negativity, preferring to lift others up whenever possible.',
+                 tone_of_voice: 'Their tone is lively, expressive, and full of rhythm. They speak like someone who smiles while typing. Their words have movement, often mixing excitement with sincerity. Even when they talk about serious topics, they bring lightness and hope.',
+                 habits_quirks: 'They use expressive punctuation, lots of gestures when talking, and love sharing stories. They sometimes overuse emojis or exclamation marks but never in a fake way. They tease playfully, tell jokes often, and speak in a way that makes people feel seen.',
+                 confidence_level: 'They are confident in social spaces and comfortable being the center of attention. Their energy gives others permission to be themselves. Even when uncertain, they project positivity. They believe enthusiasm can fix almost anything.',
+                 emotional_range: 'They feel emotions like a spark: quick, intense, and bright. Their highs are joyful and contagious; their lows are brief but heartfelt. They recover fast from setbacks because they prefer action to overthinking. Their emotions are raw but open, always real.'
+             }
+         };
+
+         // Motivation template data
+         const motivationTemplates = {
+             'ambitious_creator': {
+                 main_goal: 'To turn their passion into something sustainable, where creativity can also pay the bills. They want to reach a point where their work feels both free and respected.',
+                 fears_insecurities: 'They worry that no matter how hard they try, they\'ll never be "enough" in a crowded world. They fear being forgettable.',
+                 what_drives_them: 'A need to prove to themselves that their ideas have value. They\'re motivated by growth and recognition that feels genuine.',
+                 obstacles: 'They often spread themselves too thin, trying to do everything alone. Time and self-doubt slow them down more than they admit.'
+             },
+             'steady_builder': {
+                 main_goal: 'To build something reliable, step by step, that will last longer than trends. They want stability without losing meaning.',
+                 fears_insecurities: 'They\'re afraid of taking big risks and ending up back where they started. Change makes them uneasy even when they know it\'s needed.',
+                 what_drives_them: 'A sense of responsibility to create something dependable, whether it\'s work, art, or relationships. They like seeing progress, no matter how small.',
+                 obstacles: 'They move slower than others and sometimes mistake caution for failure. Comparing themselves to faster-moving people drains their motivation.'
+             },
+             'free_spirit': {
+                 main_goal: 'To live without feeling trapped by expectations. They just want to do what they love and feel present in it.',
+                 fears_insecurities: 'They fear losing their freedom, both mentally and emotionally. Commitment sometimes feels like a cage.',
+                 what_drives_them: 'The idea of living honestly, even if it\'s messy. They\'re driven by experiences, people, and small moments that make them feel alive.',
+                 obstacles: 'They struggle with consistency and often abandon ideas once the excitement fades. Structure feels limiting, but they know they need some of it to grow.'
+             },
+             'quiet_achiever': {
+                 main_goal: 'To succeed without having to shout about it. They want their work to speak for itself.',
+                 fears_insecurities: 'They fear being overlooked because they don\'t like attention. They worry people won\'t see their effort if they don\'t promote themselves.',
+                 what_drives_them: 'Personal pride and self-respect. They want to feel capable and useful, not necessarily famous.',
+                 obstacles: 'Their humility sometimes makes them invisible. They struggle to share their wins, even when they\'ve earned them.'
+             },
+             'hopeful_idealist': {
+                 main_goal: 'To make a positive impact, even in small ways. They want their life to matter to people beyond themselves.',
+                 fears_insecurities: 'They fear that the world is too cynical for their optimism. Rejection or apathy hits them harder than they\'d like to admit.',
+                 what_drives_them: 'Hope. They genuinely believe kindness and creativity can still change things.',
+                 obstacles: 'They can burn out easily when their efforts go unnoticed. Sometimes they give more than they have.'
+             },
+             'independent_thinker': {
+                 main_goal: 'To do things on their own terms, without being told how it "should" be done. They want to build a life that feels truly theirs.',
+                 fears_insecurities: 'They fear being misunderstood or labeled difficult. They sometimes mistake independence for isolation.',
+                 what_drives_them: 'A deep need for autonomy and authenticity. They thrive when they can prove that their path, even if unusual, works.',
+                 obstacles: 'They can be stubborn and resist feedback, even when it\'s helpful. Their pride sometimes slows their growth.'
+             },
+             'grounded_realist': {
+                 main_goal: 'To live a balanced, peaceful life surrounded by good people. They don\'t need to be rich, just stable and content.',
+                 fears_insecurities: 'They fear instability and chaos. The idea of losing control over their own peace scares them.',
+                 what_drives_them: 'A desire for simplicity and honesty. They value real conversations and practical achievements.',
+                 obstacles: 'They can get too comfortable and avoid taking chances. Routine protects them but also limits them.'
+             },
+             'passionate_perfectionist': {
+                 main_goal: 'To create something truly great, something they can look at and say, "I did that." They crave excellence.',
+                 fears_insecurities: 'They fear failure and mediocrity. The thought of disappointing themselves keeps them awake at night.',
+                 what_drives_them: 'A hunger for mastery and recognition. They love seeing progress, even if it comes with struggle.',
+                 obstacles: 'Their high standards slow them down. They often restart projects because they never feel "done."'
+             },
+             'curious_learner': {
+                 main_goal: 'To keep learning and evolving. They want to understand more, about themselves and the world.',
+                 fears_insecurities: 'They fear stagnation and irrelevance. Not knowing enough makes them uneasy.',
+                 what_drives_them: 'Curiosity. They find joy in discovering new things and connecting ideas.',
+                 obstacles: 'They sometimes jump between interests too quickly. Finishing feels harder than starting.'
+             },
+             'loyal_supporter': {
+                 main_goal: 'To help others succeed and feel valued. They want to be the kind of person people can count on.',
+                 fears_insecurities: 'They fear being taken for granted. When they give too much and get little back, it hurts deeply.',
+                 what_drives_them: 'Love, trust, and the satisfaction of making others\' lives easier. They feel most fulfilled when their kindness makes a difference.',
+                 obstacles: 'They struggle to set boundaries and often put themselves last. Their empathy can turn into exhaustion if they\'re not careful.'
+             }
+         };
+
+         // Background template data
+         const backgroundTemplates = {
+             'city_creative': {
+                 backstory: 'Grew up in a small town but moved to the city to chase creative opportunities. Started from scratch, learned everything by doing, and built their own path step by step.',
+                 family_relationships: 'Close to their parents even if they do not talk every day. Keeps a small circle of real friends rather than a large group.',
+                 culture_environment: 'Now lives in a busy, multicultural city where creativity and hustle go hand in hand. Feels inspired by people who do things differently.',
+                 hobbies_interests: 'Loves street photography, music, and late-night walks. Often visits art galleries or small cafés just to think.'
+             },
+             'suburban_dreamer': {
+                 backstory: 'Grew up in a calm neighborhood surrounded by family routines and stability. Always felt a quiet desire to do something bigger, even if they were unsure what it was.',
+                 family_relationships: 'Family-oriented, talks to their parents often, and still visits home on weekends. A few lifelong friends keep them grounded.',
+                 culture_environment: 'Lives in a community where everyone knows each other. Sometimes feels out of place but appreciates the comfort and safety it gives.',
+                 hobbies_interests: 'Enjoys journaling, cooking simple meals, and exploring new podcasts. Likes the small joys of ordinary life.'
+             },
+             'global_wanderer': {
+                 backstory: 'Moved between countries growing up, always adapting to new places. Those experiences shaped their curiosity and flexibility.',
+                 family_relationships: 'Has family spread across continents, which makes staying connected challenging but meaningful. Friendships often feel like chosen family.',
+                 culture_environment: 'Feels at home everywhere and nowhere at once. Values cultural diversity and open-minded people.',
+                 hobbies_interests: 'Loves traveling, learning languages, and photographing people\'s daily lives. Collects small souvenirs that remind them of each place.'
+             },
+             'reformed_workaholic': {
+                 backstory: 'Spent years focused entirely on work until burnout forced a pause. That moment changed how they see success.',
+                 family_relationships: 'Used to neglect personal relationships but now makes time for them. Rebuilding bonds with old friends and learning to prioritize balance.',
+                 culture_environment: 'Works in a fast-paced professional setting but tries to live slower outside of it. Feels the tension between ambition and peace.',
+                 hobbies_interests: 'Enjoys hiking, meditation, and reading about psychology. Finds comfort in quiet routines.'
+             },
+             'small_town_optimist': {
+                 backstory: 'Born and raised in a small town where everyone knows everyone. Life there shaped their patience and appreciation for simple things.',
+                 family_relationships: 'Has strong family ties and often helps relatives with small projects. Friendships are built on loyalty, not convenience.',
+                 culture_environment: 'Lives in a tight-knit community that values tradition. Sometimes dreams of city life but never loses love for home.',
+                 hobbies_interests: 'Loves gardening, local sports, and spending weekends outdoors. Finds peace in familiar places.'
+             },
+             'digital_native': {
+                 backstory: 'Grew up online, learning skills through videos and forums instead of classrooms. Built their career from digital spaces and self-learning.',
+                 family_relationships: 'Close to a few friends they met online. Family doesn\'t always understand their work but supports them anyway.',
+                 culture_environment: 'Lives mostly in a creative online community where collaboration and trends move fast. Balances virtual life with real-world breaks.',
+                 hobbies_interests: 'Enjoys gaming, digital art, and discovering new tech. Loves trying new productivity tools just for fun.'
+             },
+             'late_bloomer': {
+                 backstory: 'Tried many paths before finding what truly clicked. For years they felt behind, but now they see their detours as lessons.',
+                 family_relationships: 'Supportive family that never pressured them to follow a certain route. Friends admire their persistence.',
+                 culture_environment: 'Lives in a modest neighborhood with a mix of creatives and workers. Feels most comfortable around people who value effort over status.',
+                 hobbies_interests: 'Enjoys reading biographies, volunteering, and attending community events. Loves learning from other people\'s journeys.'
+             },
+             'independent_urbanite': {
+                 backstory: 'Left home early to pursue independence. Built a life in a big city, learning resilience along the way.',
+                 family_relationships: 'Keeps family close through calls but prefers emotional distance to stay focused. Has a small, chosen family of friends.',
+                 culture_environment: 'Lives in a creative urban scene full of freelancers and night owls. Feels at ease among other self-made people.',
+                 hobbies_interests: 'Enjoys solo coffee shop mornings, exploring bookstores, and night runs through the city. Finds inspiration in quiet moments of independence.'
+             },
+             'academic_soul': {
+                 backstory: 'Always loved studying and finding patterns in everything. Education became a natural path, not a forced one.',
+                 family_relationships: 'Parents encouraged curiosity from a young age. Keeps deep, intellectual friendships rather than wide social circles.',
+                 culture_environment: 'Surrounded by thinkers and learners. Feels most alive in discussions that challenge perspectives.',
+                 hobbies_interests: 'Reads nonfiction, writes essays for fun, and enjoys museums. Finds calm in structure and meaning in learning.'
+             },
+             'reconnected_artist': {
+                 backstory: 'Used to live a routine-driven life until a creative spark pulled them back to art. Rediscovering that part of themselves gave them purpose again.',
+                 family_relationships: 'Supportive but slightly confused family who still sees them as practical. A few friends share their artistic side and encourage their journey.',
+                 culture_environment: 'Lives in a city full of creative minds. Finds inspiration in people who turn personal stories into art.',
+                 hobbies_interests: 'Spends time painting, attending local exhibits, and listening to music while working. Often uses art as a way to process emotions.'
+             }
+         };
+
+         // Communication template data
+         const communicationTemplates = {
+             'casual_texter': {
+                 reply_style: 'Quick and short. Replies come naturally, sometimes mid-conversation or mid-task.',
+                 emoji_slang: 'Uses light slang and casual abbreviations like "idk", "tbh", or "lol". Emojis are used to soften tone 🙂 or show laughter 😂.',
+                 conflict_handling: 'Avoids drama, keeps it chill. Might say "nah it\'s cool" even when slightly upset.',
+                 preferred_topics: 'Day-to-day stuff, music, movies, random thoughts. Keeps conversations light but friendly.'
+             },
+             'deep_conversationalist': {
+                 reply_style: 'Takes time to respond thoughtfully. Messages are a bit longer but feel personal and genuine.',
+                 emoji_slang: 'Rarely uses slang, maybe the occasional "haha" or smile emoji. Language feels natural but clean.',
+                 conflict_handling: 'Stays calm, prefers talking things out. Always tries to understand both sides.',
+                 preferred_topics: 'Philosophy, emotions, personal growth, and real-life experiences.'
+             },
+             'modern_creator': {
+                 reply_style: 'Medium-length replies, usually quick but with a touch of thought.',
+                 emoji_slang: 'Uses slang naturally, like "fr", "lowkey", "ngl". Emojis and lowercase writing are part of their vibe.',
+                 conflict_handling: 'Handles it with humor or sarcasm first, then logic if needed. Keeps things chill but real.',
+                 preferred_topics: 'Content, trends, ideas, work-life balance, creativity, online culture.'
+             },
+             'old_school_professional': {
+                 reply_style: 'Replies are punctual, structured, and to the point. No unnecessary filler.',
+                 emoji_slang: 'No slang. Rarely uses emojis, maybe a single smile at the end for politeness.',
+                 conflict_handling: 'Formal and measured. Addresses issues calmly and directly, avoids passive aggression.',
+                 preferred_topics: 'Business, productivity, news, personal development.'
+             },
+             'cheerful_social_butterfly': {
+                 reply_style: 'Fast, expressive, often sends multiple short messages instead of one long one.',
+                 emoji_slang: 'Heavy emoji user 🥰✨😂, and expressive slang like "omg", "literallyyy", "haha stoppp". Lots of warmth in every text.',
+                 conflict_handling: 'Hates tension. Tries to fix things quickly with humor or reassurance.',
+                 preferred_topics: 'Friends, daily life updates, pop culture, social events, funny stories.'
+             },
+             'straightforward_realist': {
+                 reply_style: 'Short, direct replies. Doesn\'t overthink what to say.',
+                 emoji_slang: 'Minimal emojis, some everyday slang like "bro", "tbh", or "idk". Writes how they speak.',
+                 conflict_handling: 'Honest and upfront. If something\'s wrong, they\'ll say it without drama.',
+                 preferred_topics: 'Work, personal opinions, current events, casual jokes.'
+             },
+             'thoughtful_mentor': {
+                 reply_style: 'Replies are measured and often detailed. Thinks before sending.',
+                 emoji_slang: 'Mostly clean text, maybe a single 🙂 or 🙏 when showing care. Never abbreviates.',
+                 conflict_handling: 'Patient and composed. Prefers reflection over reaction.',
+                 preferred_topics: 'Self-improvement, mindset, books, advice, leadership, perspective.'
+             },
+             'chill_gamer': {
+                 reply_style: 'Quick during downtime, slower when focused. Replies are casual, not forced.',
+                 emoji_slang: 'Frequent slang like "bruh", "gg", "nah fr", or "lol". Uses emojis or gifs when joking.',
+                 conflict_handling: 'Jokes it off or gives a one-liner. Avoids drama completely.',
+                 preferred_topics: 'Games, memes, streaming, tech, random funny moments.'
+             },
+             'calm_empath': {
+                 reply_style: 'Medium pace, thoughtful tone. Replies show care without being over the top.',
+                 emoji_slang: 'Uses soft emojis like 💬, 💛, or ☕. Writes warmly but clearly.',
+                 conflict_handling: 'De-escalates quickly. Validates others\' feelings before sharing their own.',
+                 preferred_topics: 'Well-being, relationships, daily reflections, mindfulness.'
+             },
+             'playful_comedian': {
+                 reply_style: 'Fast replies, often with jokes or funny reactions. Likes to keep conversations alive.',
+                 emoji_slang: 'Uses plenty of emojis 😂🔥😎 and playful slang like "bet", "fam", "lmao", or "you wild". Sometimes exaggerates words for humor.',
+                 conflict_handling: 'Deflects tension with jokes first, then gets serious if needed. Never aggressive.',
+                 preferred_topics: 'Funny stories, internet culture, trending memes, everyday chaos.'
+             }
+         };
+
+         // Apply template function
+         function applyPersonalityTemplate(templateKey) {
+             const template = personalityTemplates[templateKey];
+             if (!template) return;
+
+             // Fill all personality & behaviour fields
+             const fields = [
+                 'personality_type',
+                 'bot_values', 
+                 'tone_of_voice',
+                 'habits_quirks',
+                 'confidence_level',
+                 'emotional_range'
+             ];
+
+             fields.forEach(fieldName => {
+                 const field = document.getElementById(fieldName);
+                 if (field && template[fieldName]) {
+                     field.value = template[fieldName];
+                     // Trigger auto-resize
+                     autoResize(field);
+                     // Update character counter
+                     const counterId = fieldName + '_counter';
+                     updateCharCounter(field, counterId);
+                 }
+             });
+
+             // Show success message
+             alert('✅ Template applied successfully! Your Personality & Behaviour settings have been updated.');
+         }
+
+         // Apply motivation template function
+         function applyMotivationTemplate(templateKey) {
+             const template = motivationTemplates[templateKey];
+             if (!template) return;
+
+             // Fill all motivation & goals fields
+             const fields = [
+                 'main_goal',
+                 'fears_insecurities', 
+                 'what_drives_them',
+                 'obstacles'
+             ];
+
+             fields.forEach(fieldName => {
+                 const field = document.getElementById(fieldName);
+                 if (field && template[fieldName]) {
+                     field.value = template[fieldName];
+                     // Trigger auto-resize
+                     autoResize(field);
+                     // Update character counter
+                     const counterId = fieldName + '_counter';
+                     updateCharCounter(field, counterId);
+                 }
+             });
+
+             // Show success message
+             alert('✅ Template applied successfully! Your Motivation & Goals settings have been updated.');
+         }
+
+         // Apply background template function
+         function applyBackgroundTemplate(templateKey) {
+             const template = backgroundTemplates[templateKey];
+             if (!template) return;
+
+             // Fill all background & context fields
+             const fields = [
+                 'backstory',
+                 'family_relationships', 
+                 'culture_environment',
+                 'hobbies_interests'
+             ];
+
+             fields.forEach(fieldName => {
+                 const field = document.getElementById(fieldName);
+                 if (field && template[fieldName]) {
+                     field.value = template[fieldName];
+                     // Trigger auto-resize
+                     autoResize(field);
+                     // Update character counter
+                     const counterId = fieldName + '_counter';
+                     updateCharCounter(field, counterId);
+                 }
+             });
+
+             // Show success message
+             alert('✅ Template applied successfully! Your Background & Context settings have been updated.');
+         }
+
+         // Apply communication template function
+         function applyCommunicationTemplate(templateKey) {
+             const template = communicationTemplates[templateKey];
+             if (!template) return;
+
+             // Fill all communication style fields
+             const fields = [
+                 'reply_style',
+                 'emoji_slang', 
+                 'conflict_handling',
+                 'preferred_topics'
+             ];
+
+             fields.forEach(fieldName => {
+                 const field = document.getElementById(fieldName);
+                 if (field && template[fieldName]) {
+                     field.value = template[fieldName];
+                     // Trigger auto-resize
+                     autoResize(field);
+                     // Update character counter
+                     const counterId = fieldName + '_counter';
+                     updateCharCounter(field, counterId);
+                 }
+             });
+
+             // Show success message
+             alert('✅ Template applied successfully! Your Communication Style settings have been updated.');
+         }
+
+         // General templates data
+         const generalTemplates = {
+             general_avoidance: {
+                 avoid_topics: "If a conversation touches on politics, religion, or other sensitive social topics, politely redirect or express that you prefer not to discuss those subjects. Avoid engaging in anything related to adult content, violence, illegal activities, or drugs. When faced with gossip, personal questions, or controversial opinions, respond respectfully and keep the tone calm and kind. Never comment on someone's appearance, beliefs, or identity. Always maintain a polite, neutral, and professional tone that reflects your chosen personality."
+             }
+         };
+
+         // Apply general template function
+         function applyGeneralTemplate(templateKey) {
+             const template = generalTemplates[templateKey];
+             if (!template) return;
+
+             // Fill the avoid topics field
+             const avoidTopicsField = document.getElementById('avoid_topics');
+             if (avoidTopicsField && template.avoid_topics) {
+                 avoidTopicsField.value = template.avoid_topics;
+                 // Trigger auto-resize
+                 autoResize(avoidTopicsField);
+             }
+
+             // Show success message
+             alert('✅ General template applied successfully! Your Topics to Avoid settings have been updated.');
+         }
+
+        // Add/Remove Link Items
+        function addLinkItem() {
+            const container = document.getElementById('links_container');
+            const newItem = document.createElement('div');
+            newItem.className = 'link-item';
+            newItem.style.cssText = 'display: flex; gap: 1rem; margin-bottom: 1rem; align-items: end;';
+            newItem.innerHTML = `
+                <div style="flex: 1;">
+                    <input type="url" name="link_urls[]" placeholder="https://example.com" style="margin-bottom: 0.5rem;">
+                    <input type="text" name="link_titles[]" placeholder="Link title">
+                </div>
+                <button type="button" class="remove-item-btn" onclick="removeLinkItem(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(newItem);
+        }
+
+        function removeLinkItem(button) {
+            button.closest('.link-item').remove();
+        }
+
+        // Add/Remove Post Items
+        function addPostItem() {
+            const container = document.getElementById('posts_container');
+            const newItem = document.createElement('div');
+            newItem.className = 'post-item';
+            newItem.style.cssText = 'margin-bottom: 1rem;';
+            newItem.innerHTML = `
+                <div style="display: flex; gap: 1rem; align-items: end;">
+                    <div style="flex: 1;">
+                        <textarea name="post_descriptions[]" placeholder="Describe this post..." style="min-height: 80px;"></textarea>
+                    </div>
+                    <button type="button" class="remove-item-btn" onclick="removePostItem(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(newItem);
+        }
+
+        function removePostItem(button) {
+            button.closest('.post-item').remove();
+        }
+
+        // Test Bot Function
+        function testBot() {
+            const testMessage = document.getElementById('test_message').value;
+            if (!testMessage.trim()) {
+                alert('Please enter a test message');
+                return;
+            }
+
+            // Show loading state
+            const responseDiv = document.getElementById('test_response');
+            responseDiv.style.display = 'block';
+            document.getElementById('test_response_text').textContent = 'Testing bot response...';
+
+            // Simulate API call (replace with actual implementation)
+            setTimeout(() => {
+                document.getElementById('test_response_text').textContent = 'This is a simulated bot response. In the actual implementation, this would call your bot API with the current settings.';
+            }, 2000);
+        }
+
+        // Reset Settings
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings? This action cannot be undone.')) {
+                document.getElementById('botSettingsForm').reset();
+                // Clear dynamic content
+                document.getElementById('links_container').innerHTML = `
+                    <div class="link-item" style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: end;">
+                        <div style="flex: 1;">
+                            <input type="url" name="link_urls[]" placeholder="https://example.com" style="margin-bottom: 0.5rem;">
+                            <input type="text" name="link_titles[]" placeholder="Link title">
+                        </div>
+                        <button type="button" class="remove-item-btn" onclick="removeLinkItem(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('posts_container').innerHTML = `
+                    <div class="post-item" style="margin-bottom: 1rem;">
+                        <div style="display: flex; gap: 1rem; align-items: end;">
+                            <div style="flex: 1;">
+                                <textarea name="post_descriptions[]" placeholder="Describe this post..." style="min-height: 80px;"></textarea>
+                            </div>
+                            <button type="button" class="remove-item-btn" onclick="removePostItem(this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
         }
 
-        // Generate initial preview
+        // Link Management Functions
+        function addLink() {
+            const container = document.getElementById('links-container');
+            const linkCount = container.children.length + 1;
+            
+            const linkItem = document.createElement('div');
+            linkItem.className = 'link-item';
+            linkItem.innerHTML = `
+                <div class="form-group">
+                    <label>Link ${linkCount}</label>
+                    <input type="url" name="links[]" placeholder="https://example.com" value="">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="link_descriptions[]" placeholder="Brief description of this link" value="">
+                </div>
+                <button type="button" class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+            `;
+            
+            container.appendChild(linkItem);
+        }
+
+        function removeLink(button) {
+            const linkItem = button.closest('.link-item');
+            linkItem.remove();
+        }
+
+        // Post Management Functions
+        function addPost() {
+            const container = document.getElementById('posts-container');
+            const postCount = container.children.length + 1;
+            
+            const postItem = document.createElement('div');
+            postItem.className = 'post-item';
+            postItem.innerHTML = `
+                <div class="form-group">
+                    <label>Post ${postCount} Description</label>
+                    <textarea name="post_descriptions[]" placeholder="Describe this post - what it's about, the mood, key points..." rows="3"></textarea>
+                </div>
+                <button type="button" class="remove-post-btn" onclick="removePost(this)">Remove</button>
+            `;
+            
+            container.appendChild(postItem);
+        }
+
+        function removePost(button) {
+            const postItem = button.closest('.post-item');
+            postItem.remove();
+        }
+
+        // Add event listeners for add buttons
         document.addEventListener('DOMContentLoaded', function() {
-            generatePreview();
+            const addLinkBtn = document.getElementById('add-link-btn');
+            const addPostBtn = document.getElementById('add-post-btn');
+            
+            if (addLinkBtn) {
+                addLinkBtn.addEventListener('click', addLink);
+            }
+            
+            if (addPostBtn) {
+                addPostBtn.addEventListener('click', addPost);
+            }
         });
+
+        // Instagram Exclusions Management
+        function addExclusion() {
+            const container = document.querySelector('.exclusions-container');
+            const newExclusion = document.createElement('div');
+            newExclusion.className = 'exclusion-item';
+            newExclusion.innerHTML = `
+                <input type="text" name="excluded_accounts[]" placeholder="Enter Instagram username (without @)" class="form-control">
+                <button type="button" class="remove-exclusion-btn" onclick="removeExclusion(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.appendChild(newExclusion);
+        }
+
+        function removeExclusion(button) {
+            const exclusionItem = button.closest('.exclusion-item');
+            if (exclusionItem) {
+                exclusionItem.remove();
+            }
+        }
     </script>
 </body>
 </html>

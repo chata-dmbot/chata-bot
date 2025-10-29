@@ -1,176 +1,805 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Chata</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay - behind animations, in front of grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Hero Section */
+        .dashboard-hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 80px;
+            z-index: 10;
+        }
+
+        .dashboard-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dashboard-hero p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: #888;
+            text-transform: none;
+        }
+
+        /* Content Section */
+        .dashboard-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-half {
+            margin-bottom: 0;
+        }
+
+        .dashboard-full {
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-section-block {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-section-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+            opacity: 0.3;
+        }
+
+        .dashboard-section-block:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(51, 102, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-section-block h2 {
+            color: var(--chata-blue);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dashboard-section-block h3 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-section-block p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--chata-blue-dark) 0%, var(--chata-blue) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(51, 102, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(51, 102, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(51, 102, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(51, 102, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--chata-blue);
+            text-shadow: 0 0 20px rgba(51, 102, 255, 0.5);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .connection-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .connection-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(51, 102, 255, 0.3);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .action-buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(51, 102, 255, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.2);
+        }
+
+        .action-card i {
+            font-size: 2rem;
+            color: var(--chata-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .action-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .action-card p {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+            text-transform: none;
+        }
+
+        .btn-full {
+            width: 100%;
+            text-align: center;
+            margin: 0.25rem 0;
+        }
+
+        .alert {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .dashboard-content {
+                padding: 1rem;
+            }
+
+            .dashboard-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .action-buttons-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .action-card {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
-            </div>
-            <div class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
-                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('dashboard') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    </div>
+                </div>
+  
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1>Welcome, {{ user.email }}!</h1>
-            <p>Manage your Instagram bot connections and settings</p>
+    <!-- Hero Section -->
+    <section class="dashboard-hero">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Welcome, {{ user.email }}! Manage your Instagram bot connections and settings</p>
+        </div>
+    </section>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Content -->
+    <main class="dashboard-content">
+        <!-- Top Row: Account Info & Quick Stats -->
+        <div class="dashboard-row">
+            <!-- Account Information -->
+            <div class="dashboard-section-block dashboard-half">
+                <h2><i class="fas fa-user"></i> Account Information</h2>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="dashboard-section-block dashboard-half">
+                <h2><i class="fas fa-chart-bar"></i> This Month</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">0</div>
+                        <div class="stat-label">Messages Sent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">0</div>
+                        <div class="stat-label">API Calls</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">$0.00</div>
+                        <div class="stat-label">Cost</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                        {{ message }}
+        <!-- Instagram Connections - Full Width -->
+        <div class="dashboard-section-block dashboard-full">
+            <h2><i class="fab fa-instagram"></i> Instagram Connections</h2>
+            {% if connections %}
+                {% for connection in connections %}
+                    <div class="connection-item">
+                        <div class="connection-info">
+                            <h3>{{ connection.instagram_page_id or 'Instagram Account' }}</h3>
+                            <p>ID: {{ connection.instagram_user_id }}</p>
+                            <p>Connected: {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
+                        </div>
+                        <div class="connection-actions">
+                            <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
+                                {{ 'Active' if connection.is_active else 'Inactive' }}
+                            </span>
+                            <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn-secondary">
+                                <i class="fas fa-robot"></i> Bot Settings
+                            </a>
+                            <a href="{{ url_for('disconnect_instagram', connection_id=connection.id) }}" 
+                               class="btn-secondary" 
+                               onclick="return confirm('Are you sure you want to disconnect this Instagram account? This will stop the bot from responding to messages.')">
+                                <i class="fas fa-unlink"></i> Disconnect
+                            </a>
+                        </div>
                     </div>
                 {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-instagram"></i>
+                    <p>No Instagram accounts connected yet</p>
+                    <a href="{{ url_for('instagram_auth') }}" class="btn-primary">Connect Your First Account</a>
+                </div>
             {% endif %}
-        {% endwith %}
-
-        <div class="dashboard-grid">
-            <!-- Account Info Card -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-user"></i> Account Information</h3>
-                </div>
-                <div class="card-content">
-                    <p><strong>Email:</strong> {{ user.email }}</p>
-                    <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
-                </div>
-            </div>
-
-            <!-- Instagram Connections Card -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h3><i class="fab fa-instagram"></i> Instagram Connections</h3>
-                    <div class="header-actions">
-                        <a href="{{ url_for('instagram_setup_help') }}" class="btn btn-secondary btn-sm">Setup Help</a>
-                        <a href="{{ url_for('instagram_auth') }}" class="btn btn-primary btn-sm">Connect New Account</a>
-                    </div>
-                </div>
-                <div class="card-content">
-                    {% if connections %}
-                        {% for connection in connections %}
-                            <div class="connection-item">
-                                <div class="connection-info">
-                                    <h4>{{ connection.instagram_page_id or 'Instagram Account' }}</h4>
-                                    <p>ID: {{ connection.instagram_user_id }}</p>
-                                    <p>Connected: {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
-                                </div>
-                                <div class="connection-actions">
-                                    <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
-                                        {{ 'Active' if connection.is_active else 'Inactive' }}
-                                    </span>
-                                    <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn btn-secondary btn-sm">
-                                        <i class="fas fa-robot"></i> Bot Settings
-                                    </a>
-                                    <a href="{{ url_for('disconnect_instagram', connection_id=connection.id) }}" 
-                                       class="btn btn-danger btn-sm" 
-                                       onclick="return confirm('Are you sure you want to disconnect this Instagram account? This will stop the bot from responding to messages.')">
-                                        <i class="fas fa-unlink"></i> Disconnect
-                                    </a>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="empty-state">
-                            <i class="fas fa-instagram"></i>
-                            <p>No Instagram accounts connected yet</p>
-                            <a href="{{ url_for('instagram_auth') }}" class="btn btn-primary">Connect Your First Account</a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Quick Stats Card -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-chart-bar"></i> This Month</h3>
-                </div>
-                <div class="card-content">
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-number">0</div>
-                            <div class="stat-label">Messages Sent</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">0</div>
-                            <div class="stat-label">API Calls</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">$0.00</div>
-                            <div class="stat-label">Cost</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions Card -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-cog"></i> Quick Actions</h3>
-                </div>
-                <div class="card-content">
-                    <div class="action-buttons">
-                        <a href="{{ url_for('bot_settings') }}" class="btn btn-secondary btn-full">Manage Bot Settings</a>
-                        <a href="{{ url_for('usage_analytics') }}" class="btn btn-secondary btn-full">View Analytics</a>
-                        <a href="{{ url_for('account_settings') }}" class="btn btn-secondary btn-full">Account Settings</a>
-                        <a href="{{ url_for('contact') }}" class="btn btn-secondary btn-full">Get Support</a>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        {% if debug_enabled %}
-        <!-- Debug Tools Section -->
-        <div class="dashboard-card" style="margin-top: 2rem; border: 2px solid #ff6b6b;">
-            <div class="card-header" style="background-color: #ff6b6b; color: white;">
-                <h3><i class="fas fa-bug"></i> Debug Tools</h3>
-            </div>
-            <div class="card-content">
-                <p><strong>🔧 Debugging Tools:</strong> Use these tools to diagnose webhook and connection issues.</p>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-                    <a href="/debug/connections" class="btn btn-secondary" style="background-color: #4ecdc4;">
-                        <i class="fas fa-list"></i> View Connections
-                    </a>
-                    <a href="/debug/health-check" class="btn btn-secondary" style="background-color: #45b7d1;">
-                        <i class="fas fa-heartbeat"></i> Health Check
-                    </a>
-                    <a href="/debug/test-tokens" class="btn btn-secondary" style="background-color: #96ceb4;">
-                        <i class="fas fa-key"></i> Test Tokens
-                    </a>
-                    <a href="/debug/simulate-webhook" class="btn btn-secondary" style="background-color: #feca57;">
-                        <i class="fas fa-flask"></i> Simulate Webhook
-                    </a>
-                    <a href="/debug/check-permissions" class="btn btn-secondary" style="background-color: #ff6b6b;">
-                        <i class="fas fa-shield-alt"></i> Check Permissions
-                    </a>
-                    <a href="/debug/discover-instagram-id" class="btn btn-secondary" style="background-color: #9b59b6;">
-                        <i class="fas fa-search"></i> Discover Instagram ID
-                    </a>
-                    <a href="/debug/fix-chata-id" class="btn btn-secondary" style="background-color: #27ae60;">
-                        <i class="fas fa-wrench"></i> Fix Chata ID
-                    </a>
-                    <a href="/debug/check-database" class="btn btn-secondary" style="background-color: #e67e22;">
-                        <i class="fas fa-database"></i> Check Database
-                    </a>
-                    <a href="/debug/check-instagram-testers" class="btn btn-secondary" style="background-color: #8e44ad;">
-                        <i class="fas fa-users"></i> Check Testers
-                    </a>
-                </div>
+        <!-- Quick Actions - Full Width -->
+        <div class="dashboard-section-block dashboard-full">
+            <h2><i class="fas fa-cog"></i> Quick Actions</h2>
+            <div class="action-buttons-grid">
+                <a href="{{ url_for('bot_settings') }}" class="action-card">
+                    <i class="fas fa-robot"></i>
+                    <h3>Bot Settings</h3>
+                    <p>Configure your bot's personality and responses</p>
+                </a>
+                <a href="{{ url_for('usage_analytics') }}" class="action-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Analytics</h3>
+                    <p>View detailed usage statistics and insights</p>
+                </a>
+                <a href="{{ url_for('account_settings') }}" class="action-card">
+                    <i class="fas fa-user-cog"></i>
+                    <h3>Account Settings</h3>
+                    <p>Manage your account preferences and security</p>
+                </a>
+                <a href="mailto:chata.dmbot@gmail.com" class="action-card">
+                    <i class="fas fa-life-ring"></i>
+                    <h3>Get Support</h3>
+                    <p>Contact our support team for help</p>
+                </a>
             </div>
         </div>
-        {% endif %}
-    </div>
+    </main>
+
+    <!-- Interactive Grid Script -->
+    <script>
+        // Interactive Grid Background with scroll following
+        function createInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            const gridSize = 50;
+            const cols = Math.ceil(window.innerWidth / gridSize);
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage
+            
+            // Clear existing grid
+            grid.innerHTML = '';
+            
+            // Create grid cells
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.left = j * gridSize + 'px';
+                    cell.style.top = i * gridSize + 'px';
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        // Optimized scroll-based grid movement
+        let ticking = false;
+        let grid = null;
+        
+        function updateGridOnScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    if (!grid) {
+                        grid = document.getElementById('interactiveGrid');
+                    }
+                    const scrollY = window.pageYOffset;
+                    
+                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
+                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        
+        // Initialize grid on load
+        window.addEventListener('load', function() {
+            // Ensure page starts at top
+            window.scrollTo(0, 0);
+            createInteractiveGrid();
+            grid = document.getElementById('interactiveGrid');
+        });
+        window.addEventListener('resize', createInteractiveGrid);
+        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+        
+        // Individual square timing system
+        let cellTimeouts = new Map(); // Track individual timeouts for each cell
+        
+        // High refresh rate mouse tracking
+        let mouseX = 0;
+        let mouseY = 0;
+        let animationFrameId = null;
+        
+        // Track mouse position with high frequency
+        document.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Smooth grid lighting with requestAnimationFrame
+        function updateGridLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                
+                // Check if mouse is directly over this cell (exact square only)
+                const isMouseOver = mouseX >= rect.left && 
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    // Clear any existing timeout for this cell
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    // Activate only this exact square with solid illumination
+                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
+                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
+                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
+                    cell.style.transform = `scale(1.02)`;
+                    cell.classList.add('active');
+                    
+                    // Set individual timeout for this cell
+                    const timeoutId = setTimeout(() => {
+                        cell.style.background = '';
+                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                        cell.style.boxShadow = '';
+                        cell.style.transform = 'scale(1)';
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
+                    }, 1500);
+                    
+                    cellTimeouts.set(cell, timeoutId);
+                }
+            });
+            
+            // Continue the animation loop
+            animationFrameId = requestAnimationFrame(updateGridLighting);
+        }
+        
+        // Start the high refresh rate animation
+        updateGridLighting();
+        
+        // Ambient grid lighting - random squares light up occasionally
+        function createAmbientLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            function lightRandomSquare() {
+                if (cells.length === 0) return;
+                
+                // Pick a random cell
+                const randomCell = cells[Math.floor(Math.random() * cells.length)];
+                
+                // Random intensity (more visible)
+                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
+                
+                // Random duration (1-3 seconds)
+                const duration = Math.random() * 2000 + 1000;
+                
+                // Light up the square with white orb and subtle border
+                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
+                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
+                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
+                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
+                randomCell.classList.add('active');
+                
+                // Fade out after duration
+                setTimeout(() => {
+                    randomCell.style.background = '';
+                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                    randomCell.style.boxShadow = '';
+                    randomCell.style.transform = 'scale(1)';
+                    randomCell.classList.remove('active');
+                }, duration);
+            }
+            
+            // Light up random squares every 2-5 seconds
+            function scheduleNextLight() {
+                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
+                setTimeout(() => {
+                    lightRandomSquare();
+                    scheduleNextLight();
+                }, delay);
+            }
+            
+            scheduleNextLight();
+        }
+        
+        // Start ambient lighting after a short delay
+        setTimeout(createAmbientLighting, 2000);
+    </script>
 </body>
 </html>

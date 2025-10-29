@@ -1,227 +1,809 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - Chata</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay - behind animations, in front of grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Hero Section */
+        .privacy-hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 80px;
+            z-index: 10;
+        }
+
+        .privacy-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .privacy-hero p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: #888;
+            text-transform: none;
+        }
+
+        /* Content Section */
+        .privacy-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .privacy-section-block {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .privacy-section-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .privacy-section-block:hover::before {
+            opacity: 1;
+        }
+
+        .privacy-section-block:hover {
+            transform: translateY(-5px);
+            border-color: var(--chata-blue);
+            box-shadow: 0 20px 40px rgba(51, 102, 255, 0.1);
+        }
+
+        .privacy-section-block h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .privacy-section-block h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem 0;
+            color: var(--chata-blue);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .privacy-section-block p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            text-transform: none;
+            letter-spacing: normal;
+            font-weight: 400;
+        }
+
+        .privacy-section-block ul {
+            margin: 1rem 0 1.5rem 2rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .privacy-section-block li {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+        }
+
+        .privacy-section-block strong {
+            color: var(--chata-blue);
+            font-weight: 600;
+        }
+
+        .contact-info {
+            background: rgba(51, 102, 255, 0.1);
+            border: 1px solid rgba(51, 102, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .contact-info p {
+            margin-bottom: 0.5rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        /* Footer Styles */
+        .site-footer {
+            margin-top: 60px;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px 0 20px 0;
+            position: relative;
+            z-index: 15;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3366ff;
+            text-decoration: none;
+        }
+
+        .footer-description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+            line-height: 1.6;
+            max-width: 300px;
+            text-transform: uppercase;
+        }
+
+        .footer-section h3 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            letter-spacing: 0.1em;
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: block;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+            text-transform: none;
+        }
+
+        .footer-section a:hover {
+            color: #3366ff;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            text-transform: none;
+        }
+
+        .contact-item i {
+            color: #3366ff;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-top: 0.2em;
+        }
+
+        .contact-item a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            text-transform: none;
+        }
+
+        .contact-item a:hover {
+            color: #3366ff;
+        }
+
+        .footer-bottom {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            text-transform: none;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .privacy-hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .privacy-content {
+                padding: 1rem;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
-            </div>
-            <div class="nav-menu">
-                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-                <a href="{{ url_for('features') }}" class="nav-link">Features</a>
-                <a href="{{ url_for('pricing') }}" class="nav-link">Pricing</a>
-                <a href="{{ url_for('contact') }}" class="nav-link">Contact</a>
-                {% if session.get('user_id') %}
-                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
-                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
-                {% else %}
-                    <a href="{{ url_for('login') }}" class="nav-link">Sign In</a>
-                    <a href="{{ url_for('signup') }}" class="nav-link nav-cta">Sign Up</a>
-                {% endif %}
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        {% if session.get('user_id') %}
+                            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                            <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">LOGIN</a>
+                            <a href="{{ url_for('signup') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
+                                GET STARTED
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+  
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main>
-        <section class="privacy-section">
-            <div class="container">
-                <div class="section-header">
-                    <h1>Privacy Policy</h1>
-                    <p>Last updated: {{ moment.strftime('%B %d, %Y') }}</p>
-                </div>
+    <!-- Hero Section -->
+    <section class="privacy-hero">
+        <div>
+      <h1>Privacy Policy</h1>
+            <p>Last updated: {{ moment.strftime('%B %d, %Y') }}</p>
+        </div>
+    </section>
 
-                <div class="privacy-content">
-                    <div class="privacy-section-block">
-                        <h2>1. Introduction</h2>
-                        <p>Welcome to Chata ("we," "our," or "us"). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Instagram DM bot service.</p>
-                        
-                        <p>By using our service, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our service.</p>
-                    </div>
+    <!-- Content -->
+    <main class="privacy-content">
+        <div class="privacy-section-block">
+            <h2>1. Introduction</h2>
+            <p>Welcome to Chata ("we," "our," or "us"). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Instagram DM bot service.</p>
+            
+            <p>By using our service, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our service.</p>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>2. Information We Collect</h2>
-                        
-                        <h3>2.1 Personal Information</h3>
-                        <p>We collect the following personal information when you create an account:</p>
-                        <ul>
-                            <li>Email address</li>
-                            <li>First and last name</li>
-                            <li>Company name (optional)</li>
-                            <li>Password (encrypted)</li>
-                        </ul>
+        <div class="privacy-section-block">
+            <h2>2. Information We Collect</h2>
+            
+            <h3>2.1 Personal Information</h3>
+            <p>We collect the following personal information when you create an account:</p>
+            <ul>
+                <li>Email address</li>
+                <li>First and last name</li>
+                <li>Company name (optional)</li>
+                <li>Password (encrypted)</li>
+        </ul>
+        
+            <h3>2.2 Instagram Connection Data</h3>
+            <p>When you connect your Instagram Business account, we collect:</p>
+            <ul>
+                <li>Instagram User ID</li>
+                <li>Instagram Page ID</li>
+                <li>Page Access Token (encrypted)</li>
+                <li>Page name and basic information</li>
+        </ul>
+        
+            <h3>2.3 Usage Data</h3>
+            <p>We automatically collect usage information including:</p>
+            <ul>
+                <li>Message content and timestamps</li>
+                <li>API call logs and costs</li>
+                <li>Bot settings and configurations</li>
+                <li>Activity logs (logins, settings changes)</li>
+                <li>IP addresses and user agents</li>
+        </ul>
+        </div>
 
-                        <h3>2.2 Instagram Connection Data</h3>
-                        <p>When you connect your Instagram Business account, we collect:</p>
-                        <ul>
-                            <li>Instagram User ID</li>
-                            <li>Instagram Page ID</li>
-                            <li>Page Access Token (encrypted)</li>
-                            <li>Page name and basic information</li>
-                        </ul>
+        <div class="privacy-section-block">
+            <h2>3. How We Use Your Information</h2>
+            <p>We use the collected information for the following purposes:</p>
+            
+            <ul>
+                <li><strong>Service Provision:</strong> To provide and maintain our Instagram DM bot service</li>
+                <li><strong>Message Processing:</strong> To process and respond to Instagram messages using AI</li>
+                <li><strong>Account Management:</strong> To manage your account and provide customer support</li>
+                <li><strong>Analytics:</strong> To analyze usage patterns and improve our service</li>
+                <li><strong>Billing:</strong> To process payments and manage subscriptions</li>
+                <li><strong>Security:</strong> To detect and prevent fraud, abuse, and security threats</li>
+                <li><strong>Communication:</strong> To send important updates and notifications</li>
+        </ul>
+        </div>
 
-                        <h3>2.3 Usage Data</h3>
-                        <p>We automatically collect usage information including:</p>
-                        <ul>
-                            <li>Message content and timestamps</li>
-                            <li>API call logs and costs</li>
-                            <li>Bot settings and configurations</li>
-                            <li>Activity logs (logins, settings changes)</li>
-                            <li>IP addresses and user agents</li>
-                        </ul>
-                    </div>
+        <div class="privacy-section-block">
+            <h2>4. Data Storage and Security</h2>
+            
+            <h3>4.1 Data Storage</h3>
+            <p>Your data is stored securely using industry-standard encryption and security measures:</p>
+            <ul>
+                <li>All data is encrypted in transit and at rest</li>
+                <li>Passwords are hashed using secure algorithms</li>
+                <li>Access tokens are encrypted before storage</li>
+          <li>Regular security audits and updates</li>
+        </ul>
 
-                    <div class="privacy-section-block">
-                        <h2>3. How We Use Your Information</h2>
-                        <p>We use the collected information for the following purposes:</p>
-                        
-                        <ul>
-                            <li><strong>Service Provision:</strong> To provide and maintain our Instagram DM bot service</li>
-                            <li><strong>Message Processing:</strong> To process and respond to Instagram messages using AI</li>
-                            <li><strong>Account Management:</strong> To manage your account and provide customer support</li>
-                            <li><strong>Analytics:</strong> To analyze usage patterns and improve our service</li>
-                            <li><strong>Billing:</strong> To process payments and manage subscriptions</li>
-                            <li><strong>Security:</strong> To detect and prevent fraud, abuse, and security threats</li>
-                            <li><strong>Communication:</strong> To send important updates and notifications</li>
-                        </ul>
-                    </div>
+            <h3>4.2 Data Retention</h3>
+            <p>We retain your data for as long as your account is active or as needed to provide services:</p>
+            <ul>
+                <li>Account data: Until account deletion</li>
+                <li>Message history: 12 months</li>
+                <li>Usage logs: 24 months</li>
+                <li>Activity logs: 36 months</li>
+            </ul>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>4. Data Storage and Security</h2>
-                        
-                        <h3>4.1 Data Storage</h3>
-                        <p>Your data is stored securely using industry-standard encryption and security measures:</p>
-                        <ul>
-                            <li>All data is encrypted in transit and at rest</li>
-                            <li>Passwords are hashed using secure algorithms</li>
-                            <li>Access tokens are encrypted before storage</li>
-                            <li>Regular security audits and updates</li>
-                        </ul>
+        <div class="privacy-section-block">
+            <h2>5. Data Sharing and Disclosure</h2>
+            <p>We do not sell, trade, or rent your personal information to third parties. We may share your information in the following limited circumstances:</p>
+            
+            <ul>
+                <li><strong>Service Providers:</strong> With trusted third-party services that help us operate our service (hosting, payment processing, analytics)</li>
+                <li><strong>Legal Requirements:</strong> When required by law or to protect our rights and safety</li>
+                <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
+                <li><strong>Consent:</strong> With your explicit consent for specific purposes</li>
+        </ul>
+        </div>
 
-                        <h3>4.2 Data Retention</h3>
-                        <p>We retain your data for as long as your account is active or as needed to provide services:</p>
-                        <ul>
-                            <li>Account data: Until account deletion</li>
-                            <li>Message history: 12 months</li>
-                            <li>Usage logs: 24 months</li>
-                            <li>Activity logs: 36 months</li>
-                        </ul>
-                    </div>
+        <div class="privacy-section-block">
+            <h2>6. Your Rights and Choices</h2>
+            <p>You have the following rights regarding your personal information:</p>
+            
+            <ul>
+                <li><strong>Access:</strong> Request a copy of your personal data</li>
+                <li><strong>Correction:</strong> Update or correct inaccurate information</li>
+                <li><strong>Deletion:</strong> Request deletion of your account and data</li>
+                <li><strong>Portability:</strong> Export your data in a machine-readable format</li>
+                <li><strong>Opt-out:</strong> Unsubscribe from marketing communications</li>
+                <li><strong>Restriction:</strong> Limit how we process your data</li>
+        </ul>
 
-                    <div class="privacy-section-block">
-                        <h2>5. Data Sharing and Disclosure</h2>
-                        <p>We do not sell, trade, or rent your personal information to third parties. We may share your information in the following limited circumstances:</p>
-                        
-                        <ul>
-                            <li><strong>Service Providers:</strong> With trusted third-party services that help us operate our service (hosting, payment processing, analytics)</li>
-                            <li><strong>Legal Requirements:</strong> When required by law or to protect our rights and safety</li>
-                            <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
-                            <li><strong>Consent:</strong> With your explicit consent for specific purposes</li>
-                        </ul>
-                    </div>
+            <p>To exercise these rights, please contact us at privacy@chata.com</p>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>6. Your Rights and Choices</h2>
-                        <p>You have the following rights regarding your personal information:</p>
-                        
-                        <ul>
-                            <li><strong>Access:</strong> Request a copy of your personal data</li>
-                            <li><strong>Correction:</strong> Update or correct inaccurate information</li>
-                            <li><strong>Deletion:</strong> Request deletion of your account and data</li>
-                            <li><strong>Portability:</strong> Export your data in a machine-readable format</li>
-                            <li><strong>Opt-out:</strong> Unsubscribe from marketing communications</li>
-                            <li><strong>Restriction:</strong> Limit how we process your data</li>
-                        </ul>
+        <div class="privacy-section-block">
+            <h2>7. Third-Party Services</h2>
+            <p>Our service integrates with the following third-party services:</p>
+            
+            <ul>
+                <li><strong>OpenAI:</strong> For AI-powered message generation</li>
+                <li><strong>Meta/Instagram:</strong> For Instagram API access</li>
+                <li><strong>Payment Processors:</strong> For subscription billing</li>
+                <li><strong>Analytics Services:</strong> For usage tracking and improvements</li>
+        </ul>
 
-                        <p>To exercise these rights, please contact us at privacy@chata.com</p>
-                    </div>
+            <p>Each third-party service has its own privacy policy, and we encourage you to review them.</p>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>7. Third-Party Services</h2>
-                        <p>Our service integrates with the following third-party services:</p>
-                        
-                        <ul>
-                            <li><strong>OpenAI:</strong> For AI-powered message generation</li>
-                            <li><strong>Meta/Instagram:</strong> For Instagram API access</li>
-                            <li><strong>Payment Processors:</strong> For subscription billing</li>
-                            <li><strong>Analytics Services:</strong> For usage tracking and improvements</li>
-                        </ul>
+        <div class="privacy-section-block">
+        <h2>8. Children's Privacy</h2>
+            <p>Our service is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately.</p>
+        </div>
 
-                        <p>Each third-party service has its own privacy policy, and we encourage you to review them.</p>
-                    </div>
+        <div class="privacy-section-block">
+            <h2>9. International Data Transfers</h2>
+            <p>Your information may be transferred to and processed in countries other than your own. We ensure that such transfers comply with applicable data protection laws and implement appropriate safeguards to protect your information.</p>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>8. Children's Privacy</h2>
-                        <p>Our service is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately.</p>
-                    </div>
+        <div class="privacy-section-block">
+            <h2>10. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of any changes by:</p>
+            <ul>
+                <li>Posting the new Privacy Policy on this page</li>
+                <li>Sending you an email notification</li>
+                <li>Displaying a notice in our application</li>
+        </ul>
+            <p>Your continued use of our service after any changes constitutes acceptance of the updated policy.</p>
+        </div>
 
-                    <div class="privacy-section-block">
-                        <h2>9. International Data Transfers</h2>
-                        <p>Your information may be transferred to and processed in countries other than your own. We ensure that such transfers comply with applicable data protection laws and implement appropriate safeguards to protect your information.</p>
-                    </div>
-
-                    <div class="privacy-section-block">
-                        <h2>10. Changes to This Policy</h2>
-                        <p>We may update this Privacy Policy from time to time. We will notify you of any changes by:</p>
-                        <ul>
-                            <li>Posting the new Privacy Policy on this page</li>
-                            <li>Sending you an email notification</li>
-                            <li>Displaying a notice in our application</li>
-                        </ul>
-                        <p>Your continued use of our service after any changes constitutes acceptance of the updated policy.</p>
-                    </div>
-
-                    <div class="privacy-section-block">
-                        <h2>11. Contact Us</h2>
-                        <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
-                        
-                        <div class="contact-info">
-                            <p><strong>Email:</strong> chata.dmbot@gmail.com</p>
-                            <p><strong>Phone:</strong> +33642092079</p>
-                            <p><strong>Address:</strong> Schöpplerstr. 6, Augsburg, 86153, Germany</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="footer-logo">
-                    <p>Automate your Instagram DMs with AI-powered responses.</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Product</h3>
-                    <a href="{{ url_for('features') }}">Features</a>
-                    <a href="{{ url_for('pricing') }}">Pricing</a>
-                    <a href="{{ url_for('faq') }}">FAQ</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Company</h3>
-                    <a href="{{ url_for('about') }}">About</a>
-                    <a href="{{ url_for('contact') }}">Contact</a>
-                    <a href="{{ url_for('privacy') }}">Privacy</a>
-                    <a href="{{ url_for('terms') }}">Terms</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Support</h3>
-                    <a href="{{ url_for('contact') }}">Help Center</a>
-                    <a href="{{ url_for('contact') }}">Contact Support</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Chata. All rights reserved.</p>
+        <div class="privacy-section-block">
+            <h2>11. Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
+            
+            <div class="contact-info">
+                <p><strong>Email:</strong> chata.dmbot@gmail.com</p>
+                <p><strong>Phone:</strong> +33642092079</p>
+                <p><strong>Address:</strong> Schöpplerstr. 6, Augsburg, 86153, Germany</p>
             </div>
         </div>
-    </footer>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+    <div class="footer-content">
+            <!-- Brand Section -->
+      <div class="footer-brand">
+                <a href="{{ url_for('home') }}" class="footer-logo">CHATA</a>
+                <p class="footer-description">
+                    instagram ai engagement
+                </p>
+      </div>
+
+            <!-- Legal Links Section -->
+            <div class="footer-section">
+                <h3>Legal</h3>
+      <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+                <a href="{{ url_for('terms') }}">Terms of Service</a>
+                <a href="{{ url_for('data_deletion') }}">Data Deletion</a>
+      </div>
+
+            <!-- Contact Section -->
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <a href="mailto:chata.dmbot@gmail.com">chata.dmbot@gmail.com</a>
+      </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <a href="tel:+33642092079">+33642092079</a>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-instagram"></i>
+                        <a href="https://instagram.com/chata.dmbot" target="_blank">chata.dmbot</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2024 CHATA. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.background = 'rgba(0, 0, 0, 0.8)';
+            } else {
+                nav.style.background = 'rgba(0, 0, 0, 0.3)';
+            }
+        });
+
+        // Interactive Grid Background with scroll following
+        function createInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            const gridSize = 50;
+            const cols = Math.ceil(window.innerWidth / gridSize);
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage
+            
+            // Clear existing grid
+            grid.innerHTML = '';
+            
+            // Create grid cells
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.left = j * gridSize + 'px';
+                    cell.style.top = i * gridSize + 'px';
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        // Optimized scroll-based grid movement
+        let ticking = false;
+        let grid = null;
+        
+        function updateGridOnScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    if (!grid) {
+                        grid = document.getElementById('interactiveGrid');
+                    }
+                    const scrollY = window.pageYOffset;
+                    
+                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
+                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        
+        // Initialize grid on load
+        window.addEventListener('load', function() {
+            // Ensure page starts at top
+            window.scrollTo(0, 0);
+            createInteractiveGrid();
+            grid = document.getElementById('interactiveGrid');
+        });
+        window.addEventListener('resize', createInteractiveGrid);
+        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+        
+        // Individual square timing system
+        let cellTimeouts = new Map(); // Track individual timeouts for each cell
+        
+        // High refresh rate mouse tracking
+        let mouseX = 0;
+        let mouseY = 0;
+        let animationFrameId = null;
+        
+        // Track mouse position with high frequency
+        document.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Smooth grid lighting with requestAnimationFrame
+        function updateGridLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                
+                // Check if mouse is directly over this cell (exact square only)
+                const isMouseOver = mouseX >= rect.left && 
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    // Clear any existing timeout for this cell
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    // Activate only this exact square with solid illumination
+                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
+                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
+                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
+                    cell.style.transform = `scale(1.02)`;
+                    cell.classList.add('active');
+                    
+                    // Set individual timeout for this cell
+                    const timeoutId = setTimeout(() => {
+                        cell.style.background = '';
+                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                        cell.style.boxShadow = '';
+                        cell.style.transform = 'scale(1)';
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
+                    }, 1500);
+                    
+                    cellTimeouts.set(cell, timeoutId);
+                }
+            });
+            
+            // Continue the animation loop
+            animationFrameId = requestAnimationFrame(updateGridLighting);
+        }
+        
+        // Start the high refresh rate animation
+        updateGridLighting();
+    </script>
 </body>
 </html>

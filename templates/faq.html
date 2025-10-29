@@ -52,11 +52,7 @@
     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata logo" class="logo">
     <nav>
       <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
-      <a href="{{ url_for('about') }}"><i class="fas fa-info-circle"></i> About</a>
-      <a href="{{ url_for('features') }}"><i class="fas fa-star"></i> Features</a>
-      <a href="{{ url_for('pricing') }}"><i class="fas fa-tags"></i> Pricing</a>
       <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
-      <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
       {% if session.get('user_id') %}
         <a href="{{ url_for('dashboard') }}" class="nav-cta"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
         <a href="{{ url_for('logout') }}" class="nav-cta secondary"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -121,7 +117,7 @@
             <i class="fas fa-tags"></i>
           </div>
           <h3>How much does it cost?</h3>
-          <p>We offer three simple pricing tiers: Starter ($29/month), Creator ($49/month), and Pro ($99/month). All plans include a 7-day free trial, and you can cancel anytime. Check our <a href="{{ url_for('pricing') }}">pricing page</a> for full details.</p>
+          <p>We offer three simple pricing tiers: Starter ($29/month), Creator ($49/month), and Pro ($99/month). All plans include a 7-day free trial, and you can cancel anytime. Contact us for full details on our pricing plans.</p>
         </div>
 
         <div class="faq-item">
@@ -165,7 +161,7 @@
         <div class="cta-section">
           <p>Can't find what you're looking for? Our team is ready to help you succeed with Chata.</p>
           <div class="hero-cta">
-            <a class="cta-btn primary" href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact Us</a>
+            <a class="cta-btn primary" href="mailto:chata.dmbot@gmail.com"><i class="fas fa-envelope"></i> Contact Us</a>
             <a class="cta-btn secondary" href="/admin/prompt"><i class="fas fa-play"></i> Try the Demo</a>
           </div>
         </div>
@@ -182,7 +178,7 @@
       </div>
       <div class="footer-links">
         <a href="{{ url_for('privacy') }}"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
-        <a href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a>
+        <a href="mailto:chata.dmbot@gmail.com"><i class="fas fa-envelope"></i> Contact</a>
         <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
       </div>
       <div class="footer-cta">

@@ -1,0 +1,77 @@
+"""
+Health check and monitoring utilities
+"""
+import os
+import time
+from datetime import datetime
+from database import get_db_connection
+from config import Config
+
+def health_check():
+    """Comprehensive health check for the application"""
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": {}
+    }
+    
+    # Check database connection
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            conn.close()
+            health_status["checks"]["database"] = "healthy"
+        else:
+            health_status["checks"]["database"] = "unhealthy"
+            health_status["status"] = "unhealthy"
+    except Exception as e:
+        health_status["checks"]["database"] = f"unhealthy: {str(e)}"
+        health_status["status"] = "unhealthy"
+    
+    # Check environment variables
+    required_vars = [
+        'OPENAI_API_KEY',
+        'ACCESS_TOKEN',
+        'INSTAGRAM_USER_ID',
+        'FACEBOOK_APP_ID',
+        'FACEBOOK_APP_SECRET'
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not os.getenv(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        health_status["checks"]["environment"] = f"unhealthy: missing {', '.join(missing_vars)}"
+        health_status["status"] = "unhealthy"
+    else:
+        health_status["checks"]["environment"] = "healthy"
+    
+    # Check OpenAI API (basic connectivity)
+    try:
+        import openai
+        openai.api_key = Config.OPENAI_API_KEY
+        # Simple test - just check if API key is valid format
+        if Config.OPENAI_API_KEY.startswith('sk-'):
+            health_status["checks"]["openai"] = "healthy"
+        else:
+            health_status["checks"]["openai"] = "unhealthy: invalid API key format"
+            health_status["status"] = "unhealthy"
+    except Exception as e:
+        health_status["checks"]["openai"] = f"unhealthy: {str(e)}"
+        health_status["status"] = "unhealthy"
+    
+    return health_status
+
+def get_system_info():
+    """Get system information for monitoring"""
+    return {
+        "python_version": os.sys.version,
+        "environment": os.getenv("FLASK_ENV", "development"),
+        "database_type": "postgresql" if os.getenv("DATABASE_URL") else "sqlite",
+        "timestamp": datetime.utcnow().isoformat()
+    }
