@@ -66,6 +66,17 @@ if init_database():
 else:
     print("Database initialization failed - some features may not work")
 
+# Run migration to add missing columns
+print("Running database migration...")
+from update_schema import migrate_client_settings
+try:
+    if migrate_client_settings():
+        print("✅ Migration completed successfully")
+    else:
+        print("⚠️ Migration had issues but continuing...")
+except Exception as e:
+    print(f"⚠️ Migration error (continuing anyway): {e}")
+
 # ---- Email helpers ----
 
 def send_reset_email(email, reset_token):
