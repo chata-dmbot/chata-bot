@@ -1,194 +1,562 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Settings - Chata</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay - behind animations, in front of grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Hero Section */
+        .dashboard-hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 80px;
+            z-index: 10;
+        }
+
+        .dashboard-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dashboard-hero p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: #888;
+            text-transform: none;
+        }
+
+        /* Content Section */
+        .dashboard-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-half {
+            margin-bottom: 0;
+        }
+
+        .dashboard-full {
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-section-block {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-section-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+            opacity: 0.3;
+        }
+
+        .dashboard-section-block:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(51, 102, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-section-block h2 {
+            color: var(--chata-blue);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dashboard-section-block h3 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-section-block p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.25rem;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--chata-blue-dark) 0%, var(--chata-blue) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(51, 102, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .alert {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: none;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--chata-blue);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-group input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .form-group small {
+            display: block;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            text-transform: none;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: none;
+        }
+
+        .status-value {
+            color: white;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .dashboard-content {
+                padding: 1rem;
+            }
+
+            .dashboard-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
-            </div>
-            <div class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
-                <a href="{{ url_for('bot_settings') }}" class="nav-link">Bot Settings</a>
-                <a href="{{ url_for('account_settings') }}" class="nav-link active">Account</a>
-                <a href="{{ url_for('usage_analytics') }}" class="nav-link">Usage</a>
-                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('account_settings') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    </div>
+                </div>
+  
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1><i class="fas fa-user-cog"></i> Account Settings</h1>
+    <!-- Hero Section -->
+    <section class="dashboard-hero">
+        <div>
+            <h1>Account Settings</h1>
             <p>Manage your account information and preferences</p>
         </div>
+    </section>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-        <div class="settings-grid">
-            <!-- Profile Information -->
-            <div class="settings-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-user"></i> Profile Information</h3>
+    <!-- Content -->
+    <main class="dashboard-content">
+        <!-- Account Information -->
+        <div class="dashboard-section-block dashboard-full">
+            <h2><i class="fas fa-user"></i> Profile Information</h2>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" value="{{ user.email }}" disabled>
+                    <small>Email address cannot be changed</small>
                 </div>
-                <div class="card-content">
-                    <form method="POST" class="settings-form">
-                        <div class="form-group">
-                            <label for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name or '' }}" 
-                                   placeholder="Enter your first name">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}" 
-                                   placeholder="Enter your last name">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" value="{{ user.email }}" disabled>
-                            <small>Email address cannot be changed</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="company_name">Company Name (Optional)</label>
-                            <input type="text" id="company_name" name="company_name" value="{{ user.company_name or '' }}" 
-                                   placeholder="Enter your company name">
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Update Profile
-                        </button>
-                    </form>
-                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </form>
+        </div>
+
+        <!-- Account Status -->
+        <div class="dashboard-section-block dashboard-full">
+            <h2><i class="fas fa-info-circle"></i> Account Status</h2>
+            <div class="status-item">
+                <span class="status-label">Member Since:</span>
+                <span class="status-value">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</span>
             </div>
-
-            <!-- Account Status -->
-            <div class="settings-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-info-circle"></i> Account Status</h3>
-                </div>
-                <div class="card-content">
-                    <div class="status-item">
-                        <span class="status-label">Account Type:</span>
-                        <span class="status-value">
-                            <span class="badge badge-basic">
-                                Free
-                            </span>
-                        </span>
-                    </div>
-                    
-                    <div class="status-item">
-                        <span class="status-label">Member Since:</span>
-                        <span class="status-value">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</span>
-                    </div>
-                    
-                    <div class="status-item">
-                        <span class="status-label">Account Status:</span>
-                        <span class="status-value">
-                            <span class="badge badge-success">Active</span>
-                        </span>
-                    </div>
-                    
-                    <div class="status-item">
-                        <span class="status-label">Connected Accounts:</span>
-                        <span class="status-value">0 Instagram accounts</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Security -->
-            <div class="settings-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-shield-alt"></i> Security</h3>
-                </div>
-                <div class="card-content">
-                    <div class="security-item">
-                        <div class="security-info">
-                            <h4>Password</h4>
-                            <p>Last changed: Never</p>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-key"></i> Change Password
-                        </button>
-                    </div>
-                    
-                    <div class="security-item">
-                        <div class="security-info">
-                            <h4>Two-Factor Authentication</h4>
-                            <p>Add an extra layer of security</p>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-mobile-alt"></i> Enable 2FA
-                        </button>
-                    </div>
-                    
-                    <div class="security-item">
-                        <div class="security-info">
-                            <h4>Login Sessions</h4>
-                            <p>Manage active sessions</p>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-desktop"></i> View Sessions
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Data & Privacy -->
-            <div class="settings-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-database"></i> Data & Privacy</h3>
-                </div>
-                <div class="card-content">
-                    <div class="privacy-item">
-                        <div class="privacy-info">
-                            <h4>Data Export</h4>
-                            <p>Download your data</p>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" disabled>
-                            <i class="fas fa-download"></i> Export Data
-                        </button>
-                    </div>
-                    
-                    <div class="privacy-item">
-                        <div class="privacy-info">
-                            <h4>Delete Account</h4>
-                            <p>Permanently delete your account</p>
-                        </div>
-                        <button class="btn btn-danger btn-sm" disabled>
-                            <i class="fas fa-trash"></i> Delete Account
-                        </button>
-                    </div>
-                    
-                    <div class="privacy-links">
-                        <a href="{{ url_for('privacy') }}" class="link">Privacy Policy</a>
-                        <a href="mailto:chata.dmbot@gmail.com" class="link">Contact Support</a>
-                    </div>
-                </div>
+            <div class="status-item">
+                <span class="status-label">Account Status:</span>
+                <span class="status-value">
+                    <span class="status-badge status-active">Active</span>
+                </span>
             </div>
         </div>
 
-        <div class="form-actions">
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <!-- Back to Dashboard -->
+        <div class="dashboard-section-block dashboard-full" style="text-align: center;">
+            <a href="{{ url_for('dashboard') }}" class="btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
-    </div>
+    </main>
+
+    <!-- Interactive Grid Script -->
+    <script>
+        // Interactive Grid Background with scroll following
+        function createInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            const gridSize = 50;
+            const cols = Math.ceil(window.innerWidth / gridSize);
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize);
+            
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.left = j * gridSize + 'px';
+                    cell.style.top = i * gridSize + 'px';
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        let ticking = false;
+        let grid = null;
+        
+        function updateGridOnScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    if (!grid) {
+                        grid = document.getElementById('interactiveGrid');
+                    }
+                    const scrollY = window.pageYOffset;
+                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        
+        window.addEventListener('load', function() {
+            window.scrollTo(0, 0);
+            createInteractiveGrid();
+            grid = document.getElementById('interactiveGrid');
+        });
+        window.addEventListener('resize', createInteractiveGrid);
+        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+    </script>
 </body>
 </html>
