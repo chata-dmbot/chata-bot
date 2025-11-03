@@ -1518,20 +1518,28 @@ def webhook():
         data = request.json
         
         # Debug: Show all available Instagram connections
-        print("🔍 Available Instagram connections:")
+        print("🔍 Available Instagram connections in database:")
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
             try:
                 cursor.execute("SELECT id, instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
                 connections = cursor.fetchall()
-                print(f"📊 Found {len(connections)} Instagram connections in database:")
+                print(f"📊 Found {len(connections)} Instagram connections:")
                 for conn_data in connections:
-                    print(f"  - ID: {conn_data[0]}, User ID: {conn_data[1]}, Page ID: {conn_data[2]}, Active: {conn_data[3]}")
+                    print(f"  - DB ID: {conn_data[0]}")
+                    print(f"    Instagram User ID: {conn_data[1]}")
+                    print(f"    Instagram Page ID: {conn_data[2]}")
+                    print(f"    Active: {conn_data[3]}")
+                    print(f"    ---")
             except Exception as e:
                 print(f"❌ Error fetching connections: {e}")
+                import traceback
+                traceback.print_exc()
             finally:
                 conn.close()
+        else:
+            print("❌ Could not connect to database to fetch connections")
 
         if 'entry' in data:
             for entry in data['entry']:
@@ -1565,12 +1573,22 @@ def webhook():
                                 # First try to find by the recipient ID (Instagram user ID)
                                 if recipient_id:
                                     print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
+                                    print(f"🔍 Comparing against database values...")
                                     instagram_connection = get_instagram_connection_by_id(recipient_id)
+                                    if instagram_connection:
+                                        print(f"✅ Found connection by Instagram User ID!")
+                                    else:
+                                        print(f"❌ No connection found with Instagram User ID: {recipient_id}")
                                 
                                 # If not found by user ID, try by page ID
                                 if not instagram_connection and page_id:
                                     print(f"🔍 Trying to find connection by page ID: {page_id}")
+                                    print(f"🔍 Comparing against database values...")
                                     instagram_connection = get_instagram_connection_by_page_id(page_id)
+                                    if instagram_connection:
+                                        print(f"✅ Found connection by Page ID!")
+                                    else:
+                                        print(f"❌ No connection found with Page ID: {page_id}")
                                 
                                 if not instagram_connection:
                                     print(f"❌ No Instagram connection found for account {recipient_id} or page {page_id}")
