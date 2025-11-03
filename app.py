@@ -56,6 +56,16 @@ def ping():
     """Simple ping endpoint"""
     return jsonify({"status": "pong", "timestamp": datetime.utcnow().isoformat()})
 
+@app.route("/webhook/test")
+def webhook_test():
+    """Test endpoint to verify webhook URL is accessible"""
+    return jsonify({
+        "status": "webhook_url_accessible",
+        "url": "https://chata-bot.onrender.com/webhook",
+        "verify_token_set": bool(Config.VERIFY_TOKEN),
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
 
 
 
@@ -1490,15 +1500,21 @@ def webhook():
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
+        print(f"🔍 Webhook GET request - mode: {mode}, token: {token[:10] if token else 'None'}...")
         if mode == "subscribe" and token == Config.VERIFY_TOKEN:
-            print("WEBHOOK VERIFIED!")
+            print("✅ WEBHOOK VERIFIED!")
             return challenge, 200
         else:
+            print(f"❌ Webhook verification failed - mode: {mode}, token match: {token == Config.VERIFY_TOKEN}")
             return "Forbidden", 403
 
     elif request.method == "POST":
-        print("📥 Webhook received POST request")
+        print("=" * 80)
+        print("📥 WEBHOOK RECEIVED POST REQUEST")
+        print("=" * 80)
+        print(f"📋 Request headers: {dict(request.headers)}")
         print(f"📋 Request data: {request.json}")
+        print(f"📋 Request remote address: {request.remote_addr}")
         data = request.json
         
         # Debug: Show all available Instagram connections
