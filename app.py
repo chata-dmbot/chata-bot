@@ -1462,6 +1462,8 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 temperature = settings['temperature']
                 max_tokens = settings['max_tokens']
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
+                print(f"📝 Bot personality (first 100 chars): {system_prompt[:100]}...")
+                print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
             else:
                 # Fallback to global settings
                 system_prompt = get_setting("bot_personality", "You are a helpful and friendly Instagram bot.")
@@ -1704,7 +1706,12 @@ from flask import render_template
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    # Check if user is logged in
+    user_logged_in = 'user_id' in session
+    user = None
+    if user_logged_in:
+        user = get_user_by_id(session['user_id'])
+    return render_template("index.html", user_logged_in=user_logged_in, user=user)
 
 
 
