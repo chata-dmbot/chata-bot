@@ -1040,6 +1040,16 @@ def save_client_settings(user_id, settings, connection_id=None):
 def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
+
+    if request.method == "POST":
+        form_connection_id = request.form.get('connection_id')
+        if form_connection_id == '':
+            connection_id = None
+        elif form_connection_id is not None:
+            try:
+                connection_id = int(form_connection_id)
+            except ValueError:
+                connection_id = None
     
     if request.method == "POST":
         import json
