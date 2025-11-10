@@ -34,12 +34,26 @@ app.secret_key = Config.SECRET_KEY
 
 # Predefined DM scenarios for conversation samples
 CONVERSATION_TEMPLATES = [
-    {"key": "new_follower", "fan_message": "omg just found you, you’re unreal! hi!!"},
-    {"key": "collab_request", "fan_message": "would you ever collab? what’s the best way to reach you?"},
-    {"key": "advice", "fan_message": "i’m trying to get better at what you do. any quick tips?"},
+    {"key": "hey_simple", "fan_message": "hey!!"},
+    {"key": "hey_whats_up", "fan_message": "hey what's up?"},
+    {"key": "long_time_no_chat", "fan_message": "yo it's been forever, how've you been?"},
+    {"key": "new_follower", "fan_message": "omg just found you, you're unreal! hi!!"},
+    {"key": "post_love", "fan_message": "obsessed with your latest post, how did you shoot it?"},
+    {"key": "collab_request", "fan_message": "would you ever collab? what's the best way to reach you?"},
+    {"key": "advice", "fan_message": "i'm trying to get better at what you do. any quick tips?"},
     {"key": "product_question", "fan_message": "do you still sell that thing you mentioned on stories?"},
-    {"key": "support_check_in", "fan_message": "rough day over here 😭 your stories keep me going."},
-    {"key": "event_invite", "fan_message": "we’re hosting an event in your city next month, you in?"}
+    {"key": "support_check_in", "fan_message": "rough day over here, your stories keep me going."},
+    {"key": "event_invite", "fan_message": "we're hosting an event in your city next month, you in?"},
+    {"key": "personal_update", "fan_message": "guess what, I'm moving to your city next month!"},
+    {"key": "motivation_check", "fan_message": "today was rough. how do you keep your energy up?"},
+    {"key": "shoutout_request", "fan_message": "would you mind shouting out my small shop?"},
+    {"key": "pricing_question", "fan_message": "what do you usually charge for a promo?"},
+    {"key": "booking_request", "fan_message": "can I book you for a shoot next month?"},
+    {"key": "behind_scenes", "fan_message": "can you drop more behind-the-scenes? loved the last one."},
+    {"key": "travel_question", "fan_message": "are you coming to LA any time soon?"},
+    {"key": "merch_request", "fan_message": "any new merch coming? i don't want to miss it."},
+    {"key": "voice_note", "fan_message": "could you send a quick voice note for my friend? she's obsessed."},
+    {"key": "signoff_note", "fan_message": "ok I'll stop spamming you haha, talk soon?"}
 ]
 CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
 
