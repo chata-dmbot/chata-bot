@@ -1489,6 +1489,9 @@ def build_personality_prompt(settings):
     Build a detailed system prompt using the saved settings for a connection.
     This is where the bot's identity, tone, and behaviour are defined.
     """
+
+    MAX_PROMPT_CHARS = 3950  # stay comfortably below 4k
+
     def clean(value):
         if not value:
             return ""
@@ -1520,74 +1523,111 @@ def build_personality_prompt(settings):
     if not identity_sentence:
         identity_sentence = "a real human with a unique personality"
 
-    prompt_lines = [
-        f"You are {identity_sentence}. You must role-play this person in all replies.",
-        "Speak in first person. Never reveal you are an AI or an assistant.",
-        "Keep responses very short (1-2 sentences) unless the user asks for details.",
-        "Use casual human language, allow lowercase, slang, or little imperfections when natural.",
+    intro_lines = [
+        f"You are {identity_sentence}. Role-play this person in every reply.",
+        "Speak in first person only. Never mention AI or automation.",
+        "Keep the rhythm human: mix quick replies with occasional longer thoughts when it feels natural.",
+        "Sound casual and lived-in—slang, lowercase, typos, pauses, or emojis are fine if they'd use them.",
     ]
 
     if gender:
-        prompt_lines.append(f"Pronouns / identity: {gender}.")
+        intro_lines.append(f"Pronouns / identity: {gender}.")
     if education:
-        prompt_lines.append(f"Background: {education}.")
+        intro_lines.append(f"Background: {education}.")
+
+    detail_lines = []
 
     def append_detail(label, key):
         value = clean(settings.get(key))
         if value:
-            prompt_lines.append(f"{label}: {value}")
+            detail_lines.append(f"{label}: {value}")
 
-    append_detail("Instagram bio / about", 'bot_personality')
-    append_detail("Core values", 'bot_values')
-    append_detail("Tone of voice", 'tone_of_voice')
-    append_detail("Habits or quirks", 'habits_quirks')
-    append_detail("Confidence level", 'confidence_level')
+    append_detail("About", 'bot_personality')
+    append_detail("Values", 'bot_values')
+    append_detail("Tone", 'tone_of_voice')
+    append_detail("Habits", 'habits_quirks')
+    append_detail("Confidence", 'confidence_level')
     append_detail("Emotional range", 'emotional_range')
     append_detail("Primary goal", 'main_goal')
-    append_detail("Fears or insecurities", 'fears_insecurities')
-    append_detail("Motivations", 'what_drives_them')
+    append_detail("Fears", 'fears_insecurities')
+    append_detail("Motivation", 'what_drives_them')
     append_detail("Obstacles", 'obstacles')
     append_detail("Backstory", 'backstory')
-    append_detail("Family & important relationships", 'family_relationships')
-    append_detail("Culture / environment", 'culture_environment')
-    append_detail("Hobbies & interests", 'hobbies_interests')
-    append_detail("Reply style guidance", 'reply_style')
-    append_detail("Use of emoji / slang", 'emoji_slang')
-    append_detail("Conflict handling", 'conflict_handling')
-    append_detail("Topics to engage", 'preferred_topics')
+    append_detail("Relationships", 'family_relationships')
+    append_detail("Environment", 'culture_environment')
+    append_detail("Hobbies", 'hobbies_interests')
+    append_detail("Reply style", 'reply_style')
+    append_detail("Emoji & slang", 'emoji_slang')
+    append_detail("Conflict approach", 'conflict_handling')
+    append_detail("Topics to lean into", 'preferred_topics')
     append_detail("Topics to avoid", 'avoid_topics')
 
+    link_lines = []
     links = settings.get('links') or []
     if links:
-        formatted_links = ", ".join([f"{link.get('title') or 'Link'}: {link.get('url')}" for link in links if link.get('url')])
+        formatted_links = ", ".join(
+            [f"{link.get('title') or 'Link'}: {link.get('url')}" for link in links if link.get('url')]
+        )
         if formatted_links:
-            prompt_lines.append(f"Promotional links to mention when relevant: {formatted_links}.")
+            link_lines.append(f"Links to drop when it fits: {formatted_links}.")
 
+    post_lines = []
     posts = settings.get('posts') or []
     if posts:
-        formatted_posts = "; ".join([post.get('description') for post in posts if post.get('description')])
+        formatted_posts = "; ".join(
+            [post.get('description') for post in posts if post.get('description')]
+        )
         if formatted_posts:
-            prompt_lines.append(f"Reference these Instagram posts when it makes sense: {formatted_posts}.")
+            post_lines.append(f"Content references to weave in: {formatted_posts}.")
 
+    sample_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        prompt_lines.append("Match the following DM examples exactly in tone and energy when similar messages appear:")
+        sample_lines.append("DM examples to mirror when the vibe matches:")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
-                prompt_lines.append(f'Follower: "{fan_message}" → You: {reply}')
+                sample_lines.append(f'- fan: "{fan_message}" | you: "{reply}"')
             else:
-                prompt_lines.append(f"Example reply: {reply}")
+                sample_lines.append(f'- you: "{reply}"')
+
+    closing_lines = [
+        "Mirror the user's energy. Ask follow-ups only if they'd naturally do it.",
+        "React like a friend: match good news, acknowledge stress, tease lightly when appropriate.",
+        "If they ask for info you don't have, stay in character and deflect or suggest where they'd point them.",
+    ]
 
     if settings.get('instagram_url'):
-        prompt_lines.append(f"Official Instagram profile: {clean(settings.get('instagram_url'))}.")
+        closing_lines.insert(0, f"Official profile link to mention when helpful: {clean(settings.get('instagram_url'))}.")
 
-    prompt_lines.append("Mirror the user's energy. Ask follow-up questions only when it feels natural.")
-    prompt_lines.append("If the user greets you, greet back casually. If they share news, react like a friend would.")
+    def assemble():
+        sections = intro_lines + detail_lines + link_lines + post_lines + sample_lines + closing_lines
+        return "\n".join([line for line in sections if line]).strip()
 
-    combined_prompt = " ".join(prompt_lines).strip()
-    print(f"🧠 Built system prompt ({len(combined_prompt)} chars)")
-    print("🧾 Full system prompt:\n" + combined_prompt + "\n--- end prompt ---")
+    combined_prompt = assemble()
+
+    # Trim lower-priority sections to stay under the character budget.
+    if len(combined_prompt) > MAX_PROMPT_CHARS:
+        post_lines.clear()
+        combined_prompt = assemble()
+
+    if len(combined_prompt) > MAX_PROMPT_CHARS:
+        link_lines.clear()
+        combined_prompt = assemble()
+
+    if len(combined_prompt) > MAX_PROMPT_CHARS and len(sample_lines) > 1:
+        header = sample_lines[:1]
+        sorted_samples = sorted(sample_lines[1:], key=len, reverse=True)
+        while len(sorted_samples) > 0 and len(combined_prompt) > MAX_PROMPT_CHARS:
+            sorted_samples.pop(0)  # drop the longest sample
+            sample_lines = header + sorted_samples
+            combined_prompt = assemble()
+
+    print(f"🧠 Built system prompt ({len(combined_prompt)} chars, {max(0, len(sample_lines) - 1)} samples kept)")
+    for idx in range(0, len(combined_prompt), 800):
+        chunk = combined_prompt[idx:idx + 800]
+        print(f"🧾 Prompt chunk {idx // 800 + 1}:\n{chunk}\n--- chunk end ---")
+
     return combined_prompt
 
 # ---- Webhook Route ----
