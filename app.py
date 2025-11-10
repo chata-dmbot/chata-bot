@@ -1468,7 +1468,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
             if result:
                 user_id = result[0]
                 settings = get_client_settings(user_id, connection_id)
-            system_prompt = build_personality_prompt(settings)
+                system_prompt = build_personality_prompt(settings)
                 temperature = settings['temperature']
                 max_tokens = settings['max_tokens']
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
