@@ -32,6 +32,17 @@ except ValueError as e:
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
+# Predefined DM scenarios for conversation samples
+CONVERSATION_TEMPLATES = [
+    {"key": "new_follower", "fan_message": "omg just found you, you’re unreal! hi!!"},
+    {"key": "collab_request", "fan_message": "would you ever collab? what’s the best way to reach you?"},
+    {"key": "advice", "fan_message": "i’m trying to get better at what you do. any quick tips?"},
+    {"key": "product_question", "fan_message": "do you still sell that thing you mentioned on stories?"},
+    {"key": "support_check_in", "fan_message": "rough day over here 😭 your stories keep me going."},
+    {"key": "event_invite", "fan_message": "we’re hosting an event in your city next month, you in?"}
+]
+CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
+
 # Debug OAuth configuration
 print(f"Facebook OAuth - App ID: {Config.FACEBOOK_APP_ID[:8] + '...' if Config.FACEBOOK_APP_ID else 'Not set'}")
 print(f"Facebook OAuth - App Secret: {'Set' if Config.FACEBOOK_APP_SECRET else 'Not set'}")
@@ -744,7 +755,7 @@ def get_client_settings(user_id, connection_id=None):
                    personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
                    main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
                    culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, instagram_url, avoid_topics, 
+                   use_active_hours, active_start, active_end, links, posts, conversation_samples, instagram_url, avoid_topics, 
                    temperature, max_tokens, is_active
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
@@ -797,11 +808,12 @@ def get_client_settings(user_id, connection_id=None):
             'active_end': row[27] or '18:00',
             'links': json.loads(row[28]) if row[28] else [],
             'posts': json.loads(row[29]) if row[29] else [],
-            'instagram_url': row[30] or '',
-            'avoid_topics': row[31] or '',
-            'temperature': row[32] or 0.7,
-            'max_tokens': row[33] or 150,
-            'auto_reply': bool(row[34]) if row[34] is not None else True
+            'conversation_samples': json.loads(row[30]) if row[30] else {},
+            'instagram_url': row[31] or '',
+            'avoid_topics': row[32] or '',
+            'temperature': row[33] or 0.7,
+            'max_tokens': row[34] or 150,
+            'auto_reply': bool(row[35]) if row[35] is not None else True
         }
     
     # Return default settings if none exist
@@ -836,6 +848,7 @@ def get_client_settings(user_id, connection_id=None):
         'active_end': '18:00',
         'links': [],
         'posts': [],
+        'conversation_samples': {},
         'instagram_url': '',
         'avoid_topics': '',
         'temperature': 0.7,
@@ -871,6 +884,7 @@ def save_client_settings(user_id, settings, connection_id=None):
     # Prepare the data
     links_json = json.dumps(settings.get('links', []))
     posts_json = json.dumps(settings.get('posts', []))
+    samples_json = json.dumps(settings.get('conversation_samples', {}))
     
     # Use different syntax for PostgreSQL vs SQLite
     if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
@@ -880,14 +894,14 @@ def save_client_settings(user_id, settings, connection_id=None):
              bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
              confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
              backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, 
+             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
              instagram_url, avoid_topics, temperature, max_tokens, is_active)
             VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
                 bot_personality = EXCLUDED.bot_personality,
                 bot_name = EXCLUDED.bot_name,
@@ -919,6 +933,7 @@ def save_client_settings(user_id, settings, connection_id=None):
                 active_end = EXCLUDED.active_end,
                 links = EXCLUDED.links,
                 posts = EXCLUDED.posts,
+                conversation_samples = EXCLUDED.conversation_samples,
                 instagram_url = EXCLUDED.instagram_url,
                 avoid_topics = EXCLUDED.avoid_topics,
                 temperature = EXCLUDED.temperature,
@@ -936,7 +951,7 @@ def save_client_settings(user_id, settings, connection_id=None):
               settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
+              links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
               settings.get('auto_reply', True)))
     else:
@@ -946,14 +961,14 @@ def save_client_settings(user_id, settings, connection_id=None):
              bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
              confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
              backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, 
+             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
              instagram_url, avoid_topics, temperature, max_tokens, is_active)
             VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
         """, (user_id, connection_id, 
               settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
               settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
@@ -965,7 +980,7 @@ def save_client_settings(user_id, settings, connection_id=None):
               settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
+              links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
               settings.get('auto_reply', True)))
     
@@ -980,78 +995,16 @@ def save_client_settings(user_id, settings, connection_id=None):
 def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
+    conversation_templates = CONVERSATION_TEMPLATES
 
     if request.method == "POST":
         form_connection_id = request.form.get('connection_id')
-        if form_connection_id is not None:
+        if form_connection_id:
             try:
                 connection_id = int(form_connection_id)
             except ValueError:
                 connection_id = None
-    
-    if request.method == "POST":
-        import json
-        if connection_id is None:
-            flash("Please choose an Instagram account before saving the bot settings.", "error")
-            return redirect(url_for('bot_settings'))
-        
-        # Process links
-        link_urls = request.form.getlist('link_urls[]')
-        link_titles = request.form.getlist('link_titles[]')
-        links = []
-        for i, url in enumerate(link_urls):
-            if url.strip() and i < len(link_titles):
-                links.append({'url': url.strip(), 'title': link_titles[i].strip()})
-        
-        # Process posts
-        post_descriptions = request.form.getlist('post_descriptions[]')
-        posts = []
-        for desc in post_descriptions:
-            if desc.strip():
-                posts.append({'description': desc.strip()})
-        
-        settings = {
-            'bot_personality': request.form.get('bot_personality', ''),
-            'bot_name': request.form.get('bot_name', ''),
-            'bot_age': request.form.get('bot_age', ''),
-            'bot_gender': request.form.get('bot_gender', ''),
-            'bot_location': request.form.get('bot_location', ''),
-            'bot_occupation': request.form.get('bot_occupation', ''),
-            'bot_education': request.form.get('bot_education', ''),
-            'personality_type': request.form.get('personality_type', ''),
-            'bot_values': request.form.get('bot_values', ''),
-            'tone_of_voice': request.form.get('tone_of_voice', ''),
-            'habits_quirks': request.form.get('habits_quirks', ''),
-            'confidence_level': request.form.get('confidence_level', ''),
-            'emotional_range': request.form.get('emotional_range', ''),
-            'main_goal': request.form.get('main_goal', ''),
-            'fears_insecurities': request.form.get('fears_insecurities', ''),
-            'what_drives_them': request.form.get('what_drives_them', ''),
-            'obstacles': request.form.get('obstacles', ''),
-            'backstory': request.form.get('backstory', ''),
-            'family_relationships': request.form.get('family_relationships', ''),
-            'culture_environment': request.form.get('culture_environment', ''),
-            'hobbies_interests': request.form.get('hobbies_interests', ''),
-            'reply_style': request.form.get('reply_style', ''),
-            'emoji_slang': request.form.get('emoji_slang', ''),
-            'conflict_handling': request.form.get('conflict_handling', ''),
-            'preferred_topics': request.form.get('preferred_topics', ''),
-            'use_active_hours': bool(request.form.get('use_active_hours')),
-            'active_start': request.form.get('active_start', '09:00'),
-            'active_end': request.form.get('active_end', '18:00'),
-            'links': links,
-            'posts': posts,
-            'instagram_url': request.form.get('instagram_url', ''),
-            'avoid_topics': request.form.get('avoid_topics', ''),
-            'max_tokens': int(request.form.get('max_tokens', 150)),
-            'auto_reply': bool(request.form.get('auto_reply', True))
-        }
-        
-        save_client_settings(user_id, settings, connection_id)
-        flash("Bot settings updated successfully!", "success")
-        return redirect(url_for('bot_settings', connection_id=connection_id))
-    
-    # Get user's Instagram connections for the dropdown
+
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
@@ -1074,19 +1027,74 @@ def bot_settings():
         })
     
     if not connections_list:
-        flash("Please connect an Instagram account before configuring bot settings.", "warning")
-        return render_template("bot_settings.html", settings=None, connections=[], selected_connection_id=None, selected_connection=None)
+        if request.method == "POST":
+            flash("Please connect an Instagram account before configuring bot settings.", "warning")
+        return render_template(
+            "bot_settings.html",
+            settings=None,
+            connections=[],
+            selected_connection_id=None,
+            selected_connection=None,
+            conversation_templates=conversation_templates
+        )
 
     if connection_id is None:
         connection_id = connections_list[0]['id']
     
     current_settings = get_client_settings(user_id, connection_id)
     selected_connection = next((c for c in connections_list if c['id'] == connection_id), None)
-    return render_template("bot_settings.html", 
-                         settings=current_settings, 
-                         connections=connections_list,
-                         selected_connection_id=connection_id,
-                         selected_connection=selected_connection)
+
+    if request.method == "POST":
+        link_urls = request.form.getlist('link_urls[]')
+        link_titles = request.form.getlist('link_titles[]')
+        links = []
+        for index, url in enumerate(link_urls):
+            if url.strip():
+                title = link_titles[index].strip() if index < len(link_titles) else ""
+                links.append({'url': url.strip(), 'title': title})
+
+        post_descriptions = request.form.getlist('post_descriptions[]')
+        posts = []
+        for desc in post_descriptions:
+            if desc.strip():
+                posts.append({'description': desc.strip()})
+
+        conversation_samples = {}
+        for template in conversation_templates:
+            reply_value = request.form.get(f"sample_reply_{template['key']}", "")
+            reply_value = reply_value.strip()
+            if reply_value:
+                conversation_samples[template['key']] = reply_value
+
+        settings = {
+            'bot_personality': request.form.get('bot_personality', '').strip(),
+            'bot_name': request.form.get('bot_name', '').strip(),
+            'bot_age': request.form.get('bot_age', '').strip(),
+            'bot_gender': request.form.get('bot_gender', '').strip(),
+            'bot_location': request.form.get('bot_location', '').strip(),
+            'bot_occupation': request.form.get('bot_occupation', '').strip(),
+            'links': links,
+            'posts': posts,
+            'conversation_samples': conversation_samples,
+            'instagram_url': request.form.get('instagram_url', '').strip(),
+            'avoid_topics': request.form.get('avoid_topics', '').strip()
+        }
+
+        save_client_settings(user_id, settings, connection_id)
+        flash("Bot settings updated successfully!", "success")
+        return redirect(url_for('bot_settings', connection_id=connection_id))
+
+    if current_settings.get('conversation_samples') is None:
+        current_settings['conversation_samples'] = {}
+
+    return render_template(
+        "bot_settings.html",
+        settings=current_settings,
+        connections=connections_list,
+        selected_connection_id=connection_id,
+        selected_connection=selected_connection,
+        conversation_templates=conversation_templates
+    )
 
 @app.route("/dashboard/account-settings", methods=["GET", "POST"])
 @login_required
@@ -1546,6 +1554,16 @@ def build_personality_prompt(settings):
         formatted_posts = "; ".join([post.get('description') for post in posts if post.get('description')])
         if formatted_posts:
             prompt_lines.append(f"Reference these Instagram posts when it makes sense: {formatted_posts}.")
+
+    samples = settings.get('conversation_samples') or {}
+    if isinstance(samples, dict) and samples:
+        prompt_lines.append("Match the following DM examples exactly in tone and energy when similar messages appear:")
+        for key, reply in samples.items():
+            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
+            if fan_message:
+                prompt_lines.append(f'Follower: "{fan_message}" → You: {reply}')
+            else:
+                prompt_lines.append(f"Example reply: {reply}")
 
     if settings.get('instagram_url'):
         prompt_lines.append(f"Official Instagram profile: {clean(settings.get('instagram_url'))}.")

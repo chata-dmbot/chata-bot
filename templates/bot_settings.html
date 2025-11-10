@@ -1,402 +1,480 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Settings - CHATA</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <meta charset="UTF-8">
+    <title>Bot Settings | Chata</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
         :root {
-            --chata-blue: #3366ff;
-            --chata-blue-light: #4d7cff;
-            --chata-blue-dark: #1a4dcc;
+            --bg-dark: #050715;
+            --bg-card: rgba(13, 17, 33, 0.85);
+            --bg-card-alt: rgba(30, 37, 63, 0.55);
+            --border: rgba(96, 110, 200, 0.25);
+            --text-primary: #f5f7ff;
+            --text-secondary: rgba(224, 228, 255, 0.66);
+            --accent: #556dfc;
+            --accent-soft: rgba(85, 109, 252, 0.2);
+            --radius: 18px;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            color: #ffffff;
-            overflow-x: hidden;
-            font-weight: 300;
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text-primary);
+            background: radial-gradient(120% 120% at 50% 0%, #1d2146 0%, #060818 45%, #040414 100%);
+            min-height: 100vh;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        .page { min-height: 100vh; display: flex; flex-direction: column; }
+        .hero {
+            padding: 64px 32px 40px;
+            text-align: center;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2.5rem, 4vw, 3.4rem);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .hero p {
+            color: var(--text-secondary);
+            max-width: 640px;
+            margin: 16px auto 0;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        main.content {
+            flex: 1;
+            width: min(1100px, 94vw);
+            margin: 0 auto 80px;
+        }
+        .flash-container {
+            width: min(980px, 90vw);
+            margin: 0 auto 24px;
+        }
+        .alert {
+            padding: 16px 18px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .alert-success { border-color: rgba(63, 218, 143, 0.4); color: #b9ffd9; }
+        .alert-error { border-color: rgba(255, 99, 132, 0.5); color: #ffc9d1; }
+        .alert-warning { border-color: rgba(255, 183, 77, 0.4); color: #ffe3b0; }
+        .connection-banner {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .connection-banner strong {
+            color: var(--accent);
+            font-size: 0.9rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        form.bot-settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px;
+        }
+        .card h2.section-title {
+            margin: 0 0 12px;
+            font-size: 1.05rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+        .card p.section-hint {
+            margin: 0 0 22px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+        .essentials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        label {
+            font-size: 0.82rem;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            min-height: 100vh;
-            position: relative;
+            color: var(--text-secondary);
         }
-
-        /* Global subtle blur overlay - behind animations, in front of grid */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(1px);
-            z-index: 1;
-            pointer-events: none;
+        input[type="text"], input[type="url"], textarea {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(151, 163, 255, 0.2);
+            background: rgba(8, 10, 24, 0.65);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            resize: none;
+            transition: border 0.2s ease, background 0.2s ease;
         }
-
-        /* Navigation */
-        .glass-nav {
-            backdrop-filter: none;
-            background: transparent;
-            border: none;
+        input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(14, 18, 40, 0.9);
         }
-        
-        .navigation {
-            opacity: 0;
-            transform: translateY(-50px);
-            animation: slideDown 1s ease-out forwards;
-            position: relative;
-            z-index: 15;
+        textarea.large {
+            min-height: 150px;
+            line-height: 1.55;
         }
-
-        .nav-item {
-            position: relative;
-            transition: all 0.3s ease;
+        .char-counter {
+            font-size: 0.75rem;
+            color: rgba(189, 196, 255, 0.6);
+            text-align: right;
         }
-        
-        .nav-item:hover {
-            color: var(--chata-blue);
+        .conversation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
         }
-        
-        .nav-item::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--chata-blue);
-            transition: width 0.3s ease;
-        }
-        
-        .nav-item:hover::after {
-            width: 100%;
-        }
-
-        .logo-blue {
-            color: #3366ff;
-        }
-
-        .cta-button {
-            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
-        }
-
-        /* Interactive Grid Background */
-        .interactive-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: #000000;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-attachment: scroll;
-            transition: all 0.3s ease;
-        }
-
-        .grid-cell {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 1px solid rgba(51, 102, 255, 0.1);
-            transition: all 0.6s ease;
-            pointer-events: auto;
-            background: transparent;
-        }
-        
-        .grid-cell:hover,
-        .grid-cell.active {
-            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
-            transform: scale(1.05);
-        }
-
-        /* Hero Section */
-        .bot-settings-hero {
-            position: relative;
-            min-height: 40vh;
+        .conversation-card {
+            background: var(--bg-card-alt);
+            border: 1px solid rgba(96, 110, 200, 0.18);
+            border-radius: 16px;
+            padding: 18px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-            margin-top: 80px;
-            z-index: 10;
+            flex-direction: column;
+            gap: 12px;
         }
-
-        .bot-settings-hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
+        .conversation-card .fan-message {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+        .conversation-card .fan-message span {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #fff, #ccc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            display: block;
+            margin-bottom: 6px;
         }
-
-        .bot-settings-hero p {
-            font-size: 1.2rem;
-            font-weight: 300;
-            letter-spacing: 0.05em;
-            color: #888;
-            text-transform: none;
+        .conversation-card textarea {
+            min-height: 90px;
         }
-
-         /* Content Section */
-         .bot-settings-content {
-             max-width: 1400px;
-             margin: 0 auto;
-             padding: 2rem;
-             position: relative;
-             z-index: 10;
-         }
-
-        /* Main Layout */
-        .main-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .form-column {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Personality Section */
-        .personality-section {
+        .links-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
         }
-
-        .personality-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        /* Motivation Section */
-        .motivation-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        .motivation-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        /* Background Section */
-        .background-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        .background-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        /* Communication Section */
-        .communication-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        .communication-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        /* Links & Posts Section */
-        .links-posts-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-            align-items: start;
-        }
-
-        .links-content, .posts-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        /* Topics & Template Section */
-        .topics-template-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-            align-items: stretch;
-        }
-
-        .topics-content, .template-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            height: 100%;
-        }
-
-        .topics-content textarea {
-            resize: vertical;
-            overflow-y: auto;
-            min-height: 200px;
-        }
-
-        .topics-content textarea::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .topics-content textarea::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-
-        .topics-content textarea::-webkit-scrollbar-thumb {
-            background: var(--chata-blue);
-            border-radius: 3px;
-        }
-
-        .topics-content textarea::-webkit-scrollbar-thumb:hover {
-            background: #3366cc;
-        }
-
-        .template-content {
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .template-content .template-buttons-container {
-            flex: 1;
-        }
-
-        .template-content #apply_general_template_btn {
-            margin-top: -80px !important;
-            position: relative !important;
-            z-index: 10 !important;
-            transform: translateY(-20px) !important;
-        }
-
-        /* Active Hours & Instagram Exclusions Section */
-        .active-hours-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: stretch;
-            margin-top: 2rem;
-        }
-
-        .active-hours-content, .instagram-exclusions-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            height: 100%;
-        }
-
-        .exclusions-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .exclusion-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-        }
-
-        .exclusion-item input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
-            padding: 0.75rem;
-            color: white;
+        .link-item, .post-item { display: flex; flex-direction: column; gap: 10px; }
+        .add-button {
+            margin-top: 16px;
+            align-self: flex-start;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px dashed rgba(151, 163, 255, 0.35);
+            background: rgba(85, 109, 252, 0.15);
+            color: var(--text-primary);
+            cursor: pointer;
             font-size: 0.9rem;
         }
-
-        .exclusion-item input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .exclusion-item input:focus {
-            outline: none;
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 0 2px rgba(51, 102, 204, 0.2);
-        }
-
-        .remove-exclusion-btn {
-            background: transparent;
-            color: #dc3545;
-            border: 1px solid #dc3545;
-            padding: 0.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            width: 36px;
-            height: 36px;
+        .add-button:hover { border-color: var(--accent); }
+        .actions {
             display: flex;
+            justify-content: flex-end;
+        }
+        .btn-primary {
+            padding: 14px 28px;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #556dfc, #8a7bff);
+            color: #fff;
+            font-size: 1rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(85, 109, 252, 0.35);
+        }
+        .empty-state {
+            background: var(--bg-card);
+            border: 1px dashed rgba(151, 163, 255, 0.35);
+            border-radius: var(--radius);
+            padding: 34px;
+            text-align: center;
+        }
+        .empty-state h2 { margin-bottom: 12px; }
+        .empty-state p { color: var(--text-secondary); margin-bottom: 20px; }
+        .btn-secondary {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 999px;
+            background: rgba(85, 109, 252, 0.18);
+            border: 1px solid rgba(85, 109, 252, 0.3);
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.85rem;
         }
-
-        .remove-exclusion-btn:hover {
-            background: #dc3545;
-            color: white;
+        @media (max-width: 720px) {
+            .card { padding: 20px; }
+            .conversation-grid { grid-template-columns: 1fr; }
+            .hero { padding: 48px 20px 28px; }
         }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="hero">
+        <h1>Bot Persona</h1>
+        <p>Teach Chata how to sound exactly like you. Use your own words in the samples so replies stay natural and consistent with your audience.</p>
+    </header>
 
-        .add-exclusion-btn {
-            background: var(--chata-blue);
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="content">
+        {% if not connections %}
+        <section class="empty-state">
+            <h2>No Instagram account connected yet</h2>
+            <p>Link your Instagram account first so we can save a persona for it.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn-secondary"><i class="fas fa-link"></i> Go to dashboard</a>
+        </section>
+        {% else %}
+        <section class="connection-banner">
+            <strong>Configuring</strong>
+            {% if selected_connection %}
+            <span>Instagram user ID: {{ selected_connection.instagram_user_id }}{% if selected_connection.instagram_page_id %} · Page ID: {{ selected_connection.instagram_page_id }}{% endif %}</span>
+            {% endif %}
+            <span style="color: var(--text-secondary);">Any change here updates the way this account replies in DMs.</span>
+        </section>
+
+        <form method="POST" id="botSettingsForm" class="bot-settings-form">
+            <input type="hidden" name="connection_id" value="{{ selected_connection_id }}">
+
+            <section class="card">
+                <h2 class="section-title">Essentials</h2>
+                <p class="section-hint">The basics your fans already know. Keep it simple and truthful.</p>
+                <div class="essentials-grid">
+                    <div class="form-group">
+                        <label for="bot_name">Name</label>
+                        <input type="text" id="bot_name" name="bot_name" placeholder="What name should the bot use?" value="{{ settings.bot_name if settings else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bot_age">Age</label>
+                        <input type="text" id="bot_age" name="bot_age" placeholder="e.g., 22" value="{{ settings.bot_age if settings else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bot_gender">Pronouns / Gender</label>
+                        <input type="text" id="bot_gender" name="bot_gender" placeholder="e.g., she/her" value="{{ settings.bot_gender if settings else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bot_location">Location</label>
+                        <input type="text" id="bot_location" name="bot_location" placeholder="Where are you based?" value="{{ settings.bot_location if settings else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bot_occupation">What you do</label>
+                        <input type="text" id="bot_occupation" name="bot_occupation" placeholder="e.g., content creator, coach" value="{{ settings.bot_occupation if settings else '' }}">
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="section-title">About me</h2>
+                <p class="section-hint">Write like you’re introducing yourself to a new follower. Include tone, vibe, quirks, anything that makes you sound like you.</p>
+                <div class="form-group">
+                    <label for="bot_personality">Personal paragraph</label>
+                    <textarea id="bot_personality" name="bot_personality" class="auto-resize large" data-maxlength="1000" placeholder="Example: I’m a chill aerospace student who documents late-night build sessions, messy breakthroughs, and the brain fog that comes with too much coffee.">{{ settings.bot_personality if settings else '' }}</textarea>
+                    <div class="char-counter" id="bot_personality_counter">0/1000</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="section-title">Conversation samples</h2>
+                <p class="section-hint">Answer these like real DMs. Short, natural replies work best. The bot will mirror your tone from these examples.</p>
+                <div class="conversation-grid">
+                    {% for template in conversation_templates %}
+                    <div class="conversation-card">
+                        <div class="fan-message">
+                            <span>Follower says</span>
+                            “{{ template.fan_message }}”
+                        </div>
+                        <textarea class="auto-resize conversation-input" name="sample_reply_{{ template.key }}" data-maxlength="280" placeholder="Type the reply you would naturally send">{{ settings.conversation_samples[template.key] if settings and settings.conversation_samples else '' }}</textarea>
+                        <div class="char-counter" id="sample_reply_{{ template.key }}_counter">0/280</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="section-title">Links & highlights</h2>
+                <p class="section-hint">Give Chata the important things to mention, only when it fits the conversation.</p>
+                <div class="links-grid">
+                    <div>
+                        <h3 style="margin:0 0 12px; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-secondary);">Promotional links</h3>
+                        <div id="links-container">
+                            {% if settings and settings.links %}
+                                {% for link in settings.links %}
+                                <div class="link-item">
+                                    <div class="form-group">
+                                        <label>URL</label>
+                                        <input type="url" name="link_urls[]" placeholder="https://..." value="{{ link.url if link.url else '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Short description</label>
+                                        <input type="text" name="link_titles[]" placeholder="What is this link for?" value="{{ link.title if link.title else (link.description if link.description else '') }}">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="link-item">
+                                    <div class="form-group">
+                                        <label>URL</label>
+                                        <input type="url" name="link_urls[]" placeholder="https://...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Short description</label>
+                                        <input type="text" name="link_titles[]" placeholder="What is this link for?">
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="add-button" id="add-link-btn"><i class="fas fa-plus"></i> Add link</button>
+                    </div>
+                    <div>
+                        <h3 style="margin:0 0 12px; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-secondary);">Posts to reference</h3>
+                        <div class="form-group">
+                            <label for="instagram_url">Instagram URL</label>
+                            <input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/yourhandle" value="{{ settings.instagram_url if settings else '' }}">
+                        </div>
+                        <div id="posts-container">
+                            {% if settings and settings.posts %}
+                                {% for post in settings.posts %}
+                                <div class="post-item">
+                                    <div class="form-group">
+                                        <label>Post description</label>
+                                        <textarea name="post_descriptions[]" class="auto-resize" data-maxlength="400" placeholder="Describe the post so the bot can reference it">{{ post.description if post.description else '' }}</textarea>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="post-item">
+                                    <div class="form-group">
+                                        <label>Post description</label>
+                                        <textarea name="post_descriptions[]" class="auto-resize" data-maxlength="400" placeholder="Describe the post so the bot can reference it"></textarea>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="add-button" id="add-post-btn"><i class="fas fa-plus"></i> Add post</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="section-title">Boundaries</h2>
+                <p class="section-hint">If there are topics to stay away from, spell them out here.</p>
+                <div class="form-group">
+                    <label for="avoid_topics">Topics to avoid</label>
+                    <textarea id="avoid_topics" name="avoid_topics" class="auto-resize" data-maxlength="400" placeholder="Example: politics, financial advice, personal family matters">{{ settings.avoid_topics if settings else '' }}</textarea>
+                    <div class="char-counter" id="avoid_topics_counter">0/400</div>
+                </div>
+            </section>
+
+            <div class="actions">
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save persona</button>
+            </div>
+        </form>
+        {% endif %}
+    </main>
+</div>
+
+<script>
+(function() {
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    function updateCounter(textarea) {
+        var max = parseInt(textarea.getAttribute('data-maxlength') || '600', 10);
+        var counter = document.getElementById(textarea.name + '_counter') || document.getElementById(textarea.id + '_counter');
+        if (!counter) return;
+        var length = textarea.value.length;
+        counter.textContent = length + '/' + max;
+        counter.style.color = length > max ? '#ff9aa2' : 'rgba(189,196,255,0.6)';
+    }
+
+    document.querySelectorAll('textarea.auto-resize').forEach(function(textarea) {
+        autoResize(textarea);
+        updateCounter(textarea);
+        textarea.addEventListener('input', function() {
+            autoResize(textarea);
+            updateCounter(textarea);
+        });
+    });
+
+    document.querySelectorAll('textarea.conversation-input').forEach(function(textarea) {
+        textarea.addEventListener('input', function() {
+            var max = parseInt(textarea.getAttribute('data-maxlength') || '280', 10);
+            if (textarea.value.length > max) {
+                textarea.value = textarea.value.slice(0, max);
+            }
+        });
+    });
+
+    var addLinkBtn = document.getElementById('add-link-btn');
+    if (addLinkBtn) {
+        addLinkBtn.addEventListener('click', function() {
+            var container = document.getElementById('links-container');
+            var div = document.createElement('div');
+            div.className = 'link-item';
+            div.innerHTML = '<div class="form-group"><label>URL</label><input type="url" name="link_urls[]" placeholder="https://..."></div><div class="form-group"><label>Short description</label><input type="text" name="link_titles[]" placeholder="What is this link for?"></div>';
+            container.appendChild(div);
+        });
+    }
+
+    var addPostBtn = document.getElementById('add-post-btn');
+    if (addPostBtn) {
+        addPostBtn.addEventListener('click', function() {
+            var container = document.getElementById('posts-container');
+            var wrapper = document.createElement('div');
+            wrapper.className = 'post-item';
+            wrapper.innerHTML = '<div class="form-group"><label>Post description</label><textarea name="post_descriptions[]" class="auto-resize" data-maxlength="400" placeholder="Describe the post so the bot can reference it"></textarea></div>';
+            container.appendChild(wrapper);
+            var textarea = wrapper.querySelector('textarea');
+            textarea.addEventListener('input', function() {
+                autoResize(textarea);
+                updateCounter(textarea);
+            });
+        });
+    }
+})();
+</script>
+</body>
+</html>
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;

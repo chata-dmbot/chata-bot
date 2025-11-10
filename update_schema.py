@@ -50,6 +50,7 @@ def migrate_client_settings():
             ('active_end', "TEXT DEFAULT '18:00'"),
             ('links', 'TEXT'),
             ('posts', 'TEXT'),
+            ('conversation_samples', 'TEXT'),
             ('instagram_url', 'TEXT'),
             ('avoid_topics', 'TEXT'),
             ('is_active', 'BOOLEAN DEFAULT TRUE'),
