@@ -1468,7 +1468,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
             if result:
                 user_id = result[0]
                 settings = get_client_settings(user_id, connection_id)
-                system_prompt = settings['bot_personality']
+            system_prompt = build_personality_prompt(settings)
                 temperature = settings['temperature']
                 max_tokens = settings['max_tokens']
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
@@ -1503,6 +1503,84 @@ def get_ai_reply_with_connection(history, connection_id=None):
     except Exception as e:
         print("OpenAI API error:", e)
         return "Sorry, I'm having trouble replying right now."
+
+
+def build_personality_prompt(settings):
+    """
+    Build a detailed system prompt using the saved settings for a connection.
+    This is where the bot's identity, tone, and behaviour are defined.
+    """
+    lines = []
+
+    # Base personality text
+    base_personality = settings.get('bot_personality') or "You are a helpful and friendly Instagram bot."
+    lines.append(base_personality.strip())
+
+    # Identity basics
+    if settings.get('bot_name'):
+        lines.append(f"Your name is {settings['bot_name'].strip()}. Introduce yourself using this name when appropriate.")
+    if settings.get('bot_age'):
+        lines.append(f"You are {settings['bot_age'].strip()} years old.")
+    if settings.get('bot_gender'):
+        lines.append(f"Your pronouns / gender identity: {settings['bot_gender'].strip()}. Respectfully embody this identity.")
+    if settings.get('bot_location'):
+        lines.append(f"You are located in {settings['bot_location'].strip()}.")
+    if settings.get('bot_occupation'):
+        lines.append(f"Occupation / role: {settings['bot_occupation'].strip()}.")
+    if settings.get('bot_education'):
+        lines.append(f"Education / background: {settings['bot_education'].strip()}.")
+
+    # Personality & behaviour
+    def add_if_present(label, key):
+        value = settings.get(key)
+        if value:
+            lines.append(f"{label}: {value.strip()}")
+
+    add_if_present("Personality type", "personality_type")
+    add_if_present("Core values", "bot_values")
+    add_if_present("Typical tone of voice", "tone_of_voice")
+    add_if_present("Notable habits or quirks", "habits_quirks")
+    add_if_present("Confidence level", "confidence_level")
+    add_if_present("Emotional range", "emotional_range")
+    add_if_present("Primary goal", "main_goal")
+    add_if_present("Fears or insecurities", "fears_insecurities")
+    add_if_present("What motivates you", "what_drives_them")
+    add_if_present("Common obstacles", "obstacles")
+    add_if_present("Backstory", "backstory")
+    add_if_present("Family & relationships", "family_relationships")
+    add_if_present("Culture / environment", "culture_environment")
+    add_if_present("Hobbies & interests", "hobbies_interests")
+    add_if_present("Preferred reply style", "reply_style")
+    add_if_present("Use of emoji / slang", "emoji_slang")
+    add_if_present("How you handle conflict", "conflict_handling")
+    add_if_present("Topics you enjoy discussing", "preferred_topics")
+    add_if_present("Topics to avoid", "avoid_topics")
+
+    # Links & promo material
+    links = settings.get('links') or []
+    if links:
+        formatted_links = "\n".join([f"- {link.get('title') or link.get('url')}: {link.get('url')}" for link in links])
+        lines.append("Promotional or important links to share when relevant:\n" + formatted_links)
+    else:
+        lines.append("No promotional links provided unless the user adds them later.")
+
+    posts = settings.get('posts') or []
+    if posts:
+        formatted_posts = "\n".join([f"- {post.get('description')}" for post in posts if post.get('description')])
+        lines.append("Instagram posts or highlights you can reference:\n" + formatted_posts)
+
+    if settings.get('instagram_url'):
+        lines.append(f"Official Instagram profile URL: {settings['instagram_url'].strip()}")
+
+    # Behavioural reminders
+    lines.append("Stay in character at all times. Respond like a real person with this identity.")
+    lines.append("Always keep responses conversational, concise, and tailored to Instagram DMs.")
+    if settings.get('auto_reply') is False:
+        lines.append("Auto-reply is disabled, but if you are invoked, respond thoughtfully.")
+
+    combined_prompt = "\n\n".join(lines).strip()
+    print(f"🧠 Built system prompt ({len(combined_prompt)} chars)")
+    return combined_prompt
 
 # ---- Webhook Route ----
 
