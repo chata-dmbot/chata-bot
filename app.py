@@ -1075,16 +1075,18 @@ def bot_settings():
     
     if not connections_list:
         flash("Please connect an Instagram account before configuring bot settings.", "warning")
-        return render_template("bot_settings.html", settings=None, connections=[], selected_connection_id=None)
+        return render_template("bot_settings.html", settings=None, connections=[], selected_connection_id=None, selected_connection=None)
 
     if connection_id is None:
         connection_id = connections_list[0]['id']
     
     current_settings = get_client_settings(user_id, connection_id)
+    selected_connection = next((c for c in connections_list if c['id'] == connection_id), None)
     return render_template("bot_settings.html", 
                          settings=current_settings, 
                          connections=connections_list,
-                         selected_connection_id=connection_id)
+                         selected_connection_id=connection_id,
+                         selected_connection=selected_connection)
 
 @app.route("/dashboard/account-settings", methods=["GET", "POST"])
 @login_required
@@ -1497,11 +1499,14 @@ def build_personality_prompt(settings):
         identity_sentence = "a real human with a unique personality"
 
     prompt_lines = [
-        f"You must role-play {identity_sentence}. You are not an assistant or AI. Speak in first person as this individual.",
+        f"You are {identity_sentence}. You must role-play this person in all replies.",
+        "Speak in first person. Never reveal you are an AI or an assistant.",
+        "Keep responses very short (1-2 sentences) unless the user asks for details.",
+        "Use casual human language, allow lowercase, slang, or little imperfections when natural.",
     ]
 
     if gender:
-        prompt_lines.append(f"Use the pronouns / gender identity: {gender}.")
+        prompt_lines.append(f"Pronouns / identity: {gender}.")
     if education:
         prompt_lines.append(f"Background: {education}.")
 
@@ -1510,47 +1515,47 @@ def build_personality_prompt(settings):
         if value:
             prompt_lines.append(f"{label}: {value}")
 
-    append_detail("Persona summary", 'bot_personality')
-    append_detail("Personality type", 'personality_type')
+    append_detail("Instagram bio / about", 'bot_personality')
     append_detail("Core values", 'bot_values')
     append_detail("Tone of voice", 'tone_of_voice')
     append_detail("Habits or quirks", 'habits_quirks')
     append_detail("Confidence level", 'confidence_level')
     append_detail("Emotional range", 'emotional_range')
     append_detail("Primary goal", 'main_goal')
-    append_detail("Fears / insecurities", 'fears_insecurities')
+    append_detail("Fears or insecurities", 'fears_insecurities')
     append_detail("Motivations", 'what_drives_them')
-    append_detail("Common obstacles", 'obstacles')
+    append_detail("Obstacles", 'obstacles')
     append_detail("Backstory", 'backstory')
     append_detail("Family & important relationships", 'family_relationships')
-    append_detail("Cultural context / environment", 'culture_environment')
-    append_detail("Hobbies and interests", 'hobbies_interests')
-    append_detail("Preferred reply style", 'reply_style')
-    append_detail("Use of emoji or slang", 'emoji_slang')
-    append_detail("Conflict handling style", 'conflict_handling')
-    append_detail("Topics you enjoy", 'preferred_topics')
+    append_detail("Culture / environment", 'culture_environment')
+    append_detail("Hobbies & interests", 'hobbies_interests')
+    append_detail("Reply style guidance", 'reply_style')
+    append_detail("Use of emoji / slang", 'emoji_slang')
+    append_detail("Conflict handling", 'conflict_handling')
+    append_detail("Topics to engage", 'preferred_topics')
     append_detail("Topics to avoid", 'avoid_topics')
 
     links = settings.get('links') or []
     if links:
         formatted_links = ", ".join([f"{link.get('title') or 'Link'}: {link.get('url')}" for link in links if link.get('url')])
-        prompt_lines.append(f"Promotional links you can share when relevant: {formatted_links}.")
+        if formatted_links:
+            prompt_lines.append(f"Promotional links to mention when relevant: {formatted_links}.")
 
     posts = settings.get('posts') or []
     if posts:
         formatted_posts = "; ".join([post.get('description') for post in posts if post.get('description')])
         if formatted_posts:
-            prompt_lines.append(f"Reference these Instagram posts when appropriate: {formatted_posts}.")
+            prompt_lines.append(f"Reference these Instagram posts when it makes sense: {formatted_posts}.")
 
     if settings.get('instagram_url'):
         prompt_lines.append(f"Official Instagram profile: {clean(settings.get('instagram_url'))}.")
 
-    prompt_lines.append("Stay fully in character, speak naturally, and mirror the energy of Instagram DMs.")
-    prompt_lines.append("Do not announce that you are role-playing. Do not offer generic assistance. Respond as this person would.")
+    prompt_lines.append("Mirror the user's energy. Ask follow-up questions only when it feels natural.")
+    prompt_lines.append("If the user greets you, greet back casually. If they share news, react like a friend would.")
 
     combined_prompt = " ".join(prompt_lines).strip()
     print(f"🧠 Built system prompt ({len(combined_prompt)} chars)")
-    print(f"🧾 Prompt preview: {combined_prompt[:160]}...")
+    print("🧾 Full system prompt:\n" + combined_prompt + "\n--- end prompt ---")
     return combined_prompt
 
 # ---- Webhook Route ----

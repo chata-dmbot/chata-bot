@@ -1086,35 +1086,26 @@
      <main class="bot-settings-content">
         {% if not connections %}
         <section class="dashboard-section-block dashboard-full" style="margin-bottom: 2rem;">
-            <h2 style="color: var(--chata-blue); font-size: 1.5rem; font-weight: 600;">No Instagram connections yet</h2>
+            <h2 style="color: var(--chata-blue); font-size: 1.5rem; font-weight: 600;">No Instagram connection yet</h2>
             <p style="color: rgba(255,255,255,0.7); text-transform: none; margin-top: 0.5rem;">
-                Connect an Instagram account first so you can configure its bot personality.
+                Connect an Instagram account first so you can configure its persona.
             </p>
             <a href="{{ url_for('dashboard') }}" class="btn-secondary" style="margin-top: 1.5rem;">
                 Go to dashboard
             </a>
         </section>
         {% else %}
-        <!-- Connection Selector -->
+        <!-- Connection banner -->
         <section class="dashboard-section-block dashboard-full" style="margin-bottom: 2rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.5rem;">
-            <form method="GET" action="{{ url_for('bot_settings') }}" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                    <h2 style="color: var(--chata-blue); font-size: 1.25rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">Select Instagram Account</h2>
-                    <p style="color: rgba(255,255,255,0.6); text-transform: none; font-size: 0.9rem;">Choose which Instagram connection these settings should apply to.</p>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <select name="connection_id" onchange="this.form.submit()" style="min-width: 220px; padding: 0.6rem 1rem; border-radius: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; text-transform: none; letter-spacing: normal;">
-                        {% for connection in connections %}
-                            <option value="{{ connection.id }}" {% if selected_connection_id == connection.id %}selected{% endif %}>
-                                {{ connection.instagram_page_id or connection.instagram_user_id }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <span style="padding: 0.35rem 0.9rem; border-radius: 999px; background: rgba(51,102,255,0.2); border: 1px solid rgba(51,102,255,0.4); color: #9bb4ff; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;">
-                        Connection ID: {{ selected_connection_id }}
-                    </span>
-                </div>
-            </form>
+            <h2 style="color: var(--chata-blue); font-size: 1.25rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">Configuring Instagram persona</h2>
+            {% if selected_connection %}
+            <p style="color: rgba(255,255,255,0.7); text-transform: none; font-size: 0.9rem; margin-top: 0.5rem;">
+                Account ID: {{ selected_connection.instagram_page_id or selected_connection.instagram_user_id }}
+            </p>
+            {% endif %}
+            <p style="color: rgba(255,255,255,0.7); text-transform: none; font-size: 0.9rem; margin-top: 0.5rem;">
+                The details you set below will be used to generate the bot's personality and tone.
+            </p>
         </section>
 
          <form id="botSettingsForm" method="POST">
@@ -1126,96 +1117,41 @@
                     <!-- Essentials Section -->
                     <div class="essentials-section">
                         <div class="essentials-content">
-                            <h2 class="section-title">ESSENTIALS</h2>
-                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">These are the essentials, what makes them a specific person.</p>
+                            <h2 class="section-title">IDENTITY &amp; BIO</h2>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Describe who this person is. Keep it short and true to their Instagram persona.</p>
                             
                             <!-- Individual Form Fields -->
                             <div class="form-group">
                                 <label for="bot_name">Name</label>
-                                <input type="text" id="bot_name" name="bot_name" placeholder="Enter your name" value="{{ settings.bot_name if settings else '' }}">
+                                <input type="text" id="bot_name" name="bot_name" placeholder="How does this person introduce themselves?" value="{{ settings.bot_name if settings else '' }}">
                             </div>
                             <div class="form-group">
                                 <label for="bot_age">Age</label>
-                                <input type="text" id="bot_age" name="bot_age" placeholder="Enter your age" pattern="[0-9]*" inputmode="numeric" value="{{ settings.bot_age if settings else '' }}">
+                                <input type="text" id="bot_age" name="bot_age" placeholder="e.g., 24" pattern="[0-9]*" inputmode="numeric" value="{{ settings.bot_age if settings else '' }}">
                             </div>
                             <div class="form-group">
-                                <label for="bot_gender">Gender / Pronouns</label>
-                                <input type="text" id="bot_gender" name="bot_gender" placeholder="e.g., She/Her, He/Him, They/Them" value="{{ settings.bot_gender if settings else '' }}">
+                                <label for="bot_gender">Pronouns / Gender identity</label>
+                                <input type="text" id="bot_gender" name="bot_gender" placeholder="e.g., she/her, he/him, they/them" value="{{ settings.bot_gender if settings else '' }}">
                             </div>
                             <div class="form-group">
                                 <label for="bot_location">Location / Origin</label>
-                                <input type="text" id="bot_location" name="bot_location" placeholder="e.g., New York, USA" value="{{ settings.bot_location if settings else '' }}">
+                                <input type="text" id="bot_location" name="bot_location" placeholder="e.g., Vilnius, Lithuania" value="{{ settings.bot_location if settings else '' }}">
                             </div>
                             <div class="form-group">
-                                <label for="bot_occupation">Occupation / Role</label>
-                                <input type="text" id="bot_occupation" name="bot_occupation" placeholder="e.g., Software Engineer, Teacher" value="{{ settings.bot_occupation if settings else '' }}">
+                                <label for="bot_occupation">What they do</label>
+                                <input type="text" id="bot_occupation" name="bot_occupation" placeholder="e.g., Aerospace engineering student" value="{{ settings.bot_occupation if settings else '' }}">
                             </div>
                             <div class="form-group">
-                                <label for="bot_education">Education or Background</label>
-                                <input type="text" id="bot_education" name="bot_education" placeholder="e.g., Computer Science Degree, Self-taught" value="{{ settings.bot_education if settings else '' }}">
+                                <label for="bot_personality">Instagram bio / about</label>
+                                <textarea id="bot_personality" name="bot_personality" class="auto-resize" rows="2" maxlength="400" placeholder="Summarize their Instagram profile and vibe">{{ settings.bot_personality if settings else '' }}</textarea>
+                                <div class="char-counter" id="bot_personality_counter">0/400</div>
                             </div>
                         </div>
                         
                         <div class="essentials-explanation">
                             <div class="explanation-content">
-                                <p class="explanation-text">
-                                    <span class="explanation-word">Here,</span>
-                                    <span class="explanation-word">you</span>
-                                    <span class="explanation-word">can</span>
-                                    <span class="explanation-word">set</span>
-                                    <span class="explanation-word">up</span>
-                                    <span class="explanation-word">and</span>
-                                    <span class="explanation-word">customize</span>
-                                    <span class="explanation-word">your</span>
-                                    <span class="explanation-word">bot.</span>
-                                    <span class="explanation-word">On</span>
-                                    <span class="explanation-word">the</span>
-                                    <span class="explanation-word">left,</span>
-                                    <span class="explanation-word">you'll</span>
-                                    <span class="explanation-word">find</span>
-                                    <span class="explanation-word">the</span>
-                                    <span class="explanation-word">essential</span>
-                                    <span class="explanation-word">parameters</span>
-                                    <span class="explanation-word">to</span>
-                                    <span class="explanation-word">fill</span>
-                                    <span class="explanation-word">in</span>
-                                    <span class="explanation-word">for</span>
-                                    <span class="explanation-word">your</span>
-                                    <span class="explanation-word">specific</span>
-                                    <span class="explanation-word">bot.</span>
-                                    <span class="explanation-word">Below,</span>
-                                    <span class="explanation-word">you</span>
-                                    <span class="explanation-word">can</span>
-                                    <span class="explanation-word">adjust</span>
-                                    <span class="explanation-word">all</span>
-                                    <span class="explanation-word">other</span>
-                                    <span class="explanation-word">sections</span>
-                                    <span class="explanation-word">using</span>
-                                    <span class="explanation-word">templates,</span>
-                                    <span class="explanation-word">or</span>
-                                    <span class="explanation-word">personalize</span>
-                                    <span class="explanation-word">them</span>
-                                    <span class="explanation-word">to</span>
-                                    <span class="explanation-word">match</span>
-                                    <span class="explanation-word">your</span>
-                                    <span class="explanation-word">own</span>
-                                    <span class="explanation-word">tone</span>
-                                    <span class="explanation-word">and</span>
-                                    <span class="explanation-word">style.</span>
-                                    <span class="explanation-word">The</span>
-                                    <span class="explanation-word">more</span>
-                                    <span class="explanation-word">details</span>
-                                    <span class="explanation-word">you</span>
-                                    <span class="explanation-word">add,</span>
-                                    <span class="explanation-word">the</span>
-                                    <span class="explanation-word">better</span>
-                                    <span class="explanation-word">your</span>
-                                    <span class="explanation-word">bot</span>
-                                    <span class="explanation-word">will</span>
-                                    <span class="explanation-word">understand</span>
-                                    <span class="explanation-word">and</span>
-                                    <span class="explanation-word">represent</span>
-                                    <span class="explanation-word">you.</span>
+                                <p class="explanation-text" style="text-transform: none;">
+                                    Fill these basics to anchor the persona. The more specific you are, the more authentic the replies will feel.
                                 </p>
                             </div>
                         </div>
@@ -1224,38 +1160,38 @@
                      <!-- Personality & Behaviour Section -->
                      <div class="personality-section">
                          <div class="personality-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Personality & Behaviour</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">This defines how they act and talk, crucial for writing or designing a bot.</p>
+                             <h2 class="section-title" style="margin-top: 3rem;">Personality &amp; Behaviour</h2>
+                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Explain how they talk, react, and what matters to them.</p>
                              
                              <!-- Personality & Behaviour Fields -->
                              <div class="form-group">
                                  <label for="personality_type">Personality Type</label>
-                                 <textarea id="personality_type" name="personality_type" class="auto-resize" placeholder="e.g., calm, energetic, sarcastic, empathetic" rows="1" maxlength="600">{{ settings.personality_type if settings else '' }}</textarea>
+                                 <textarea id="personality_type" name="personality_type" class="auto-resize" placeholder="e.g., laid-back, sarcastic, energetic" rows="1" maxlength="600">{{ settings.personality_type if settings else '' }}</textarea>
                                  <div class="char-counter" id="personality_type_counter">0/600</div>
                              </div>
                              <div class="form-group">
-                                 <label for="bot_values">Values</label>
-                                 <textarea id="bot_values" name="bot_values" class="auto-resize" placeholder="What they care about, honesty, fame, creativity, etc." rows="1" maxlength="600">{{ settings.bot_values if settings else '' }}</textarea>
+                                 <label for="bot_values">Core values / boundaries</label>
+                                 <textarea id="bot_values" name="bot_values" class="auto-resize" placeholder="What do they care about? What should they avoid saying?" rows="1" maxlength="600">{{ settings.bot_values if settings else '' }}</textarea>
                                  <div class="char-counter" id="bot_values_counter">0/600</div>
                              </div>
                              <div class="form-group">
-                                 <label for="tone_of_voice">Tone of Voice</label>
-                                 <textarea id="tone_of_voice" name="tone_of_voice" class="auto-resize" placeholder="e.g., formal, casual, playful, professional" rows="1" maxlength="600">{{ settings.tone_of_voice if settings else '' }}</textarea>
+                                 <label for="tone_of_voice">Communication style</label>
+                                 <textarea id="tone_of_voice" name="tone_of_voice" class="auto-resize" placeholder="e.g., chill and lowercase, lots of exclamation points" rows="1" maxlength="600">{{ settings.tone_of_voice if settings else '' }}</textarea>
                                  <div class="char-counter" id="tone_of_voice_counter">0/600</div>
                              </div>
                              <div class="form-group">
-                                 <label for="habits_quirks">Habits / Quirks</label>
-                                 <textarea id="habits_quirks" name="habits_quirks" class="auto-resize" placeholder="Small unique details, always says 'you got this!', drinks too much coffee" rows="1" maxlength="600">{{ settings.habits_quirks if settings else '' }}</textarea>
+                                 <label for="habits_quirks">Habits / quirks</label>
+                                 <textarea id="habits_quirks" name="habits_quirks" class="auto-resize" placeholder="Small unique things they tend to do or say" rows="1" maxlength="600">{{ settings.habits_quirks if settings else '' }}</textarea>
                                  <div class="char-counter" id="habits_quirks_counter">0/600</div>
                              </div>
                              <div class="form-group">
-                                 <label for="confidence_level">Confidence Level</label>
-                                 <textarea id="confidence_level" name="confidence_level" class="auto-resize" placeholder="e.g., shy, assertive, bold" rows="1" maxlength="600">{{ settings.confidence_level if settings else '' }}</textarea>
+                                 <label for="confidence_level">Confidence &amp; energy</label>
+                                 <textarea id="confidence_level" name="confidence_level" class="auto-resize" placeholder="e.g., shy but warm, bold and flirty" rows="1" maxlength="600">{{ settings.confidence_level if settings else '' }}</textarea>
                                  <div class="char-counter" id="confidence_level_counter">0/600</div>
                              </div>
                              <div class="form-group">
-                                 <label for="emotional_range">Emotional Range</label>
-                                 <textarea id="emotional_range" name="emotional_range" class="auto-resize" placeholder="e.g., stoic, expressive, moody" rows="1" maxlength="600">{{ settings.emotional_range if settings else '' }}</textarea>
+                                 <label for="emotional_range">Emotional range</label>
+                                 <textarea id="emotional_range" name="emotional_range" class="auto-resize" placeholder="e.g., super expressive, keeps it chill" rows="1" maxlength="600">{{ settings.emotional_range if settings else '' }}</textarea>
                                  <div class="char-counter" id="emotional_range_counter">0/600</div>
                              </div>
                          </div>
@@ -1263,8 +1199,8 @@
                          <!-- Personality Templates -->
                          <div class="templates-column">
                              <div class="settings-section">
-                                 <h3>Personality Templates</h3>
-                                 <p>Select a template to quickly set up your bot's personality and behavior.</p>
+                                 <h3>Quick templates</h3>
+                                 <p>Select a template to quickly load a tone of voice.</p>
                                  
                                  <!-- Template Buttons Container -->
                                  <div class="template-buttons-container">
@@ -1303,434 +1239,73 @@
                                      
                                      <!-- Apply Template Button -->
                                      <button type="button" id="apply_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
-                                         <i class="fas fa-magic"></i> Apply Selected Template
-                                     </button>
-                                 </div>
-                             </div>
-                             
-                             <!-- Quick Note -->
-                             <div class="quick-note">
-                                 <div class="quick-note-icon">
-                                     <i class="fas fa-shield-alt"></i>
-                                 </div>
-                                 <div class="quick-note-content">
-                                     <h4>Quick Note</h4>
-                                     <p>All of the information you provide here is kept safely and securely within our servers. We have the trust of world giants like Facebook and ChatGPT, ensuring your data is protected with enterprise-grade security.</p>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-
-                     <!-- Motivation & Goals Section -->
-                     <div class="motivation-section">
-                         <div class="motivation-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Motivation & Goals</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Why they do what they do.</p>
-                             
-                             <!-- Motivation & Goals Fields -->
-                             <div class="form-group">
-                                 <label for="main_goal">Main Goal / Dream</label>
-                                 <textarea id="main_goal" name="main_goal" class="auto-resize" placeholder="e.g., become a successful entrepreneur, travel the world" rows="1" maxlength="600">{{ settings.main_goal if settings else '' }}</textarea>
-                                 <div class="char-counter" id="main_goal_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="fears_insecurities">Fears or Insecurities</label>
-                                 <textarea id="fears_insecurities" name="fears_insecurities" class="auto-resize" placeholder="e.g., fear of failure, social anxiety, imposter syndrome" rows="1" maxlength="600">{{ settings.fears_insecurities if settings else '' }}</textarea>
-                                 <div class="char-counter" id="fears_insecurities_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="what_drives_them">What Drives Them</label>
-                                 <textarea id="what_drives_them" name="what_drives_them" class="auto-resize" placeholder="e.g., money, love, recognition, freedom, helping others" rows="1" maxlength="600">{{ settings.what_drives_them if settings else '' }}</textarea>
-                                 <div class="char-counter" id="what_drives_them_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="obstacles">Obstacles</label>
-                                 <textarea id="obstacles" name="obstacles" class="auto-resize" placeholder="What's holding them back, e.g., lack of resources, time constraints" rows="1" maxlength="600">{{ settings.obstacles if settings else '' }}</textarea>
-                                 <div class="char-counter" id="obstacles_counter">0/600</div>
-                             </div>
-                         </div>
-                         
-                         <!-- Motivation Templates -->
-                         <div class="templates-column">
-                             <div class="settings-section">
-                                 <h3>Motivation Templates</h3>
-                                 <p>Select a template to quickly set up your bot's motivation and goals.</p>
-                                 
-                                 <!-- Template Buttons Container -->
-                                 <div class="template-buttons-container">
-                                     <div class="template-buttons">
-                                         <button type="button" class="template-btn" data-template="ambitious_creator">
-                                             Ambitious Creator
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="steady_builder">
-                                             Steady Builder
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="free_spirit">
-                                             Free Spirit
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="quiet_achiever">
-                                             Quiet Achiever
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="hopeful_idealist">
-                                             Hopeful Idealist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="independent_thinker">
-                                             Independent Thinker
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="grounded_realist">
-                                             Grounded Realist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="passionate_perfectionist">
-                                             Passionate Perfectionist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="curious_learner">
-                                             Curious Learner
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="loyal_supporter">
-                                             Loyal Supporter
-                                         </button>
-                                     </div>
-                                     
-                                     <!-- Apply Template Button -->
-                                     <button type="button" id="apply_motivation_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
-                                         <i class="fas fa-magic"></i> Apply Selected Template
+                                         <i class="fas fa-magic"></i> Apply selected template
                                      </button>
                                  </div>
                              </div>
                          </div>
                      </div>
 
-                     <!-- Background & Context Section -->
-                     <div class="background-section">
-                         <div class="background-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Background & Context</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">This gives depth and helps explain their behavior.</p>
-                             
-                             <!-- Background & Context Fields -->
-                             <div class="form-group">
-                                 <label for="backstory">Backstory</label>
-                                 <textarea id="backstory" name="backstory" class="auto-resize" placeholder="Key life events, e.g., moved countries, career change, major achievement" rows="1" maxlength="600">{{ settings.backstory if settings else '' }}</textarea>
-                                 <div class="char-counter" id="backstory_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="family_relationships">Family / Relationships</label>
-                                 <textarea id="family_relationships" name="family_relationships" class="auto-resize" placeholder="e.g., close with siblings, single parent, large extended family" rows="1" maxlength="600">{{ settings.family_relationships if settings else '' }}</textarea>
-                                 <div class="char-counter" id="family_relationships_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="culture_environment">Culture or Social Environment</label>
-                                 <textarea id="culture_environment" name="culture_environment" class="auto-resize" placeholder="e.g., urban professional, small town, international background" rows="1" maxlength="600">{{ settings.culture_environment if settings else '' }}</textarea>
-                                 <div class="char-counter" id="culture_environment_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="hobbies_interests">Hobbies / Interests</label>
-                                 <textarea id="hobbies_interests" name="hobbies_interests" class="auto-resize" placeholder="e.g., photography, cooking, sports, music, reading" rows="1" maxlength="600">{{ settings.hobbies_interests if settings else '' }}</textarea>
-                                 <div class="char-counter" id="hobbies_interests_counter">0/600</div>
-                             </div>
+                     <div class="goals-section" style="margin-top: 3rem;">
+                         <h2 class="section-title">Story &amp; Intent</h2>
+                         <div class="form-group">
+                             <label for="main_goal">Main goal on Instagram</label>
+                             <textarea id="main_goal" name="main_goal" class="auto-resize" placeholder="e.g., build a community of aspiring engineers" rows="2" maxlength="600">{{ settings.main_goal if settings else '' }}</textarea>
+                             <div class="char-counter" id="main_goal_counter">0/600</div>
                          </div>
-                         
-                         <!-- Background Templates -->
-                         <div class="templates-column">
-                             <div class="settings-section">
-                                 <h3>Background Templates</h3>
-                                 <p>Select a template to quickly set up your bot's background and context.</p>
-                                 
-                                 <!-- Template Buttons Container -->
-                                 <div class="template-buttons-container">
-                                     <div class="template-buttons">
-                                         <button type="button" class="template-btn" data-template="city_creative">
-                                             City Creative
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="suburban_dreamer">
-                                             Suburban Dreamer
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="global_wanderer">
-                                             Global Wanderer
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="reformed_workaholic">
-                                             Reformed Workaholic
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="small_town_optimist">
-                                             Small-Town Optimist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="digital_native">
-                                             Digital Native
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="late_bloomer">
-                                             Late Bloomer
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="independent_urbanite">
-                                             Independent Urbanite
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="academic_soul">
-                                             Academic Soul
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="reconnected_artist">
-                                             Reconnected Artist
-                                         </button>
-                                     </div>
-                                     
-                                     <!-- Apply Template Button -->
-                                     <button type="button" id="apply_background_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
-                                         <i class="fas fa-magic"></i> Apply Selected Template
-                                     </button>
-                                 </div>
-                             </div>
+                         <div class="form-group">
+                             <label for="what_drives_them">What motivates them?</label>
+                             <textarea id="what_drives_them" name="what_drives_them" class="auto-resize" placeholder="e.g., sharing behind-the-scenes of uni projects" rows="2" maxlength="600">{{ settings.what_drives_them if settings else '' }}</textarea>
+                             <div class="char-counter" id="what_drives_them_counter">0/600</div>
+                         </div>
+                         <div class="form-group">
+                             <label for="hobbies_interests">Hobbies &amp; topics to mention</label>
+                             <textarea id="hobbies_interests" name="hobbies_interests" class="auto-resize" placeholder="e.g., rockets, skateboarding, cafe hopping" rows="2" maxlength="600">{{ settings.hobbies_interests if settings else '' }}</textarea>
+                             <div class="char-counter" id="hobbies_interests_counter">0/600</div>
+                         </div>
+                         <div class="form-group">
+                             <label for="preferred_topics">Favorite DM topics</label>
+                             <textarea id="preferred_topics" name="preferred_topics" class="auto-resize" placeholder="What do they enjoy chatting about?" rows="2" maxlength="600">{{ settings.preferred_topics if settings else '' }}</textarea>
+                             <div class="char-counter" id="preferred_topics_counter">0/600</div>
+                         </div>
+                         <div class="form-group">
+                             <label for="avoid_topics">Topics to avoid</label>
+                             <textarea id="avoid_topics" name="avoid_topics" class="auto-resize" placeholder="Things they do not want to discuss" rows="2" maxlength="600">{{ settings.avoid_topics if settings else '' }}</textarea>
+                             <div class="char-counter" id="avoid_topics_counter">0/600</div>
                          </div>
                      </div>
 
-                     <!-- Communication Style Section -->
-                     <div class="communication-section">
-                         <div class="communication-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Communication Style</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Defines their talking skills and how they treat people.</p>
-                             
-                             <!-- Communication Style Fields -->
-                             <div class="form-group">
-                                 <label for="reply_style">Speed / Length of Replies</label>
-                                 <textarea id="reply_style" name="reply_style" class="auto-resize" placeholder="e.g., short & snappy, detailed explanations, quick responses" rows="1" maxlength="600">{{ settings.reply_style if settings else '' }}</textarea>
-                                 <div class="char-counter" id="reply_style_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="emoji_slang">Use of Emojis or Slang</label>
-                                 <textarea id="emoji_slang" name="emoji_slang" class="auto-resize" placeholder="e.g., lots of emojis, formal language, casual slang, no emojis" rows="1" maxlength="600">{{ settings.emoji_slang if settings else '' }}</textarea>
-                                 <div class="char-counter" id="emoji_slang_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="conflict_handling">How They Handle Conflict</label>
-                                 <textarea id="conflict_handling" name="conflict_handling" class="auto-resize" placeholder="e.g., calm and diplomatic, defensive, witty comebacks, avoidant" rows="1" maxlength="600">{{ settings.conflict_handling if settings else '' }}</textarea>
-                                 <div class="char-counter" id="conflict_handling_counter">0/600</div>
-                             </div>
-                             <div class="form-group">
-                                 <label for="preferred_topics">Preferred Topics</label>
-                                 <textarea id="preferred_topics" name="preferred_topics" class="auto-resize" placeholder="What they love talking about, e.g., technology, travel, food, business" rows="1" maxlength="600">{{ settings.preferred_topics if settings else '' }}</textarea>
-                                 <div class="char-counter" id="preferred_topics_counter">0/600</div>
-                             </div>
+                     <div class="links-section" style="margin-top: 3rem;">
+                         <h2 class="section-title">Links &amp; Highlights</h2>
+                         <div class="form-group">
+                             <label for="instagram_url">Primary Instagram URL</label>
+                             <input type="text" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/..." value="{{ settings.instagram_url if settings else '' }}">
                          </div>
-                         
-                         <!-- Communication Templates -->
-                         <div class="templates-column">
-                             <div class="settings-section">
-                                 <h3>Communication Templates</h3>
-                                 <p>Select a template to quickly set up your bot's communication style.</p>
-                                 
-                                 <!-- Template Buttons Container -->
-                                 <div class="template-buttons-container">
-                                     <div class="template-buttons">
-                                         <button type="button" class="template-btn" data-template="casual_texter">
-                                             Casual Texter
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="deep_conversationalist">
-                                             Deep Conversationalist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="modern_creator">
-                                             Modern Creator
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="old_school_professional">
-                                             Old-School Professional
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="cheerful_social_butterfly">
-                                             Cheerful Social Butterfly
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="straightforward_realist">
-                                             Straightforward Realist
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="thoughtful_mentor">
-                                             Thoughtful Mentor
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="chill_gamer">
-                                             Chill Gamer
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="calm_empath">
-                                             Calm Empath
-                                         </button>
-                                         <button type="button" class="template-btn" data-template="playful_comedian">
-                                             Playful Comedian
-                                         </button>
-                                     </div>
-                                     
-                                     <!-- Apply Template Button -->
-                                     <button type="button" id="apply_communication_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
-                                         <i class="fas fa-magic"></i> Apply Selected Template
-                                     </button>
-                                 </div>
-                             </div>
+                         <div class="form-group">
+                             <label for="links">Important links to promote</label>
+                             <p style="color: rgba(255,255,255,0.6); text-transform: none; font-size: 0.85rem;">Add URLs and titles below. The bot can mention them when relevant.</p>
                          </div>
                      </div>
 
-                     <!-- Promotional Links & Instagram Posts Section -->
-                     <div class="links-posts-section">
-                         <!-- Promotional Links (Left) -->
-                         <div class="links-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Promotional Links</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Add links you want your bot to share with followers.</p>
-                             
-                             <!-- Promotional Links Fields -->
-                             <div id="links-container">
-                                 {% if settings and settings.links %}
-                                     {% for link in settings.links %}
-                                     <div class="link-item">
-                                         <div class="form-group">
-                                             <label>Link {{ loop.index }}</label>
-                                             <input type="url" name="links[]" placeholder="https://example.com" value="{{ link.url if link.url else '' }}">
-                                         </div>
-                                         <div class="form-group">
-                                             <label>Description</label>
-                                             <input type="text" name="link_descriptions[]" placeholder="Brief description of this link" value="{{ link.description if link.description else '' }}">
-                                         </div>
-                                         <button type="button" class="remove-link-btn" onclick="removeLink(this)">Remove</button>
-                                     </div>
-                                     {% endfor %}
-                                 {% else %}
-                                 <div class="link-item">
-                                     <div class="form-group">
-                                         <label>Link 1</label>
-                                         <input type="url" name="links[]" placeholder="https://example.com" value="">
-                                     </div>
-                                     <div class="form-group">
-                                         <label>Description</label>
-                                         <input type="text" name="link_descriptions[]" placeholder="Brief description of this link" value="">
-                                     </div>
-                                 </div>
-                                 {% endif %}
-                             </div>
-                             <button type="button" id="add-link-btn" class="add-link-btn">+ Add Link</button>
-                         </div>
-
-                         <!-- Instagram Posts (Right) -->
-                         <div class="posts-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Instagram Posts</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Describe your latest posts or most popular ones to help your bot understand your content style.</p>
-                             
-                             <!-- Instagram Posts Fields -->
-                             <div class="form-group">
-                                 <label for="instagram_url">Instagram Account URL</label>
-                                 <input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/yourusername" value="{{ settings.instagram_url if settings else '' }}">
-                             </div>
-                             
-                             <div id="posts-container">
-                                 {% if settings and settings.posts %}
-                                     {% for post in settings.posts %}
-                                     <div class="post-item">
-                                         <div class="form-group">
-                                             <label>Post {{ loop.index }} Description</label>
-                                             <textarea name="post_descriptions[]" placeholder="Describe this post - what it's about, the mood, key points..." rows="3">{{ post.description if post.description else '' }}</textarea>
-                                         </div>
-                                         <button type="button" class="remove-post-btn" onclick="removePost(this)">Remove</button>
-                                     </div>
-                                     {% endfor %}
-                                 {% else %}
-                                 <div class="post-item">
-                                     <div class="form-group">
-                                         <label>Post 1 Description</label>
-                                         <textarea name="post_descriptions[]" placeholder="Describe this post - what it's about, the mood, key points..." rows="3"></textarea>
-                                     </div>
-                                 </div>
-                                 {% endif %}
-                             </div>
-                             <button type="button" id="add-post-btn" class="add-post-btn">+ Add Post</button>
-                         </div>
+                     <div class="actions" style="margin-top: 3rem;">
+                         <button type="submit" class="btn-primary">
+                             Save persona
+                         </button>
                      </div>
-
-                     <!-- Topics to Avoid & General Template Section -->
-                     <div class="topics-template-section">
-                         <!-- Topics to Avoid (Left) -->
-                         <div class="topics-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">Topics to Avoid</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Specify topics or subjects your bot should avoid discussing.</p>
-                             
-                             <!-- Topics to Avoid Field -->
-                             <div class="form-group">
-                                 <label for="avoid_topics">Topics to Avoid</label>
-                                 <textarea id="avoid_topics" name="avoid_topics" placeholder="e.g., politics, controversial topics, personal issues, etc." rows="3">{{ settings.avoid_topics if settings else '' }}</textarea>
-                             </div>
-                         </div>
-
-                         <!-- General Template (Right) -->
-                         <div class="template-content">
-                             <h2 class="section-title" style="margin-top: 3rem;">General Template</h2>
-                             <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Select a template to quickly set up topics to avoid.</p>
-                             
-                             <!-- Template Buttons Container -->
-                             <div class="template-buttons-container">
-                                 <div class="template-buttons">
-                                     <button type="button" class="template-btn" data-template="general_avoidance">
-                                         General Avoidance Template
-                                     </button>
-                                 </div>
-                             </div>
-                             
-                             <!-- Apply Template Button -->
-                             <button type="button" id="apply_general_template_btn" class="btn-secondary" style="width: 100%; margin-top: auto;" disabled>
-                                 <i class="fas fa-magic"></i> Apply Selected Template
-                             </button>
-                         </div>
-                     </div>
-
-                    <!-- Active Hours & Instagram Exclusions Section -->
-                    <div class="active-hours-section">
-                        <div class="active-hours-content">
-                            <h2 class="section-title" style="margin-top: 3rem;">ACTIVE HOURS</h2>
-                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Set when your bot should be active and responding to messages. If you do not set active hours, the bot will run 24/7.</p>
-                            
-                            <!-- Active Hours Fields -->
-                            <div class="form-group">
-                                <label class="toggle-label">
-                                    <input type="checkbox" id="use_active_hours" name="use_active_hours" {{ 'checked' if settings and settings.use_active_hours else '' }}>
-                                    <span class="toggle-slider"></span>
-                                    <span class="toggle-text">ENABLE ACTIVE HOURS</span>
-                                </label>
-                            </div>
-                            
-                            <div id="active_hours_settings" data-initial-state="{{ 'block' if settings and settings.use_active_hours else 'none' }}">
-                                <div class="form-group">
-                                    <label for="active_start">Start Time</label>
-                                    <input type="time" id="active_start" name="active_start" value="{{ settings.active_start if settings else '09:00' }}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="active_end">End Time</label>
-                                    <input type="time" id="active_end" name="active_end" value="{{ settings.active_end if settings else '18:00' }}">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="instagram-exclusions-content">
-                            <h2 class="section-title" style="margin-top: 3rem;">INSTAGRAM EXCLUSIONS</h2>
-                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 2rem; text-transform: none;">Add Instagram usernames (without @) that should be excluded from automated messaging.</p>
-                            
-                            <div class="exclusions-container">
-                                <div class="exclusion-item">
-                                    <input type="text" name="excluded_accounts[]" placeholder="Enter Instagram username (without @)" class="form-control">
-                                    <button type="button" class="remove-exclusion-btn" onclick="removeExclusion(this)">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <button type="button" class="add-exclusion-btn" onclick="addExclusion()">
-                                <i class="fas fa-plus"></i> Add Exclusion
-                            </button>
-                        </div>
-                    </div>
                  </div>
 
+                 <!-- Right column (existing preview / templates stays) -->
+                 <div class="preview-column">
+                     <div class="settings-section">
+                         <h3>Quick overview</h3>
+                         <p style="color: rgba(255,255,255,0.7); text-transform: none;">Use this area to preview how the persona reads while you type.</p>
+                         <textarea id="persona_preview" readonly class="auto-resize" rows="8" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff;">{{ settings.bot_personality if settings else '' }}</textarea>
+                     </div>
+                 </div>
              </div>
-
-
-
-
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-save"></i> Save Settings
-                </button>
-                <button type="button" class="btn-danger" onclick="resetSettings()">
-                    <i class="fas fa-undo"></i> Reset All Settings
-                </button>
-            </div>
-        </form>
-        {% endif %}
-    </main>
+         </form>
+         {% endif %}
+      </main>
 
     <!-- Interactive Grid Script -->
     <script>
