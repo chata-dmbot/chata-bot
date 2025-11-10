@@ -30,6 +30,17 @@
       min-height: 100vh;
       letter-spacing: 0.06em;
       overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.12);
+      backdrop-filter: blur(2px);
+      z-index: 1;
+      pointer-events: none;
     }
 
     a {
@@ -39,26 +50,36 @@
 
     .interactive-grid {
       position: fixed;
-      inset: 0;
-      z-index: -2;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: #000;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
       overflow: hidden;
+      transition: transform 0.3s ease;
+      pointer-events: none;
     }
 
     .grid-cell {
       position: absolute;
-      width: 70px;
-      height: 70px;
-      border: 1px solid rgba(51, 102, 255, 0.06);
-      transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
-      pointer-events: auto;
+      width: 50px;
+      height: 50px;
+      border: 1px solid rgba(51, 102, 255, 0.08);
+      transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease, transform 0.6s ease;
+      background: transparent;
+      pointer-events: none;
     }
 
-    .grid-cell:hover,
     .grid-cell.active {
-      background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.15) 55%, transparent 75%);
+      background: rgba(51, 102, 255, 0.15);
       border-color: rgba(51, 102, 255, 0.45);
-      box-shadow: 0 0 25px rgba(51, 102, 255, 0.35);
-      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(51, 102, 255, 0.4);
+      transform: scale(1.03);
     }
 
     nav {
@@ -155,6 +176,8 @@
       padding-top: 140px;
       padding-bottom: 48px;
       text-align: center;
+      position: relative;
+      z-index: 5;
     }
 
     .bot-settings-hero h1 {
@@ -182,7 +205,7 @@
       margin: 0 auto 96px;
       padding: 0 1.5rem 2rem;
       position: relative;
-      z-index: 1;
+      z-index: 5;
     }
 
     .alert {
@@ -246,10 +269,10 @@
     .section-card {
       padding: 2rem;
       border-radius: 24px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(18px);
+      backdrop-filter: blur(16px);
     }
 
     .section-header {
@@ -297,9 +320,8 @@
     .form-group input,
     .form-group textarea {
       width: 100%;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(8, 12, 26, 0.75);
-      box-shadow: inset 0 0 0 rgba(0, 0, 0, 0);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
       border-radius: 14px;
       padding: 0.85rem 1rem;
       color: #fff;
@@ -307,14 +329,20 @@
       font-weight: 400;
       letter-spacing: 0.05em;
       resize: none;
-      transition: border 0.3s ease, box-shadow 0.3s ease;
+      transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
     }
 
     .form-group input:focus,
     .form-group textarea:focus {
       border-color: rgba(51, 102, 255, 0.7);
       box-shadow: 0 0 0 3px rgba(51, 102, 255, 0.15);
+      background: rgba(255, 255, 255, 0.08);
       outline: none;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(255, 255, 255, 0.45);
     }
 
     .char-counter {
@@ -345,6 +373,26 @@
       gap: 0.85rem;
       box-shadow: inset 0 0 0 rgba(0,0,0,0);
       transition: border-color 0.3s ease, transform 0.3s ease;
+    }
+
+    .conversation-card textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      padding: 0.9rem 1rem;
+      font-size: 0.92rem;
+      letter-spacing: 0.05em;
+      resize: none;
+      transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+
+    .conversation-card textarea:focus {
+      border-color: rgba(51, 102, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(51, 102, 255, 0.15);
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
     }
 
     .conversation-card:hover {
@@ -790,43 +838,104 @@
 
   <script>
     (function () {
-      const grid = document.getElementById('interactiveGrid');
-      const CELL_SIZE = 70;
+      const GRID_ID = 'interactiveGrid';
+      const GRID_SIZE = 50;
+      let gridEl = null;
+      let ticking = false;
+      const cellTimeouts = new Map();
+      let mouseX = 0;
+      let mouseY = 0;
 
       function createInteractiveGrid() {
+        const grid = document.getElementById(GRID_ID);
         if (!grid) return;
+        const cols = Math.ceil(window.innerWidth / GRID_SIZE) + 2;
+        const rows = Math.ceil(window.innerHeight * 6 / GRID_SIZE);
         grid.innerHTML = '';
-        const cols = Math.ceil(window.innerWidth / CELL_SIZE) + 2;
-        const rows = Math.ceil(window.innerHeight / CELL_SIZE) + 2;
+        cellTimeouts.clear();
 
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            const cell = document.createElement('span');
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cell = document.createElement('div');
             cell.className = 'grid-cell';
-            cell.style.left = `${(x - 1) * CELL_SIZE}px`;
-            cell.style.top = `${(y - 1) * CELL_SIZE}px`;
-            cell.addEventListener('mouseenter', () => {
-              cell.classList.add('active');
-              setTimeout(() => cell.classList.remove('active'), 650);
-            });
+            cell.style.left = `${(col - 1) * GRID_SIZE}px`;
+            cell.style.top = `${(row - 1) * GRID_SIZE}px`;
             grid.appendChild(cell);
           }
         }
+
+        gridEl = grid;
       }
 
-      function randomPulse() {
-        if (!grid) return;
-        const cells = grid.querySelectorAll('.grid-cell');
-        if (!cells.length) return;
-        const cell = cells[Math.floor(Math.random() * cells.length)];
-        cell.classList.add('active');
-        setTimeout(() => cell.classList.remove('active'), 900);
+      function updateGridOnScroll() {
+        if (!gridEl) return;
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            const scrollY = window.pageYOffset || window.scrollY || 0;
+            gridEl.style.transform = `translateY(-${scrollY * 0.6}px)`;
+            ticking = false;
+          });
+          ticking = true;
+        }
       }
 
-      function updateGridOffset() {
-        if (!grid) return;
-        const scrollY = window.scrollY || window.pageYOffset;
-        grid.style.transform = `translateY(${scrollY * -0.12}px)`;
+      document.addEventListener('mousemove', event => {
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+      });
+
+      function updateGridLighting() {
+        if (!gridEl) {
+          gridEl = document.getElementById(GRID_ID);
+          if (!gridEl) {
+            requestAnimationFrame(updateGridLighting);
+            return;
+          }
+        }
+
+        const cells = gridEl.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+          const rect = cell.getBoundingClientRect();
+          const isMouseOver =
+            mouseX >= rect.left &&
+            mouseX < rect.right &&
+            mouseY >= rect.top &&
+            mouseY < rect.bottom;
+
+          if (isMouseOver) {
+            if (cellTimeouts.has(cell)) {
+              clearTimeout(cellTimeouts.get(cell));
+              cellTimeouts.delete(cell);
+            }
+
+            cell.classList.add('active');
+            const timeoutId = setTimeout(() => {
+              cell.classList.remove('active');
+              cellTimeouts.delete(cell);
+            }, 1200);
+
+            cellTimeouts.set(cell, timeoutId);
+          }
+        });
+
+        requestAnimationFrame(updateGridLighting);
+      }
+
+      function createAmbientLighting() {
+        function lightRandomCell() {
+          if (!gridEl) return;
+          const cells = gridEl.querySelectorAll('.grid-cell');
+          if (!cells.length) return;
+
+          const cell = cells[Math.floor(Math.random() * cells.length)];
+          cell.classList.add('active');
+          setTimeout(() => cell.classList.remove('active'), Math.random() * 1500 + 600);
+        }
+
+        (function schedule() {
+          lightRandomCell();
+          setTimeout(schedule, Math.random() * 400 + 150);
+        })();
       }
 
       function autoResize(field) {
@@ -958,19 +1067,26 @@
       };
 
       document.addEventListener('DOMContentLoaded', () => {
-        createInteractiveGrid();
-        updateGridOffset();
         attachAutoResize();
         attachCounters();
         setupLinkControls();
         setupPostControls();
-        window.addEventListener('resize', () => {
-          createInteractiveGrid();
-          updateGridOffset();
-        });
-        window.addEventListener('scroll', updateGridOffset);
-        setInterval(randomPulse, 3200);
       });
+
+      window.addEventListener('load', () => {
+        window.scrollTo(0, 0);
+        createInteractiveGrid();
+        updateGridOnScroll();
+        updateGridLighting();
+        setTimeout(createAmbientLighting, 800);
+      });
+
+      window.addEventListener('resize', () => {
+        createInteractiveGrid();
+        updateGridOnScroll();
+      });
+
+      window.addEventListener('scroll', updateGridOnScroll, { passive: true });
     })();
   </script>
 </body>
