@@ -1490,7 +1490,7 @@ def build_personality_prompt(settings):
     This is where the bot's identity, tone, and behaviour are defined.
     """
 
-    MAX_PROMPT_CHARS = 3950  # stay comfortably below 4k
+    MAX_PROMPT_CHARS = 6000  # new ceiling requested by user
 
     def clean(value):
         if not value:
@@ -1523,17 +1523,17 @@ def build_personality_prompt(settings):
     if not identity_sentence:
         identity_sentence = "a real human with a unique personality"
 
-    intro_lines = [
+    identity_lines = [
         f"You are {identity_sentence}. Role-play this person in every reply.",
-        "Speak in first person only. Never mention AI or automation.",
-        "Keep the rhythm human: mix quick replies with occasional longer thoughts when it feels natural.",
-        "Sound casual and lived-in—slang, lowercase, typos, pauses, or emojis are fine if they'd use them.",
+        "Speak in first person only. Never admit to being automated.",
+        "Blend short bursts with longer riffs—match how a real person texts across a day.",
+        "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up when they'd feel natural.",
     ]
 
     if gender:
-        intro_lines.append(f"Pronouns / identity: {gender}.")
+        identity_lines.append(f"Pronouns / identity: {gender}.")
     if education:
-        intro_lines.append(f"Background: {education}.")
+        identity_lines.append(f"Background: {education}.")
 
     detail_lines = []
 
@@ -1583,7 +1583,7 @@ def build_personality_prompt(settings):
     sample_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        sample_lines.append("DM examples to mirror when the vibe matches:")
+        sample_lines.append("Mirror these sample exchanges when the vibe matches:")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
@@ -1591,29 +1591,48 @@ def build_personality_prompt(settings):
             else:
                 sample_lines.append(f'- you: "{reply}"')
 
+    conversation_lines = [
+        "Study the recent conversation history already provided—mirroring its mood matters more than rigid scripts.",
+        "Switch up sentence openings, length, pacing, and punctuation so no two replies feel formulaic.",
+        "Let curiosity, empathy, or hype drive the flow; only ask follow-ups when they'd genuinely do it.",
+        "React like a close friend: celebrate wins, empathise with struggles, and keep references grounded in their life.",
+    ]
+
     closing_lines = [
-        "Mirror the user's energy. Ask follow-ups only if they'd naturally do it.",
-        "React like a friend: match good news, acknowledge stress, tease lightly when appropriate.",
-        "If they ask for info you don't have, stay in character and deflect or suggest where they'd point them.",
+        "If you lack info, stay in character and improvise or redirect instead of breaking immersion.",
+        "Never repeat details the user already mentioned in this session unless you're building on them.",
     ]
 
     if settings.get('instagram_url'):
-        closing_lines.insert(0, f"Official profile link to mention when helpful: {clean(settings.get('instagram_url'))}.")
+        link_lines.insert(0, f"Official profile link to mention when helpful: {clean(settings.get('instagram_url'))}.")
 
-    def assemble():
-        sections = intro_lines + detail_lines + link_lines + post_lines + sample_lines + closing_lines
-        return "\n".join([line for line in sections if line]).strip()
+    def build_sections():
+        sections = []
 
-    combined_prompt = assemble()
+        def add_section(title, lines):
+            block = [line for line in lines if line]
+            if block:
+                sections.append(f"{title}\n" + "\n".join(block))
+
+        add_section("IDENTITY & BASELINE", identity_lines)
+        add_section("PERSONA DETAILS", detail_lines)
+        add_section("LINKS & CONTENT", link_lines + post_lines)
+        add_section("CONVERSATION FLOW", conversation_lines)
+        add_section("DM EXAMPLES", sample_lines)
+        add_section("SAFETY & REALISM", closing_lines)
+
+        return "\n\n".join(sections).strip()
+
+    combined_prompt = build_sections()
 
     # Trim lower-priority sections to stay under the character budget.
     if len(combined_prompt) > MAX_PROMPT_CHARS:
         post_lines.clear()
-        combined_prompt = assemble()
+        combined_prompt = build_sections()
 
     if len(combined_prompt) > MAX_PROMPT_CHARS:
         link_lines.clear()
-        combined_prompt = assemble()
+        combined_prompt = build_sections()
 
     if len(combined_prompt) > MAX_PROMPT_CHARS and len(sample_lines) > 1:
         header = sample_lines[:1]
@@ -1621,12 +1640,12 @@ def build_personality_prompt(settings):
         while len(sorted_samples) > 0 and len(combined_prompt) > MAX_PROMPT_CHARS:
             sorted_samples.pop(0)  # drop the longest sample
             sample_lines = header + sorted_samples
-            combined_prompt = assemble()
+            combined_prompt = build_sections()
 
     print(f"🧠 Built system prompt ({len(combined_prompt)} chars, {max(0, len(sample_lines) - 1)} samples kept)")
-    for idx in range(0, len(combined_prompt), 800):
-        chunk = combined_prompt[idx:idx + 800]
-        print(f"🧾 Prompt chunk {idx // 800 + 1}:\n{chunk}\n--- chunk end ---")
+    print("🧾 Prompt start >>>")
+    print(combined_prompt)
+    print("<<< Prompt end")
 
     return combined_prompt
 
