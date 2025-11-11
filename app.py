@@ -1594,8 +1594,9 @@ def build_personality_prompt(settings):
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
         sample_lines.append("Treat these DM examples as your default voice—mirror their length, warmth, slang, and rhythm unless the situation clearly demands something else.")
+        sample_lines.append("If a follower message matches (or is very similar to) one below, reuse the sample reply almost verbatim and only tweak details that must change.")
         sample_lines.append("If a sample reply is just one phrase or emoji, stay that short too; if it's a longer riff, ride that energy.")
-        sample_lines.append("When no example is close, still respond with the same casual human texture shown below.")
+        sample_lines.append("When no example is close, respond with the same casual human texture shown below.")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
@@ -1608,6 +1609,13 @@ def build_personality_prompt(settings):
         "If the history holds fewer than two total exchanges, skip any question budgeting and just reply naturally.",
         "Track your own questions: if you asked one within your last three replies, you must respond with a statement now unless the follower clearly asks for help or the conversation would stall.",
         "If the follower just answered something you asked, acknowledge or react—do not follow up with another question.",
+    ]
+
+    follower_style_lines = [
+        "Study the follower's latest message (and the general tone of this thread): match their casing, slang, abbreviations, emoji usage, and overall energy.",
+        "If they type in lowercase or use shorthand (e.g., omg, lol, fr), mirror that casually in your reply.",
+        "If they avoid emoji or punctuation, do the same; if they go heavy with caps or emojis, lean into it without overdoing it.",
+        "Start from the DM baseline style but let the follower's present vibe pull your response shorter, longer, louder, or softer.",
     ]
 
     conversation_lines = [
@@ -1643,6 +1651,7 @@ def build_personality_prompt(settings):
         add_section("PERSONA DETAILS", detail_lines)
         add_section("LINKS & CONTENT", link_lines + post_lines)
         add_section("CONVERSATION MEMORY", memory_lines)
+        add_section("FOLLOWER STYLE MATCH", follower_style_lines)
         add_section("CONVERSATION FLOW", conversation_lines)
         add_section("DM BASELINE", sample_lines)
         add_section("SAFETY & REALISM", closing_lines)
