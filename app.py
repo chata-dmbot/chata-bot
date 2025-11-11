@@ -724,35 +724,35 @@ def instagram_callback():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-        # Normal user flow
-        user = get_user_by_id(session['user_id'])
-        if not user:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('login'))
-        
-        # Get user's Instagram connections
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
-            FROM instagram_connections 
-            WHERE user_id = {placeholder} 
-            ORDER BY created_at DESC
-        """, (user['id'],))
-        connections = cursor.fetchall()
-        conn.close()
-        
-        connections_list = []
-        for conn_data in connections:
-            connections_list.append({
-                'id': conn_data[0],
-                'instagram_user_id': conn_data[1],
-                'instagram_page_id': conn_data[2],
-                'is_active': conn_data[3],
-                'created_at': conn_data[4]
-            })
-    
+    # Normal user flow
+    user = get_user_by_id(session['user_id'])
+    if not user:
+        flash('User not found. Please log in again.', 'error')
+        return redirect(url_for('login'))
+
+    # Get user's Instagram connections
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+        FROM instagram_connections 
+        WHERE user_id = {placeholder} 
+        ORDER BY created_at DESC
+    """, (user['id'],))
+    connections = cursor.fetchall()
+    conn.close()
+
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
+            'is_active': conn_data[3],
+            'created_at': conn_data[4]
+        })
+
     return render_template("dashboard.html", user=user, connections=connections_list)
 
 # ---- Bot Settings Management ----
@@ -947,7 +947,7 @@ def save_client_settings(user_id, settings, connection_id=None):
             active_end = EXCLUDED.active_end,
             links = EXCLUDED.links,
             posts = EXCLUDED.posts,
-                conversation_samples = EXCLUDED.conversation_samples,
+            conversation_samples = EXCLUDED.conversation_samples,
             instagram_url = EXCLUDED.instagram_url,
             avoid_topics = EXCLUDED.avoid_topics,
             temperature = EXCLUDED.temperature,
@@ -968,21 +968,21 @@ def save_client_settings(user_id, settings, connection_id=None):
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
               settings.get('auto_reply', True)))
-        else:
-            cursor.execute(f"""
+    else:
+        cursor.execute(f"""
                 INSERT OR REPLACE INTO client_settings 
                 (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
                  bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
                  confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
                  backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
+                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
                  instagram_url, avoid_topics, temperature, max_tokens, is_active)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (user_id, connection_id, 
                   settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
                   settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
@@ -996,7 +996,7 @@ def save_client_settings(user_id, settings, connection_id=None):
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
-                  settings.get('auto_reply', True)))
+              settings.get('auto_reply', True)))
     
     conn.commit()
     conn.close()
@@ -1407,7 +1407,7 @@ def get_ai_reply(history):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -1470,7 +1470,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
