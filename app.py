@@ -53,7 +53,17 @@ CONVERSATION_TEMPLATES = [
     {"key": "travel_question", "fan_message": "are you coming to LA any time soon?"},
     {"key": "merch_request", "fan_message": "any new merch coming? i don't want to miss it."},
     {"key": "voice_note", "fan_message": "could you send a quick voice note for my friend? she's obsessed."},
-    {"key": "signoff_note", "fan_message": "ok I'll stop spamming you haha, talk soon?"}
+    {"key": "signoff_note", "fan_message": "ok I'll stop spamming you haha, talk soon?"},
+    {"key": "gym_update", "fan_message": "just crushed a new PR because of your tips!"},
+    {"key": "late_reply", "fan_message": "sorry for the ghosting, life went crazy for a bit lol."},
+    {"key": "travel_sighting", "fan_message": "i'm in paris right now and your rooftop shots came to mind."},
+    {"key": "gear_question", "fan_message": "what camera setup are you rocking these days?"},
+    {"key": "recovery_help", "fan_message": "knees are smoked after training—any recovery hacks?"},
+    {"key": "birthday_shout", "fan_message": "it's my birthday today, any chance of a quick shoutout?"},
+    {"key": "live_stream", "fan_message": "are you going live again this week? i don't wanna miss it."},
+    {"key": "workshop_request", "fan_message": "ever thought about hosting a workshop? i'd sign up instantly."},
+    {"key": "fan_thanks", "fan_message": "you got me waking up early to train—just wanted to say thanks!"},
+    {"key": "merch_feedback", "fan_message": "your merch just landed and the fit is insane!"}
 ]
 CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
 
@@ -1583,8 +1593,9 @@ def build_personality_prompt(settings):
     sample_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        sample_lines.append("Mirror these sample exchanges when the vibe matches—match length, warmth, slang, and energy closely:")
-        sample_lines.append("If a sample reply is just one phrase or emoji, feel free to keep it that short too.")
+        sample_lines.append("Treat these DM examples as your default voice—mirror their length, warmth, slang, and rhythm unless the situation clearly demands something else.")
+        sample_lines.append("If a sample reply is just one phrase or emoji, stay that short too; if it's a longer riff, ride that energy.")
+        sample_lines.append("When no example is close, still respond with the same casual human texture shown below.")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
@@ -1592,13 +1603,21 @@ def build_personality_prompt(settings):
             else:
                 sample_lines.append(f'- you: "{reply}"')
 
+    memory_lines = [
+        "Review the full conversation history in this chat before replying.",
+        "If the history holds fewer than two total exchanges, skip any question budgeting and just reply naturally.",
+        "Track your own questions: if you asked one within your last three replies, you must respond with a statement now unless the follower clearly asks for help or the conversation would stall.",
+        "If the follower just answered something you asked, acknowledge or react—do not follow up with another question.",
+    ]
+
     conversation_lines = [
-        "Study the recent conversation history already provided—mirror its rhythm before replying.",
-        "Default to the timing and brevity shown in the samples; keep replies short unless they ask for detail or a story needs space.",
+        "Default to statements; questions are rare and intentional.",
+        "Only ask a question when the follower is stuck, directly invites it, or it's been at least three of your replies since the last question.",
+        "Never stack more than one question in the same message.",
+        "When you do ask, keep it short and casual, and follow it with supportive context from your life or vibe.",
+        "Match the timing and brevity shown in the DM baseline—most replies should stay tight unless the follower asks for details.",
         "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
         "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
-        "Limit yourself to at most one follow-up question per several replies. If they've already given an answer, pivot to statements or reactions instead of asking more questions.",
-        "Use statements for most check-ins or transitions—questions are rare and intentional.",
         "React like a close friend: celebrate wins, empathise with struggles, and keep references grounded in their life.",
     ]
 
@@ -1623,8 +1642,9 @@ def build_personality_prompt(settings):
         add_section("IDENTITY & BASELINE", identity_lines)
         add_section("PERSONA DETAILS", detail_lines)
         add_section("LINKS & CONTENT", link_lines + post_lines)
+        add_section("CONVERSATION MEMORY", memory_lines)
         add_section("CONVERSATION FLOW", conversation_lines)
-        add_section("DM EXAMPLES", sample_lines)
+        add_section("DM BASELINE", sample_lines)
         add_section("SAFETY & REALISM", closing_lines)
 
         return "\n\n".join(sections).strip()
