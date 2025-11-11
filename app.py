@@ -724,34 +724,34 @@ def instagram_callback():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # Normal user flow
-    user = get_user_by_id(session['user_id'])
-    if not user:
-        flash('User not found. Please log in again.', 'error')
-        return redirect(url_for('login'))
-    
-    # Get user's Instagram connections
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"""
-        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
-        FROM instagram_connections 
-        WHERE user_id = {placeholder} 
-        ORDER BY created_at DESC
-    """, (user['id'],))
-    connections = cursor.fetchall()
-    conn.close()
-    
-    connections_list = []
-    for conn_data in connections:
-        connections_list.append({
-            'id': conn_data[0],
-            'instagram_user_id': conn_data[1],
-            'instagram_page_id': conn_data[2],
-            'is_active': conn_data[3],
-            'created_at': conn_data[4]
-        })
+        # Normal user flow
+        user = get_user_by_id(session['user_id'])
+        if not user:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('login'))
+        
+        # Get user's Instagram connections
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+            FROM instagram_connections 
+            WHERE user_id = {placeholder} 
+            ORDER BY created_at DESC
+        """, (user['id'],))
+        connections = cursor.fetchall()
+        conn.close()
+        
+        connections_list = []
+        for conn_data in connections:
+            connections_list.append({
+                'id': conn_data[0],
+                'instagram_user_id': conn_data[1],
+                'instagram_page_id': conn_data[2],
+                'is_active': conn_data[3],
+                'created_at': conn_data[4]
+            })
     
     return render_template("dashboard.html", user=user, connections=connections_list)
 
@@ -902,7 +902,7 @@ def save_client_settings(user_id, settings, connection_id=None):
     
     # Use different syntax for PostgreSQL vs SQLite
     if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
-        cursor.execute(f"""
+            cursor.execute(f"""
             INSERT INTO client_settings 
             (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
              bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
@@ -917,43 +917,43 @@ def save_client_settings(user_id, settings, connection_id=None):
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
-                bot_personality = EXCLUDED.bot_personality,
-                bot_name = EXCLUDED.bot_name,
-                bot_age = EXCLUDED.bot_age,
-                bot_gender = EXCLUDED.bot_gender,
-                bot_location = EXCLUDED.bot_location,
-                bot_occupation = EXCLUDED.bot_occupation,
-                bot_education = EXCLUDED.bot_education,
-                personality_type = EXCLUDED.personality_type,
-                bot_values = EXCLUDED.bot_values,
-                tone_of_voice = EXCLUDED.tone_of_voice,
-                habits_quirks = EXCLUDED.habits_quirks,
-                confidence_level = EXCLUDED.confidence_level,
-                emotional_range = EXCLUDED.emotional_range,
-                main_goal = EXCLUDED.main_goal,
-                fears_insecurities = EXCLUDED.fears_insecurities,
-                what_drives_them = EXCLUDED.what_drives_them,
-                obstacles = EXCLUDED.obstacles,
-                backstory = EXCLUDED.backstory,
-                family_relationships = EXCLUDED.family_relationships,
-                culture_environment = EXCLUDED.culture_environment,
-                hobbies_interests = EXCLUDED.hobbies_interests,
-                reply_style = EXCLUDED.reply_style,
-                emoji_slang = EXCLUDED.emoji_slang,
-                conflict_handling = EXCLUDED.conflict_handling,
-                preferred_topics = EXCLUDED.preferred_topics,
-                use_active_hours = EXCLUDED.use_active_hours,
-                active_start = EXCLUDED.active_start,
-                active_end = EXCLUDED.active_end,
-                links = EXCLUDED.links,
-                posts = EXCLUDED.posts,
+            bot_personality = EXCLUDED.bot_personality,
+            bot_name = EXCLUDED.bot_name,
+            bot_age = EXCLUDED.bot_age,
+            bot_gender = EXCLUDED.bot_gender,
+            bot_location = EXCLUDED.bot_location,
+            bot_occupation = EXCLUDED.bot_occupation,
+            bot_education = EXCLUDED.bot_education,
+            personality_type = EXCLUDED.personality_type,
+            bot_values = EXCLUDED.bot_values,
+            tone_of_voice = EXCLUDED.tone_of_voice,
+            habits_quirks = EXCLUDED.habits_quirks,
+            confidence_level = EXCLUDED.confidence_level,
+            emotional_range = EXCLUDED.emotional_range,
+            main_goal = EXCLUDED.main_goal,
+            fears_insecurities = EXCLUDED.fears_insecurities,
+            what_drives_them = EXCLUDED.what_drives_them,
+            obstacles = EXCLUDED.obstacles,
+            backstory = EXCLUDED.backstory,
+            family_relationships = EXCLUDED.family_relationships,
+            culture_environment = EXCLUDED.culture_environment,
+            hobbies_interests = EXCLUDED.hobbies_interests,
+            reply_style = EXCLUDED.reply_style,
+            emoji_slang = EXCLUDED.emoji_slang,
+            conflict_handling = EXCLUDED.conflict_handling,
+            preferred_topics = EXCLUDED.preferred_topics,
+            use_active_hours = EXCLUDED.use_active_hours,
+            active_start = EXCLUDED.active_start,
+            active_end = EXCLUDED.active_end,
+            links = EXCLUDED.links,
+            posts = EXCLUDED.posts,
                 conversation_samples = EXCLUDED.conversation_samples,
-                instagram_url = EXCLUDED.instagram_url,
-                avoid_topics = EXCLUDED.avoid_topics,
-                temperature = EXCLUDED.temperature,
-                max_tokens = EXCLUDED.max_tokens,
-                is_active = EXCLUDED.is_active,
-                updated_at = CURRENT_TIMESTAMP
+            instagram_url = EXCLUDED.instagram_url,
+            avoid_topics = EXCLUDED.avoid_topics,
+            temperature = EXCLUDED.temperature,
+            max_tokens = EXCLUDED.max_tokens,
+            is_active = EXCLUDED.is_active,
+            updated_at = CURRENT_TIMESTAMP
         """, (user_id, connection_id, 
               settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
               settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
@@ -968,35 +968,35 @@ def save_client_settings(user_id, settings, connection_id=None):
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
               settings.get('auto_reply', True)))
-    else:
-        cursor.execute(f"""
-            INSERT OR REPLACE INTO client_settings 
-            (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
-             bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
-             confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
-             backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
+        else:
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO client_settings 
+                (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
+                 bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
+                 confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
+                 backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
              conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
-             instagram_url, avoid_topics, temperature, max_tokens, is_active)
-            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                 instagram_url, avoid_topics, temperature, max_tokens, is_active)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-        """, (user_id, connection_id, 
-              settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
-              settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
-              settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
-              settings.get('tone_of_voice', ''), settings.get('habits_quirks', ''), settings.get('confidence_level', ''),
-              settings.get('emotional_range', ''), settings.get('main_goal', ''), settings.get('fears_insecurities', ''),
-              settings.get('what_drives_them', ''), settings.get('obstacles', ''), settings.get('backstory', ''),
-              settings.get('family_relationships', ''), settings.get('culture_environment', ''), settings.get('hobbies_interests', ''),
-              settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
-              settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
-              settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
+            """, (user_id, connection_id, 
+                  settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
+                  settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
+                  settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
+                  settings.get('tone_of_voice', ''), settings.get('habits_quirks', ''), settings.get('confidence_level', ''),
+                  settings.get('emotional_range', ''), settings.get('main_goal', ''), settings.get('fears_insecurities', ''),
+                  settings.get('what_drives_them', ''), settings.get('obstacles', ''), settings.get('backstory', ''),
+                  settings.get('family_relationships', ''), settings.get('culture_environment', ''), settings.get('hobbies_interests', ''),
+                  settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
+                  settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
+                  settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, settings.get('max_tokens', 150), 
-              settings.get('auto_reply', True)))
+                  settings.get('auto_reply', True)))
     
     conn.commit()
     conn.close()
@@ -1010,7 +1010,7 @@ def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
     conversation_templates = CONVERSATION_TEMPLATES
-
+    
     if request.method == "POST":
         form_connection_id = request.form.get('connection_id')
         if form_connection_id:
@@ -1103,8 +1103,8 @@ def bot_settings():
 
     return render_template(
         "bot_settings.html",
-        settings=current_settings,
-        connections=connections_list,
+                         settings=current_settings, 
+                         connections=connections_list,
         selected_connection_id=connection_id,
         selected_connection=selected_connection,
         conversation_templates=conversation_templates
@@ -1407,7 +1407,7 @@ def get_ai_reply(history):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -1443,7 +1443,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 temperature = settings['temperature']
                 max_tokens = settings['max_tokens']
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
-                print(f"📝 Bot personality (first 100 chars): {system_prompt[:100]}...")
+                print(f"📝 Prompt length: {len(system_prompt)} chars")
                 print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
             else:
                 # Fallback to global settings
@@ -1470,7 +1470,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -1526,7 +1526,7 @@ def build_personality_prompt(settings):
     identity_lines = [
         f"You are {identity_sentence}. Role-play this person in every reply.",
         "Speak in first person only. Never admit to being automated.",
-        "Blend tiny one-liners, mid-length riffs, and the occasional longer reply—mirror how their DMs actually move.",
+        "Blend tiny one-liners, mid-length riffs, and occasional longer replies—mirror the follower's DM flow.",
         "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up only if they'd genuinely use them.",
     ]
 
@@ -1584,6 +1584,7 @@ def build_personality_prompt(settings):
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
         sample_lines.append("Mirror these sample exchanges when the vibe matches—match length, warmth, slang, and energy closely:")
+        sample_lines.append("If a sample reply is just one phrase or emoji, feel free to keep it that short too.")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
@@ -1593,10 +1594,11 @@ def build_personality_prompt(settings):
 
     conversation_lines = [
         "Study the recent conversation history already provided—mirror its rhythm before replying.",
-        "Default to the timing and brevity shown in the samples; only go long when the situation truly needs detail.",
+        "Default to the timing and brevity shown in the samples; keep replies short unless they ask for detail or a story needs space.",
         "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
         "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
-        "Let curiosity, empathy, or hype drive the flow; only ask follow-ups when they'd genuinely do it.",
+        "Limit yourself to at most one follow-up question per several replies. If they've already given an answer, pivot to statements or reactions instead of asking more questions.",
+        "Use statements for most check-ins or transitions—questions are rare and intentional.",
         "React like a close friend: celebrate wins, empathise with struggles, and keep references grounded in their life.",
     ]
 
@@ -1604,6 +1606,7 @@ def build_personality_prompt(settings):
         "If you lack info, stay in character and improvise or redirect instead of breaking immersion.",
         "Never repeat details the user already mentioned in this session unless you're building on them.",
         "Always read your reply back—if it sounds like a template or corporate copy, rewrite it until it feels hand-typed.",
+        "Wrap replies naturally; avoid ending every message with a question or call-to-action.",
     ]
 
     if settings.get('instagram_url'):
