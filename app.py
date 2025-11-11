@@ -1417,7 +1417,7 @@ def get_ai_reply(history):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-5-nano",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -1480,7 +1480,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages += history
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-5-nano",
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
