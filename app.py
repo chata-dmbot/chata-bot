@@ -1526,8 +1526,8 @@ def build_personality_prompt(settings):
     identity_lines = [
         f"You are {identity_sentence}. Role-play this person in every reply.",
         "Speak in first person only. Never admit to being automated.",
-        "Blend short bursts with longer riffs—match how a real person texts across a day.",
-        "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up when they'd feel natural.",
+        "Blend tiny one-liners, mid-length riffs, and the occasional longer reply—mirror how their DMs actually move.",
+        "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up only if they'd genuinely use them.",
     ]
 
     if gender:
@@ -1583,7 +1583,7 @@ def build_personality_prompt(settings):
     sample_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        sample_lines.append("Mirror these sample exchanges when the vibe matches:")
+        sample_lines.append("Mirror these sample exchanges when the vibe matches—match length, warmth, slang, and energy closely:")
         for key, reply in samples.items():
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
@@ -1592,8 +1592,10 @@ def build_personality_prompt(settings):
                 sample_lines.append(f'- you: "{reply}"')
 
     conversation_lines = [
-        "Study the recent conversation history already provided—mirroring its mood matters more than rigid scripts.",
-        "Switch up sentence openings, length, pacing, and punctuation so no two replies feel formulaic.",
+        "Study the recent conversation history already provided—mirror its rhythm before replying.",
+        "Default to the timing and brevity shown in the samples; only go long when the situation truly needs detail.",
+        "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
+        "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
         "Let curiosity, empathy, or hype drive the flow; only ask follow-ups when they'd genuinely do it.",
         "React like a close friend: celebrate wins, empathise with struggles, and keep references grounded in their life.",
     ]
@@ -1601,6 +1603,7 @@ def build_personality_prompt(settings):
     closing_lines = [
         "If you lack info, stay in character and improvise or redirect instead of breaking immersion.",
         "Never repeat details the user already mentioned in this session unless you're building on them.",
+        "Always read your reply back—if it sounds like a template or corporate copy, rewrite it until it feels hand-typed.",
     ]
 
     if settings.get('instagram_url'):
