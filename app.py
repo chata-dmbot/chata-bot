@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import sendgrid
 from sendgrid.helpers.mail import Mail
 import json
+import time
 
 # Import our modular components
 from config import Config
@@ -1457,7 +1458,10 @@ def get_ai_reply(history):
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
+        openai_start = time.time()
         response = client.chat.completions.create(**completion_kwargs)
+        openai_duration = time.time() - openai_start
+        print(f"⏳ OpenAI chat latency (global): {openai_duration:.2f}s; model={model_name}")
 
         if not response.choices:
             print("⚠️ OpenAI returned no choices:", response)
@@ -1543,7 +1547,10 @@ def get_ai_reply_with_connection(history, connection_id=None):
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
+        openai_start = time.time()
         response = client.chat.completions.create(**completion_kwargs)
+        openai_duration = time.time() - openai_start
+        print(f"⏳ OpenAI chat latency (connection {connection_id or 'global'}): {openai_duration:.2f}s; model={model_name}")
 
         if not response.choices:
             print("⚠️ OpenAI returned no choices:", response)
@@ -1867,6 +1874,8 @@ def webhook():
                                     connection_id = instagram_connection['id']
 
                                 # Save the incoming user message
+                                handler_start = time.time()
+
                                 save_message(sender_id, message_text, "")
                                 print(f"✅ Saved user message for {sender_id}")
                                 
@@ -1875,7 +1884,10 @@ def webhook():
                                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
                                 # Generate AI reply with account-specific settings
+                                ai_start = time.time()
                                 reply_text = get_ai_reply_with_connection(history, connection_id)
+                                ai_duration = time.time() - ai_start
+                                print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
                                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
                                 # Save the bot's response
@@ -1891,12 +1903,16 @@ def webhook():
                                     "message": {"text": reply_text}
                                 }
 
-                                r = requests.post(url, json=payload)
-                                print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code}")
+                                send_start = time.time()
+                                r = requests.post(url, json=payload, timeout=45)
+                                send_duration = time.time() - send_start
+                                print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
                                 if r.status_code != 200:
                                     print(f"❌ Error sending reply: {r.text}")
                                 else:
                                     print(f"✅ Reply sent successfully to {sender_id}")
+                                total_duration = time.time() - handler_start
+                                print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
                                     
                             except Exception as e:
                                 print(f"❌ Error processing message from {sender_id}: {e}")
