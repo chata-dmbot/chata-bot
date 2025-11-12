@@ -1419,8 +1419,9 @@ def get_ai_reply(history):
         completion_kwargs = {
             "model": "gpt-5-nano",
             "messages": messages,
-            "temperature": temperature,
         }
+        if completion_kwargs["model"] != "gpt-5-nano":
+            completion_kwargs["temperature"] = temperature
         if completion_kwargs["model"] == "gpt-5-nano":
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
@@ -1486,8 +1487,9 @@ def get_ai_reply_with_connection(history, connection_id=None):
         completion_kwargs = {
             "model": "gpt-5-nano",
             "messages": messages,
-            "temperature": temperature,
         }
+        if completion_kwargs["model"] != "gpt-5-nano":
+            completion_kwargs["temperature"] = temperature
         if completion_kwargs["model"] == "gpt-5-nano":
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
