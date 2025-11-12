@@ -1428,7 +1428,20 @@ def get_ai_reply(history):
             completion_kwargs["max_tokens"] = max_tokens
         response = client.chat.completions.create(**completion_kwargs)
 
-        ai_reply = response.choices[0].message.content.strip()
+        if not response.choices:
+            print("⚠️ OpenAI returned no choices:", response)
+            return "Sorry, I'm having trouble replying right now."
+
+        message = response.choices[0].message
+        if not message or not getattr(message, "content", None):
+            print("⚠️ OpenAI returned empty content:", response)
+            return "Sorry, I'm having trouble replying right now."
+
+        ai_reply = message.content.strip()
+        if not ai_reply:
+            print("⚠️ OpenAI content was blank after strip:", response)
+            return "Sorry, I'm having trouble replying right now."
+
         return ai_reply
 
     except Exception as e:
@@ -1496,7 +1509,20 @@ def get_ai_reply_with_connection(history, connection_id=None):
             completion_kwargs["max_tokens"] = max_tokens
         response = client.chat.completions.create(**completion_kwargs)
 
-        ai_reply = response.choices[0].message.content.strip()
+        if not response.choices:
+            print("⚠️ OpenAI returned no choices:", response)
+            return "Sorry, I'm having trouble replying right now."
+
+        message = response.choices[0].message
+        if not message or not getattr(message, "content", None):
+            print("⚠️ OpenAI returned empty content:", response)
+            return "Sorry, I'm having trouble replying right now."
+
+        ai_reply = message.content.strip()
+        if not ai_reply:
+            print("⚠️ OpenAI content was blank after strip:", response)
+            return "Sorry, I'm having trouble replying right now."
+
         return ai_reply
 
     except Exception as e:
