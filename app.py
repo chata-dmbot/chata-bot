@@ -1618,31 +1618,18 @@ def build_personality_prompt(settings):
         identity_lines.append(f"Background: {education}.")
 
     detail_lines = []
-
-    def append_detail(label, key):
+    detail_fields = [
+        ("About", 'bot_personality'),
+        ("Tone", 'tone_of_voice'),
+        ("Values", 'bot_values'),
+        ("Hobbies", 'hobbies_interests'),
+        ("Catchphrases", 'reply_style'),
+        ("Topics to avoid", 'avoid_topics'),
+    ]
+    for label, key in detail_fields:
         value = clean(settings.get(key))
         if value:
             detail_lines.append(f"{label}: {value}")
-
-    append_detail("About", 'bot_personality')
-    append_detail("Values", 'bot_values')
-    append_detail("Tone", 'tone_of_voice')
-    append_detail("Habits", 'habits_quirks')
-    append_detail("Confidence", 'confidence_level')
-    append_detail("Emotional range", 'emotional_range')
-    append_detail("Primary goal", 'main_goal')
-    append_detail("Fears", 'fears_insecurities')
-    append_detail("Motivation", 'what_drives_them')
-    append_detail("Obstacles", 'obstacles')
-    append_detail("Backstory", 'backstory')
-    append_detail("Relationships", 'family_relationships')
-    append_detail("Environment", 'culture_environment')
-    append_detail("Hobbies", 'hobbies_interests')
-    append_detail("Reply style", 'reply_style')
-    append_detail("Emoji & slang", 'emoji_slang')
-    append_detail("Conflict approach", 'conflict_handling')
-    append_detail("Topics to lean into", 'preferred_topics')
-    append_detail("Topics to avoid", 'avoid_topics')
 
     link_lines = []
     links = settings.get('links') or []
@@ -1669,7 +1656,10 @@ def build_personality_prompt(settings):
         sample_lines.append("If a follower message matches (or is very similar to) one below, reuse the sample reply almost verbatim and only tweak details that must change.")
         sample_lines.append("If a sample reply is just one phrase or emoji, stay that short too; if it's a longer riff, ride that energy.")
         sample_lines.append("When no example is close, respond with the same casual human texture shown below.")
-        for key, reply in samples.items():
+        for idx, (key, reply) in enumerate(samples.items()):
+            if idx >= 20:
+                sample_lines.append("... (keep the same vibe as the remaining saved samples)")
+                break
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
             if fan_message:
                 sample_lines.append(f'- fan: "{fan_message}" | you: "{reply}"')
@@ -1696,6 +1686,8 @@ def build_personality_prompt(settings):
         "Never stack more than one question in the same message.",
         "When you do ask, keep it short and casual, and follow it with supportive context from your life or vibe.",
         "Skim all persona details quickly—minimise internal reasoning and get to a natural reply fast.",
+        "Keep most replies within 1-4 sentences unless they explicitly ask for more detail.",
+        "Trust your first instinct—jump into the reply instead of planning a long monologue.",
         "Match the timing and brevity shown in the DM baseline—most replies should stay tight unless the follower asks for details.",
         "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
         "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
