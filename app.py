@@ -83,6 +83,15 @@ DEFAULT_MODEL_CONFIG = {
     "supports_temperature": True,
 }
 
+
+def normalize_max_tokens(value, floor=2000):
+    """Ensure max_tokens is at least the configured floor."""
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError):
+        return floor
+    return max(numeric, floor)
+
 # Debug OAuth configuration
 print(f"Facebook OAuth - App ID: {Config.FACEBOOK_APP_ID[:8] + '...' if Config.FACEBOOK_APP_ID else 'Not set'}")
 print(f"Facebook OAuth - App Secret: {'Set' if Config.FACEBOOK_APP_SECRET else 'Not set'}")
@@ -852,7 +861,7 @@ def get_client_settings(user_id, connection_id=None):
             'instagram_url': row[31] or '',
             'avoid_topics': row[32] or '',
             'temperature': row[33] or 0.7,
-            'max_tokens': row[34] or 2000,
+            'max_tokens': normalize_max_tokens(row[34]),
             'auto_reply': bool(row[35]) if row[35] is not None else True
         }
     
@@ -925,6 +934,7 @@ def save_client_settings(user_id, settings, connection_id=None):
     links_json = json.dumps(settings.get('links', []))
     posts_json = json.dumps(settings.get('posts', []))
     samples_json = json.dumps(settings.get('conversation_samples', {}))
+    max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 2000))
     
     # Use different syntax for PostgreSQL vs SQLite
     if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
@@ -992,7 +1002,7 @@ def save_client_settings(user_id, settings, connection_id=None):
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, settings.get('max_tokens', 2000), 
+              0.7, max_tokens_value,
               settings.get('auto_reply', True)))
     else:
         cursor.execute(f"""
@@ -1021,7 +1031,7 @@ def save_client_settings(user_id, settings, connection_id=None):
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, settings.get('max_tokens', 2000), 
+              0.7, max_tokens_value,
               settings.get('auto_reply', True)))
     
     conn.commit()
@@ -1427,7 +1437,7 @@ def get_ai_reply(history):
         system_prompt = get_setting("bot_personality",
             "You are a helpful and friendly Instagram bot.")
         temperature = float(get_setting("temperature", "0.7"))
-        max_tokens = int(get_setting("max_tokens", "2000"))
+        max_tokens = normalize_max_tokens(get_setting("max_tokens", "2000"))
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1490,7 +1500,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 settings = get_client_settings(user_id, connection_id)
                 system_prompt = build_personality_prompt(settings)
                 temperature = settings['temperature']
-                max_tokens = int(settings.get('max_tokens', 2000))
+                max_tokens = normalize_max_tokens(settings.get('max_tokens', 2000))
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
                 print(f"📝 Prompt length: {len(system_prompt)} chars")
                 print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
@@ -1913,12 +1923,13 @@ def admin_prompt():
     if flask_request.method == "POST":
         set_setting("bot_personality", flask_request.form.get("bot_personality", ""))
         set_setting("temperature", flask_request.form.get("temperature", "0.7"))
-        set_setting("max_tokens", flask_request.form.get("max_tokens", "2000"))
+        max_tokens_input = normalize_max_tokens(flask_request.form.get("max_tokens", "2000"))
+        set_setting("max_tokens", str(max_tokens_input))
         message = "Bot settings updated successfully!"
 
     current_prompt = get_setting("bot_personality", "")
     current_temperature = get_setting("temperature", "0.7")
-    current_max_tokens = get_setting("max_tokens", "2000")
+    current_max_tokens = str(normalize_max_tokens(get_setting("max_tokens", "2000")))
 
     return render_template_string("""
         <!doctype html>
