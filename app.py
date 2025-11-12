@@ -1416,12 +1416,16 @@ def get_ai_reply(history):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
-        response = client.chat.completions.create(
-            model="gpt-5-nano",
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        completion_kwargs = {
+            "model": "gpt-5-nano",
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if completion_kwargs["model"] == "gpt-5-nano":
+            completion_kwargs["max_completion_tokens"] = max_tokens
+        else:
+            completion_kwargs["max_tokens"] = max_tokens
+        response = client.chat.completions.create(**completion_kwargs)
 
         ai_reply = response.choices[0].message.content.strip()
         return ai_reply
@@ -1479,12 +1483,16 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
-        response = client.chat.completions.create(
-            model="gpt-5-nano",
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        completion_kwargs = {
+            "model": "gpt-5-nano",
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if completion_kwargs["model"] == "gpt-5-nano":
+            completion_kwargs["max_completion_tokens"] = max_tokens
+        else:
+            completion_kwargs["max_tokens"] = max_tokens
+        response = client.chat.completions.create(**completion_kwargs)
 
         ai_reply = response.choices[0].message.content.strip()
         return ai_reply
