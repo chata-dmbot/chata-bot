@@ -70,7 +70,7 @@ CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CON
 MODEL_CONFIG = {
     "gpt-5-mini": {
         "token_param": "max_completion_tokens",
-        "supports_temperature": True,
+        "supports_temperature": False,
     },
     "gpt-5-nano": {
         "token_param": "max_completion_tokens",
