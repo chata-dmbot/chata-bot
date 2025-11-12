@@ -1442,7 +1442,7 @@ def get_ai_reply(history):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
-        model_name = "gpt-5-mini"
+        model_name = "gpt-5-nano"
         model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
 
         completion_kwargs = {
@@ -1528,7 +1528,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
-        model_name = "gpt-5-mini"
+        model_name = "gpt-5-nano"
         model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
 
         completion_kwargs = {
