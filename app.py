@@ -852,7 +852,7 @@ def get_client_settings(user_id, connection_id=None):
             'instagram_url': row[31] or '',
             'avoid_topics': row[32] or '',
             'temperature': row[33] or 0.7,
-            'max_tokens': row[34] or 150,
+            'max_tokens': row[34] or 2000,
             'auto_reply': bool(row[35]) if row[35] is not None else True
         }
     
@@ -892,7 +892,7 @@ def get_client_settings(user_id, connection_id=None):
         'instagram_url': '',
         'avoid_topics': '',
         'temperature': 0.7,
-        'max_tokens': 150,
+        'max_tokens': 2000,
         'auto_reply': True
     }
 
@@ -992,7 +992,7 @@ def save_client_settings(user_id, settings, connection_id=None):
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, settings.get('max_tokens', 150), 
+              0.7, settings.get('max_tokens', 2000), 
               settings.get('auto_reply', True)))
     else:
         cursor.execute(f"""
@@ -1021,7 +1021,7 @@ def save_client_settings(user_id, settings, connection_id=None):
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, settings.get('max_tokens', 150), 
+              0.7, settings.get('max_tokens', 2000), 
               settings.get('auto_reply', True)))
     
     conn.commit()
@@ -1427,7 +1427,7 @@ def get_ai_reply(history):
         system_prompt = get_setting("bot_personality",
             "You are a helpful and friendly Instagram bot.")
         temperature = float(get_setting("temperature", "0.7"))
-        max_tokens = int(get_setting("max_tokens", "150"))
+        max_tokens = int(get_setting("max_tokens", "2000"))
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1490,7 +1490,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 settings = get_client_settings(user_id, connection_id)
                 system_prompt = build_personality_prompt(settings)
                 temperature = settings['temperature']
-                max_tokens = settings['max_tokens']
+                max_tokens = int(settings.get('max_tokens', 2000))
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
                 print(f"📝 Prompt length: {len(system_prompt)} chars")
                 print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
@@ -1503,7 +1503,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 }
                 system_prompt = build_personality_prompt(fallback_settings)
                 temperature = 0.7
-                max_tokens = 150
+                max_tokens = 2000
         else:
             # Use global settings (for original Chata account)
             print("⚠️ No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
@@ -1513,7 +1513,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
             }
             system_prompt = build_personality_prompt(fallback_settings)
             temperature = 0.7
-            max_tokens = 150
+            max_tokens = 2000
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1685,6 +1685,7 @@ def build_personality_prompt(settings):
         "Only ask a question when the follower is stuck, directly invites it, or it's been at least three of your replies since the last question.",
         "Never stack more than one question in the same message.",
         "When you do ask, keep it short and casual, and follow it with supportive context from your life or vibe.",
+        "Skim all persona details quickly—minimise internal reasoning and get to a natural reply fast.",
         "Match the timing and brevity shown in the DM baseline—most replies should stay tight unless the follower asks for details.",
         "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
         "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
@@ -1912,12 +1913,12 @@ def admin_prompt():
     if flask_request.method == "POST":
         set_setting("bot_personality", flask_request.form.get("bot_personality", ""))
         set_setting("temperature", flask_request.form.get("temperature", "0.7"))
-        set_setting("max_tokens", flask_request.form.get("max_tokens", "150"))
+        set_setting("max_tokens", flask_request.form.get("max_tokens", "2000"))
         message = "Bot settings updated successfully!"
 
     current_prompt = get_setting("bot_personality", "")
     current_temperature = get_setting("temperature", "0.7")
-    current_max_tokens = get_setting("max_tokens", "150")
+    current_max_tokens = get_setting("max_tokens", "2000")
 
     return render_template_string("""
         <!doctype html>
@@ -1943,7 +1944,7 @@ def admin_prompt():
           </div>
           <div class="field-group">
             <label for="max_tokens">Max Tokens (Length of Reply):</label><br>
-            <input type="number" min="1" max="2048" id="max_tokens" name="max_tokens" value="{{current_max_tokens}}">
+            <input type="number" min="1" max="6000" id="max_tokens" name="max_tokens" value="{{current_max_tokens}}">
           </div>
           <input type="submit" value="Save Settings">
         </form>
