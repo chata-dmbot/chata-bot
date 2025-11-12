@@ -67,6 +67,22 @@ CONVERSATION_TEMPLATES = [
 ]
 CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
 
+MODEL_CONFIG = {
+    "gpt-5-mini": {
+        "token_param": "max_completion_tokens",
+        "supports_temperature": True,
+    },
+    "gpt-5-nano": {
+        "token_param": "max_completion_tokens",
+        "supports_temperature": False,
+    },
+}
+
+DEFAULT_MODEL_CONFIG = {
+    "token_param": "max_tokens",
+    "supports_temperature": True,
+}
+
 # Debug OAuth configuration
 print(f"Facebook OAuth - App ID: {Config.FACEBOOK_APP_ID[:8] + '...' if Config.FACEBOOK_APP_ID else 'Not set'}")
 print(f"Facebook OAuth - App Secret: {'Set' if Config.FACEBOOK_APP_SECRET else 'Not set'}")
@@ -1416,13 +1432,18 @@ def get_ai_reply(history):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
+        model_name = "gpt-5-mini"
+        model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
+
         completion_kwargs = {
-            "model": "gpt-5-nano",
+            "model": model_name,
             "messages": messages,
         }
-        if completion_kwargs["model"] != "gpt-5-nano":
+        if model_config.get("supports_temperature", True):
             completion_kwargs["temperature"] = temperature
-        if completion_kwargs["model"] == "gpt-5-nano":
+
+        token_param = model_config.get("token_param", "max_tokens")
+        if token_param == "max_completion_tokens":
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
@@ -1497,13 +1518,18 @@ def get_ai_reply_with_connection(history, connection_id=None):
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
 
+        model_name = "gpt-5-mini"
+        model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
+
         completion_kwargs = {
-            "model": "gpt-5-nano",
+            "model": model_name,
             "messages": messages,
         }
-        if completion_kwargs["model"] != "gpt-5-nano":
+        if model_config.get("supports_temperature", True):
             completion_kwargs["temperature"] = temperature
-        if completion_kwargs["model"] == "gpt-5-nano":
+
+        token_param = model_config.get("token_param", "max_tokens")
+        if token_param == "max_completion_tokens":
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
