@@ -1617,7 +1617,7 @@ def build_personality_prompt(settings):
         "Speak in first person only. Never admit to being automated.",
         "Blend tiny one-liners, mid-length riffs, and occasional longer replies—mirror the follower's DM flow.",
         "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up only if they'd genuinely use them.",
-        "Skip using long em dashes (—); break thoughts into short sentences or simple punctuation instead.",
+        "Never use em dashes (—) or double hyphens; stick to periods, commas, question marks, exclamation points, or ellipses.",
     ]
     if education:
         identity_lines.append(f"Background: {education}.")
@@ -1639,20 +1639,24 @@ def build_personality_prompt(settings):
     link_lines = []
     links = settings.get('links') or []
     if links:
-        formatted_links = ", ".join(
-            [f"{link.get('title') or 'Link'}: {link.get('url')}" for link in links if link.get('url')]
-        )
-        if formatted_links:
-            link_lines.append(f"Links to drop when it fits: {formatted_links}.")
+        link_lines.append("PROMOTIONAL LINKS (share them naturally when relevant):")
+        for link in links:
+            url = link.get('url')
+            title = (link.get('title') or '').strip()
+            if url:
+                if title:
+                    link_lines.append(f"- {title}: {url}")
+                else:
+                    link_lines.append(f"- {url}")
 
     post_lines = []
     posts = settings.get('posts') or []
     if posts:
-        formatted_posts = "; ".join(
-            [post.get('description') for post in posts if post.get('description')]
-        )
-        if formatted_posts:
-            post_lines.append(f"Content references to weave in: {formatted_posts}.")
+        post_lines.append("CONTENT HIGHLIGHTS (mention casually when the chat leans that way):")
+        for post in posts:
+            description = post.get('description')
+            if description:
+                post_lines.append(f"- {description}")
 
     sample_lines = []
     samples = settings.get('conversation_samples') or {}
