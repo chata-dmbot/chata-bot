@@ -1590,7 +1590,6 @@ def build_personality_prompt(settings):
 
     name = clean(settings.get('bot_name'))
     age = clean(settings.get('bot_age'))
-    gender = clean(settings.get('bot_gender'))
     location = clean(settings.get('bot_location'))
     occupation = clean(settings.get('bot_occupation'))
     education = clean(settings.get('bot_education'))
@@ -1617,10 +1616,8 @@ def build_personality_prompt(settings):
         "Speak in first person only. Never admit to being automated.",
         "Blend tiny one-liners, mid-length riffs, and occasional longer replies—mirror the follower's DM flow.",
         "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up only if they'd genuinely use them.",
+        "Skip using long em dashes (—); break thoughts into short sentences or simple punctuation instead.",
     ]
-
-    if gender:
-        identity_lines.append(f"Pronouns / identity: {gender}.")
     if education:
         identity_lines.append(f"Background: {education}.")
 
@@ -1664,7 +1661,7 @@ def build_personality_prompt(settings):
         sample_lines.append("If a sample reply is just one phrase or emoji, stay that short too; if it's a longer riff, ride that energy.")
         sample_lines.append("When no example is close, respond with the same casual human texture shown below.")
         for idx, (key, reply) in enumerate(samples.items()):
-            if idx >= 20:
+            if idx >= 30:
                 sample_lines.append("... (keep the same vibe as the remaining saved samples)")
                 break
             fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
@@ -1674,31 +1671,19 @@ def build_personality_prompt(settings):
                 sample_lines.append(f'- you: "{reply}"')
 
     memory_lines = [
-        "Review the full conversation history in this chat before replying.",
-        "If the history holds fewer than two total exchanges, skip any question budgeting and just reply naturally.",
-        "Track your own questions: if you asked one within your last three replies, you must respond with a statement now unless the follower clearly asks for help or the conversation would stall.",
-        "If the follower just answered something you asked, acknowledge or react—do not follow up with another question.",
+        "Glance over the latest chat messages so you stay consistent.",
+        "Space out your questions—ask one only when it truly helps and not more than every few replies.",
     ]
 
     follower_style_lines = [
-        "Study the follower's latest message (and the general tone of this thread): match their casing, slang, abbreviations, emoji usage, and overall energy.",
-        "If they type in lowercase or use shorthand (e.g., omg, lol, fr), mirror that casually in your reply.",
-        "If they avoid emoji or punctuation, do the same; if they go heavy with caps or emojis, lean into it without overdoing it.",
-        "Start from the DM baseline style but let the follower's present vibe pull your response shorter, longer, louder, or softer.",
+        "Mirror the follower's casing, slang, emoji habits, and pacing.",
+        "If they speak in quick bursts or one-liners, keep your reply just as tight.",
     ]
 
     conversation_lines = [
-        "Default to statements; questions are rare and intentional.",
-        "Only ask a question when the follower is stuck, directly invites it, or it's been at least three of your replies since the last question.",
-        "Never stack more than one question in the same message.",
-        "When you do ask, keep it short and casual, and follow it with supportive context from your life or vibe.",
-        "Skim all persona details quickly—minimise internal reasoning and get to a natural reply fast.",
-        "Keep most replies within 1-4 sentences unless they explicitly ask for more detail.",
-        "Trust your first instinct—jump into the reply instead of planning a long monologue.",
-        "Match the timing and brevity shown in the DM baseline—most replies should stay tight unless the follower asks for details.",
-        "Switch up sentence openings, length, pacing, punctuation, and emoji usage so no two replies feel formulaic.",
-        "Sprinkle callbacks to their hobbies, backstory, or latest posts when it fits; introduce saved links/content casually, not as lists.",
-        "React like a close friend: celebrate wins, empathise with struggles, and keep references grounded in their life.",
+        "Default to quick, human replies; stretch longer only when their energy calls for it.",
+        "Switch up wording, punctuation, and emoji use so nothing feels templated.",
+        "Skim persona details fast—focus on sounding natural right now.",
     ]
 
     closing_lines = [
@@ -1805,120 +1790,113 @@ def webhook():
         else:
             print("❌ Could not connect to database to fetch connections")
 
+        incoming_by_sender = {}
         if 'entry' in data:
             for entry in data['entry']:
-                if 'messaging' in entry:
-                    for event in entry['messaging']:
-                        if event.get('message', {}).get('is_echo'):
-                            continue
+                if 'messaging' not in entry:
+                    continue
+                entry_page_id = entry.get('id')
+                for event in entry['messaging']:
+                    if event.get('message', {}).get('is_echo'):
+                        continue
+                    message_payload = event.get('message', {})
+                    message_text = message_payload.get('text')
+                    if not message_text:
+                        continue
+                    sender_id = event['sender']['id']
+                    recipient_id = event.get('recipient', {}).get('id')
+                    print(f"📨 Received a message from {sender_id}: {message_text}")
+                    incoming_by_sender.setdefault(sender_id, []).append({
+                        "text": message_text,
+                        "timestamp": event.get('timestamp', 0),
+                        "recipient_id": recipient_id,
+                        "page_id": entry_page_id,
+                    })
 
-                        sender_id = event['sender']['id']
-                        if 'message' in event and 'text' in event['message']:
-                            try:
-                                message_text = event['message']['text']
-                                print(f"📨 Received a message from {sender_id}: {message_text}")
+        for sender_id, events in incoming_by_sender.items():
+            events.sort(key=lambda item: item.get("timestamp", 0))
+            combined_preview = " | ".join(evt["text"] for evt in events)
+            print(f"🧾 Aggregated {len(events)} incoming message(s) from {sender_id}: {combined_preview}")
 
-                                # 🔍 DETECT WHICH INSTAGRAM ACCOUNT RECEIVED THE MESSAGE
-                                # The webhook receives messages for different Instagram accounts
-                                # We need to determine which account this message was sent to
-                                
-                                # Get the recipient ID from the event (this is the Instagram account that received the message)
-                                recipient_id = event.get('recipient', {}).get('id')
-                                print(f"🎯 Message sent to Instagram account: {recipient_id}")
-                                
-                                # Also check the entry object for the page ID
-                                page_id = entry.get('id')
-                                print(f"📄 Page ID from entry: {page_id}")
-                                
-                                # Find the Instagram connection for this recipient (the account that received the message)
-                                # We need to match by the Instagram user ID, not the page ID
-                                instagram_connection = None
-                                
-                                # First try to find by the recipient ID (Instagram user ID)
-                                if recipient_id:
-                                    print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
-                                    print(f"🔍 Comparing against database values...")
-                                    instagram_connection = get_instagram_connection_by_id(recipient_id)
-                                    if instagram_connection:
-                                        print(f"✅ Found connection by Instagram User ID!")
-                                    else:
-                                        print(f"❌ No connection found with Instagram User ID: {recipient_id}")
-                                
-                                # If not found by user ID, try by page ID
-                                if not instagram_connection and page_id:
-                                    print(f"🔍 Trying to find connection by page ID: {page_id}")
-                                    print(f"🔍 Comparing against database values...")
-                                    instagram_connection = get_instagram_connection_by_page_id(page_id)
-                                    if instagram_connection:
-                                        print(f"✅ Found connection by Page ID!")
-                                    else:
-                                        print(f"❌ No connection found with Page ID: {page_id}")
-                                
-                                if not instagram_connection:
-                                    print(f"❌ No Instagram connection found for account {recipient_id} or page {page_id}")
-                                    print(f"💡 This might be the original Chata account or an unregistered account")
-                                    
-                                    # Check if this is the original Chata account
-                                    if recipient_id == Config.INSTAGRAM_USER_ID:
-                                        print(f"✅ This is the original Chata account - using hardcoded settings")
-                                        access_token = Config.ACCESS_TOKEN
-                                        instagram_user_id = Config.INSTAGRAM_USER_ID
-                                        connection_id = None  # No connection ID for original account
-                                    else:
-                                        print(f"❌ Unknown Instagram account {recipient_id} - skipping message")
-                                        continue
-                                else:
-                                    print(f"✅ Found Instagram connection: {instagram_connection}")
-                                    access_token = instagram_connection['page_access_token']
-                                    instagram_user_id = instagram_connection['instagram_user_id']
-                                    connection_id = instagram_connection['id']
+            latest_event = events[-1]
+            recipient_id = latest_event.get("recipient_id")
+            entry_page_id = latest_event.get("page_id")
 
-                                # Save the incoming user message
-                                handler_start = time.time()
+            print(f"🎯 Message batch targeted Instagram account: {recipient_id}")
+            print(f"📄 Page ID from entry: {entry_page_id}")
 
-                                save_message(sender_id, message_text, "")
-                                print(f"✅ Saved user message for {sender_id}")
-                                
-                                # Get conversation history
-                                history = get_last_messages(sender_id, n=35)
-                                print(f"📚 History for {sender_id}: {len(history)} messages")
+            instagram_connection = None
+            if recipient_id:
+                print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
+                instagram_connection = get_instagram_connection_by_id(recipient_id)
+                if instagram_connection:
+                    print("✅ Found connection by Instagram User ID!")
+                else:
+                    print(f"❌ No connection found with Instagram User ID: {recipient_id}")
 
-                                # Generate AI reply with account-specific settings
-                                ai_start = time.time()
-                                reply_text = get_ai_reply_with_connection(history, connection_id)
-                                ai_duration = time.time() - ai_start
-                                print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
-                                print(f"🤖 AI generated reply: {reply_text[:50]}...")
+            if not instagram_connection and entry_page_id:
+                print(f"🔍 Trying to find connection by page ID: {entry_page_id}")
+                instagram_connection = get_instagram_connection_by_page_id(entry_page_id)
+                if instagram_connection:
+                    print("✅ Found connection by Page ID!")
+                else:
+                    print(f"❌ No connection found with Page ID: {entry_page_id}")
 
-                                # Save the bot's response
-                                save_message(sender_id, "", reply_text)
-                                print(f"✅ Saved bot response for {sender_id}")
+            if not instagram_connection:
+                print(f"❌ No Instagram connection found for account {recipient_id} or page {entry_page_id}")
+                print("💡 This might be the original Chata account or an unregistered account")
+                if recipient_id == Config.INSTAGRAM_USER_ID:
+                    print("✅ This is the original Chata account - using hardcoded settings")
+                    access_token = Config.ACCESS_TOKEN
+                    instagram_user_id = Config.INSTAGRAM_USER_ID
+                    connection_id = None
+                else:
+                    print(f"❌ Unknown Instagram account {recipient_id} - skipping message batch")
+                    continue
+            else:
+                print(f"✅ Found Instagram connection: {instagram_connection}")
+                access_token = instagram_connection['page_access_token']
+                instagram_user_id = instagram_connection['instagram_user_id']
+                connection_id = instagram_connection['id']
 
-                                # Send reply via Instagram API using the correct access token
-                                # Use instagram_page_id for sending messages (Facebook Page ID)
-                                page_id = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
-                                url = f"https://graph.facebook.com/v18.0/{page_id}/messages?access_token={access_token}"
-                                payload = {
-                                    "recipient": {"id": sender_id},
-                                    "message": {"text": reply_text}
-                                }
+            handler_start = time.time()
 
-                                send_start = time.time()
-                                r = requests.post(url, json=payload, timeout=45)
-                                send_duration = time.time() - send_start
-                                print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
-                                if r.status_code != 200:
-                                    print(f"❌ Error sending reply: {r.text}")
-                                else:
-                                    print(f"✅ Reply sent successfully to {sender_id}")
-                                total_duration = time.time() - handler_start
-                                print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
-                                    
-                            except Exception as e:
-                                print(f"❌ Error processing message from {sender_id}: {e}")
-                                print(f"Error type: {type(e).__name__}")
-                                import traceback
-                                traceback.print_exc()
+            for event in events:
+                save_message(sender_id, event["text"], "")
+            print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
+
+            history = get_last_messages(sender_id, n=35)
+            print(f"📚 History for {sender_id}: {len(history)} messages")
+
+            ai_start = time.time()
+            reply_text = get_ai_reply_with_connection(history, connection_id)
+            ai_duration = time.time() - ai_start
+            print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
+            print(f"🤖 AI generated reply: {reply_text[:50]}...")
+
+            save_message(sender_id, "", reply_text)
+            print(f"✅ Saved bot response for {sender_id}")
+
+            page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
+            url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
+            payload = {
+                "recipient": {"id": sender_id},
+                "message": {"text": reply_text}
+            }
+
+            send_start = time.time()
+            r = requests.post(url, json=payload, timeout=45)
+            send_duration = time.time() - send_start
+            print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
+            if r.status_code != 200:
+                print(f"❌ Error sending reply: {r.text}")
+            else:
+                print(f"✅ Reply sent successfully to {sender_id}")
+
+            total_duration = time.time() - handler_start
+            print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+
+        return "EVENT_RECEIVED", 200
 
         return "EVENT_RECEIVED", 200
 
