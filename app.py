@@ -1576,11 +1576,8 @@ def get_ai_reply_with_connection(history, connection_id=None):
 
 def build_personality_prompt(settings):
     """
-    Build a detailed system prompt using the saved settings for a connection.
-    This is where the bot's identity, tone, and behaviour are defined.
+    Build the system prompt using the latest structured format provided by the user.
     """
-
-    MAX_PROMPT_CHARS = 6000  # new ceiling requested by user
 
     def clean(value):
         if not value:
@@ -1593,160 +1590,117 @@ def build_personality_prompt(settings):
     age = clean(settings.get('bot_age'))
     location = clean(settings.get('bot_location'))
     occupation = clean(settings.get('bot_occupation'))
-    education = clean(settings.get('bot_education'))
-    persona_summary = clean(settings.get('bot_personality'))
+    about = clean(settings.get('bot_personality'))
+    avoid_topics = clean(settings.get('avoid_topics'))
 
-    identity_parts = []
-    if name:
-        identity_parts.append(name)
-    if age:
-        identity_parts.append(f"{age}-year-old")
-    if occupation:
-        identity_parts.append(occupation)
-    if location:
-        identity_parts.append(f"from {location}")
+    promo_links = []
+    for link in settings.get('links') or []:
+        url = clean(link.get('url'))
+        title = clean(link.get('title'))
+        if url:
+            promo_links.append(f"{title}: {url}" if title else url)
+    if not promo_links:
+        promo_links.append("None provided.")
 
-    identity_sentence = " ".join(identity_parts).strip()
-    if not identity_sentence and persona_summary:
-        identity_sentence = persona_summary.split(".")[0]
-    if not identity_sentence:
-        identity_sentence = "a real human with a unique personality"
-
-    identity_lines = [
-        f"You are {identity_sentence}. Role-play this person in every reply.",
-        "Speak in first person only. Never admit to being automated.",
-        "Blend tiny one-liners, mid-length riffs, and occasional longer replies—mirror the follower's DM flow.",
-        "Let slang, lowercase, filler words, emojis, pauses, or playful misspellings show up only if they'd genuinely use them.",
-        "Never use em dashes (—) or double hyphens; stick to periods, commas, question marks, exclamation points, or ellipses.",
-    ]
-    if education:
-        identity_lines.append(f"Background: {education}.")
-
-    detail_lines = []
-    detail_fields = [
-        ("About", 'bot_personality'),
-        ("Tone", 'tone_of_voice'),
-        ("Values", 'bot_values'),
-        ("Hobbies", 'hobbies_interests'),
-        ("Catchphrases", 'reply_style'),
-        ("Topics to avoid", 'avoid_topics'),
-    ]
-    for label, key in detail_fields:
-        value = clean(settings.get(key))
-        if value:
-            detail_lines.append(f"{label}: {value}")
-
-    link_lines = []
-    links = settings.get('links') or []
-    if links:
-        link_lines.append("PROMOTIONAL LINKS (share them naturally when relevant):")
-        for link in links:
-            url = link.get('url')
-            title = (link.get('title') or '').strip()
-            if url:
-                if title:
-                    link_lines.append(f"- {title}: {url}")
-                else:
-                    link_lines.append(f"- {url}")
-
-    post_lines = []
+    content_highlights = []
     posts = settings.get('posts') or []
-    if posts:
-        post_lines.append("CONTENT HIGHLIGHTS (mention casually when the chat leans that way):")
-        for post in posts:
-            description = post.get('description')
-            if description:
-                post_lines.append(f"- {description}")
+    for idx, post in enumerate(posts, start=1):
+        description = clean(post.get('description'))
+        if description:
+            content_highlights.append(f"{idx}. {description}")
+    if not content_highlights:
+        content_highlights.append("None provided.")
 
-    sample_lines = []
+    dm_examples_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        sample_lines.append("DM BASELINE = canon. Talk with the same length, slang, and looseness these examples show.")
-        sample_lines.append("If a follower line matches one below, reuse it almost verbatim—only tweak facts that must change. Otherwise, keep the same vibe and brevity.")
-        sample_lines.append("A tiny sample reply means you stay tiny too; longer riffs should feel the same size and energy.")
-        for idx, (key, reply) in enumerate(samples.items()):
-            if idx >= 30:
-                sample_lines.append("... (keep the same vibe as the remaining saved samples)")
+        for key, reply in samples.items():
+            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key, "")
+            formatted_fan = fan_message or key
+            dm_examples_lines.append(f'"{formatted_fan}" → "{reply}"')
+            if len(dm_examples_lines) >= 30:
                 break
-            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key)
-            if fan_message:
-                sample_lines.append(f'- fan: "{fan_message}" | you: "{reply}"')
-            else:
-                sample_lines.append(f'- you: "{reply}"')
+    if not dm_examples_lines:
+        dm_examples_lines.append("No DM examples supplied.")
 
-    memory_lines = [
-        "Glance over the latest chat messages so you stay consistent.",
-        "Space out your questions—ask one only when it truly helps and not more than every few replies.",
-        "If you already asked a question in your previous reply, do not ask another until they answer.",
-    ]
+    prompt = f"""IDENTITY
 
-    follower_style_lines = [
-        "Mirror the follower's casing, slang, emoji habits, and pacing.",
-        "If they speak in quick bursts or one-liners, keep your reply just as tight.",
-    ]
+You are {name}, a {age} year old {occupation} from {location}.
+Role-play this person authentically in every message.
+Speak only in first person.
+Never imply or mention anything automated.
 
-    conversation_lines = [
-        "Default length: one or two short sentences (~180 characters max). If they send a single short line, reply with a single short line.",
-        "Lead with confident statements—only ask a question when they directly request more detail or you must clarify to deliver what they asked.",
-        "No bullet lists, no double messages, no fluff. Drop links or titles as casual statements when relevant.",
-        "Sound as hand-typed as the DM baseline—swap up openings, punctuation, and emoji use so nothing feels templated.",
-        "Skim persona details fast and answer immediately instead of planning a long monologue.",
-    ]
+PERSONA DETAILS
 
-    closing_lines = [
-        "If you lack info, stay in character and improvise or redirect instead of breaking immersion.",
-        "Never repeat details the user already mentioned in this session unless you're building on them.",
-        "Always read your reply back—if it sounds like a template or corporate copy, rewrite it until it feels hand-typed.",
-        "Wrap replies naturally; avoid ending every message with a question or call-to-action.",
-    ]
+About me: {about}
+Avoid these topics: {avoid_topics}.
+If a follower brings them up, politely redirect in a way that matches your personality.
 
-    if settings.get('instagram_url'):
-        link_lines.insert(0, f"Official profile link to mention when helpful: {clean(settings.get('instagram_url'))}.")
+COMMUNICATION STYLE
 
-    def build_sections():
-        sections = []
+Match the follower’s tone, pacing, casing, and warmth.
+Adapt to how they speak.
+If they use emojis, slang, abbreviations, formal writing, or casual flow, mirror it naturally.
+Reply in short, human-sized messages, usually one or two sentences unless the follower clearly invites a longer reply.
+Avoid sounding scripted, polished, or robotic.
 
-        def add_section(title, lines):
-            block = [line for line in lines if line]
-            if block:
-                sections.append(f"{title}\n" + "\n".join(block))
+PUNCTUATION RULES
 
-        add_section("IDENTITY & BASELINE", identity_lines)
-        add_section("PERSONA DETAILS", detail_lines)
-        add_section("LINKS & CONTENT", link_lines + post_lines)
-        add_section("CONVERSATION MEMORY", memory_lines)
-        add_section("FOLLOWER STYLE MATCH", follower_style_lines)
-        add_section("CONVERSATION FLOW", conversation_lines)
-        add_section("DM BASELINE", sample_lines)
-        add_section("SAFETY & REALISM", closing_lines)
+Use only periods, commas, question marks, exclamation points, or ellipses.
+Never use em dashes or double hyphens.
+Avoid list formatting or anything that looks templated.
 
-        return "\n\n".join(sections).strip()
+REPLY SHAPE & FLOW
 
-    combined_prompt = build_sections()
+Choose your reply style based on what the follower sends: reaction, short statement, warm acknowledgment, or a question when it makes sense.
+Do not ask a question after every message.
+Vary openings and closings so replies feel natural.
+Mix quick reactions with slightly longer thoughts depending on the follower’s tone.
 
-    # Trim lower-priority sections to stay under the character budget.
-    if len(combined_prompt) > MAX_PROMPT_CHARS:
-        post_lines.clear()
-        combined_prompt = build_sections()
+CONVERSATION MEMORY
 
-    if len(combined_prompt) > MAX_PROMPT_CHARS:
-        link_lines.clear()
-        combined_prompt = build_sections()
+You must stay consistent with recent messages.
+Build on what the follower said instead of repeating it.
+Do not contradict earlier context unless the persona would naturally correct themselves.
 
-    if len(combined_prompt) > MAX_PROMPT_CHARS and len(sample_lines) > 1:
-        header = sample_lines[:1]
-        sorted_samples = sorted(sample_lines[1:], key=len, reverse=True)
-        while len(sorted_samples) > 0 and len(combined_prompt) > MAX_PROMPT_CHARS:
-            sorted_samples.pop(0)  # drop the longest sample
-            sample_lines = header + sorted_samples
-            combined_prompt = build_sections()
+REALISM GUIDELINES
 
-    print(f"🧠 Built system prompt ({len(combined_prompt)} chars, {max(0, len(sample_lines) - 1)} samples kept)")
+Write as if typing casually on a phone.
+Use natural rhythm and spontaneous phrasing.
+Small imperfections are allowed when they feel natural, such as a slightly shortened word, a mild filler, or an occasional soft typo.
+Do not overuse these.
+Let your personality and the follower’s style guide your voice.
+
+CONTENT CONTEXT
+
+You can naturally reference your work using the following:
+
+promotional links: {", ".join(promo_links)}
+
+content highlights: {", ".join(content_highlights)}
+
+important posts: {", ".join(content_highlights)}
+
+Use them only when relevant, never forcefully.
+
+DM BASELINE
+
+Use the following DM examples as the main reference for tone, length, looseness, and conversational flow:
+
+{chr(10).join(dm_examples_lines)}
+
+INSTRUCTIONS
+
+Follow all rules above with no exceptions.
+Reply now as {name}.
+""".strip()
+
+    print(f"🧠 Built system prompt ({len(prompt)} chars, {len(dm_examples_lines)} samples included)")
     print("🧾 Prompt start >>>")
-    print(combined_prompt)
+    print(prompt)
     print("<<< Prompt end")
 
-    return combined_prompt
+    return prompt
 
 # ---- Webhook Route ----
 
