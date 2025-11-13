@@ -72,10 +72,12 @@ MODEL_CONFIG = {
     "gpt-5-mini": {
         "token_param": "max_completion_tokens",
         "supports_temperature": False,
+        "max_completion_cap": 900,
     },
     "gpt-5-nano": {
         "token_param": "max_completion_tokens",
         "supports_temperature": False,
+        "max_completion_cap": 900,
     },
 }
 
@@ -85,7 +87,7 @@ DEFAULT_MODEL_CONFIG = {
 }
 
 
-def normalize_max_tokens(value, floor=2000):
+def normalize_max_tokens(value, floor=800):
     """Ensure max_tokens is at least the configured floor."""
     try:
         numeric = int(value)
@@ -1455,6 +1457,8 @@ def get_ai_reply(history):
 
         token_param = model_config.get("token_param", "max_tokens")
         if token_param == "max_completion_tokens":
+            if model_config.get("max_completion_cap"):
+                max_tokens = min(max_tokens, model_config["max_completion_cap"])
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
@@ -1544,6 +1548,8 @@ def get_ai_reply_with_connection(history, connection_id=None):
 
         token_param = model_config.get("token_param", "max_tokens")
         if token_param == "max_completion_tokens":
+            if model_config.get("max_completion_cap"):
+                max_tokens = min(max_tokens, model_config["max_completion_cap"])
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
@@ -1656,10 +1662,9 @@ def build_personality_prompt(settings):
     sample_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict) and samples:
-        sample_lines.append("Treat these DM examples as your default voice—mirror their length, warmth, slang, and rhythm unless the situation clearly demands something else.")
-        sample_lines.append("If a follower message matches (or is very similar to) one below, reuse the sample reply almost verbatim and only tweak details that must change.")
-        sample_lines.append("If a sample reply is just one phrase or emoji, stay that short too; if it's a longer riff, ride that energy.")
-        sample_lines.append("When no example is close, respond with the same casual human texture shown below.")
+        sample_lines.append("DM BASELINE = canon. Talk with the same length, slang, and looseness these examples show.")
+        sample_lines.append("If a follower line matches one below, reuse it almost verbatim—only tweak facts that must change. Otherwise, keep the same vibe and brevity.")
+        sample_lines.append("A tiny sample reply means you stay tiny too; longer riffs should feel the same size and energy.")
         for idx, (key, reply) in enumerate(samples.items()):
             if idx >= 30:
                 sample_lines.append("... (keep the same vibe as the remaining saved samples)")
@@ -1673,6 +1678,7 @@ def build_personality_prompt(settings):
     memory_lines = [
         "Glance over the latest chat messages so you stay consistent.",
         "Space out your questions—ask one only when it truly helps and not more than every few replies.",
+        "If you already asked a question in your previous reply, do not ask another until they answer.",
     ]
 
     follower_style_lines = [
@@ -1681,9 +1687,11 @@ def build_personality_prompt(settings):
     ]
 
     conversation_lines = [
-        "Default to quick, human replies; stretch longer only when their energy calls for it.",
-        "Switch up wording, punctuation, and emoji use so nothing feels templated.",
-        "Skim persona details fast—focus on sounding natural right now.",
+        "Default length: one or two short sentences (~180 characters max). If they send a single short line, reply with a single short line.",
+        "Lead with confident statements—only ask a question when they directly request more detail or you must clarify to deliver what they asked.",
+        "No bullet lists, no double messages, no fluff. Drop links or titles as casual statements when relevant.",
+        "Sound as hand-typed as the DM baseline—swap up openings, punctuation, and emoji use so nothing feels templated.",
+        "Skim persona details fast and answer immediately instead of planning a long monologue.",
     ]
 
     closing_lines = [
