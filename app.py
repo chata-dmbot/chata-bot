@@ -1898,8 +1898,6 @@ def webhook():
 
         return "EVENT_RECEIVED", 200
 
-        return "EVENT_RECEIVED", 200
-
 # ---- Admin Panel Route ----
 
 @app.route("/admin/prompt", methods=["GET", "POST"])
