@@ -35,38 +35,91 @@ app.secret_key = Config.SECRET_KEY
 
 # Predefined DM scenarios for conversation samples
 CONVERSATION_TEMPLATES = [
-    {"key": "hey_simple", "fan_message": "hey!!"},
-    {"key": "hey_whats_up", "fan_message": "hey what's up?"},
-    {"key": "long_time_no_chat", "fan_message": "yo it's been forever, how've you been?"},
-    {"key": "new_follower", "fan_message": "omg just found you, you're unreal! hi!!"},
-    {"key": "post_love", "fan_message": "obsessed with your latest post, how did you shoot it?"},
-    {"key": "collab_request", "fan_message": "would you ever collab? what's the best way to reach you?"},
-    {"key": "advice", "fan_message": "i'm trying to get better at what you do. any quick tips?"},
-    {"key": "product_question", "fan_message": "do you still sell that thing you mentioned on stories?"},
-    {"key": "support_check_in", "fan_message": "rough day over here, your stories keep me going."},
-    {"key": "event_invite", "fan_message": "we're hosting an event in your city next month, you in?"},
-    {"key": "personal_update", "fan_message": "guess what, I'm moving to your city next month!"},
-    {"key": "motivation_check", "fan_message": "today was rough. how do you keep your energy up?"},
-    {"key": "shoutout_request", "fan_message": "would you mind shouting out my small shop?"},
-    {"key": "pricing_question", "fan_message": "what do you usually charge for a promo?"},
-    {"key": "booking_request", "fan_message": "can I book you for a shoot next month?"},
-    {"key": "behind_scenes", "fan_message": "can you drop more behind-the-scenes? loved the last one."},
-    {"key": "travel_question", "fan_message": "are you coming to LA any time soon?"},
-    {"key": "merch_request", "fan_message": "any new merch coming? i don't want to miss it."},
-    {"key": "voice_note", "fan_message": "could you send a quick voice note for my friend? she's obsessed."},
-    {"key": "signoff_note", "fan_message": "ok I'll stop spamming you haha, talk soon?"},
-    {"key": "gym_update", "fan_message": "just crushed a new PR because of your tips!"},
-    {"key": "late_reply", "fan_message": "sorry for the ghosting, life went crazy for a bit lol."},
-    {"key": "travel_sighting", "fan_message": "i'm in paris right now and your rooftop shots came to mind."},
-    {"key": "gear_question", "fan_message": "what camera setup are you rocking these days?"},
-    {"key": "recovery_help", "fan_message": "knees are smoked after training—any recovery hacks?"},
-    {"key": "birthday_shout", "fan_message": "it's my birthday today, any chance of a quick shoutout?"},
-    {"key": "live_stream", "fan_message": "are you going live again this week? i don't wanna miss it."},
-    {"key": "workshop_request", "fan_message": "ever thought about hosting a workshop? i'd sign up instantly."},
-    {"key": "fan_thanks", "fan_message": "you got me waking up early to train—just wanted to say thanks!"},
-    {"key": "merch_feedback", "fan_message": "your merch just landed and the fit is insane!"}
+    {"key": "enjoy_content", "fan_message": "hey, just wanted to say I really enjoy your content"},
+    {"key": "day_check", "fan_message": "how’s your day going"},
+    {"key": "new_fan", "fan_message": "omg I just found your profile and I’m obsessed"},
+    {"key": "inspires_me", "fan_message": "you inspire me a lot, fr"},
+    {"key": "getting_started", "fan_message": "quick question, how did you get started with what you do"},
+    {"key": "one_tip", "fan_message": "can you give me one tip to improve"},
+    {"key": "posting_soon", "fan_message": "are you posting anything new this week"},
+    {"key": "where_from", "fan_message": "where are you from again"},
+    {"key": "meetups", "fan_message": "do you ever do meetups or events"},
+    {"key": "motivation_bad_days", "fan_message": "what keeps you motivated on bad days"},
+    {"key": "sorry_spam", "fan_message": "sorry if I’m spamming, your stuff is really cool"},
+    {"key": "gear_tools", "fan_message": "do you use any specific gear or tools"},
+    {"key": "schedule_like", "fan_message": "what’s your schedule like these days"},
+    {"key": "plans_coming", "fan_message": "do you have any plans coming up"},
+    {"key": "how_long_doing", "fan_message": "how long have you been doing this"},
+    {"key": "random_question", "fan_message": "can I ask you something kinda random"},
+    {"key": "rough_day_helped", "fan_message": "I had a rough day today, your posts helped"},
+    {"key": "dm_often", "fan_message": "do you answer DMs often"},
+    {"key": "why_this_path", "fan_message": "what made you choose this path"},
+    {"key": "current_goals", "fan_message": "do you have any goals you’re working on right now"},
+    {"key": "beginner_recommend", "fan_message": "can you recommend something for beginners"},
+    {"key": "friend_loves", "fan_message": "omg I showed your page to my friend and they loved it"},
+    {"key": "favorite_thing", "fan_message": "what’s your favorite thing about what you do"},
+    {"key": "take_breaks", "fan_message": "do you ever take breaks or do you push through"},
+    {"key": "wish_knew_earlier", "fan_message": "what’s something you wish you knew earlier"},
+    {"key": "feel_stuck", "fan_message": "I feel stuck lately, any advice"},
+    {"key": "dropping_new", "fan_message": "are you dropping anything new soon"},
+    {"key": "check_something", "fan_message": "can you check something for me real quick"},
+    {"key": "passing_by", "fan_message": "yo just passing by to say keep it up"},
+    {"key": "hope_good_today", "fan_message": "hope you’re doing good today"}
 ]
-CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
+
+SPECIAL_CONVERSATION_GROUPS = [
+    {
+        "key": "emotional_support",
+        "title": "Emotional Support",
+        "prompts": [
+            {"key": "emotional_support_heavy_day", "fan_message": "today was kinda heavy for me, your posts helped more than you know"},
+            {"key": "emotional_support_feel_better", "fan_message": "idk why but your content always makes me feel a bit better"},
+        ],
+    },
+    {
+        "key": "hype_fan",
+        "title": "Hype / Fan",
+        "prompts": [
+            {"key": "hype_fan_insanely_good", "fan_message": "bro your stuff is insanely good, keep going"},
+            {"key": "hype_fan_makes_my_day", "fan_message": "every time you post it makes my day tbh"},
+        ],
+    },
+    {
+        "key": "curious_follower",
+        "title": "Curious Follower",
+        "prompts": [
+            {"key": "curious_follower_get_into", "fan_message": "how did you first get into all this"},
+            {"key": "curious_follower_usual_day", "fan_message": "what does your usual day look like"},
+        ],
+    },
+    {
+        "key": "boundary_testing",
+        "title": "Boundary Testing",
+        "prompts": [
+            {"key": "boundary_testing_personal", "fan_message": "can you send something personal for me real quick"},
+            {"key": "boundary_testing_shoutout", "fan_message": "could you shout out my page"},
+        ],
+    },
+    {
+        "key": "business_like",
+        "title": "Business-like",
+        "prompts": [
+            {"key": "business_like_work_with_brands", "fan_message": "do you work with brands or do promos"},
+            {"key": "business_like_best_way_reach", "fan_message": "what’s the best way to reach you for a project"},
+        ],
+    },
+]
+
+CONVERSATION_TEMPLATE_LOOKUP = {
+    item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES
+}
+for group in SPECIAL_CONVERSATION_GROUPS:
+    for prompt in group["prompts"]:
+        CONVERSATION_TEMPLATE_LOOKUP[prompt["key"]] = prompt["fan_message"]
+
+ALL_CONVERSATION_PROMPTS = CONVERSATION_TEMPLATES + [
+    prompt for group in SPECIAL_CONVERSATION_GROUPS for prompt in group["prompts"]
+]
 
 MODEL_CONFIG = {
     "gpt-5-nano": {
@@ -1044,6 +1097,7 @@ def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
     conversation_templates = CONVERSATION_TEMPLATES
+    special_conversation_groups = SPECIAL_CONVERSATION_GROUPS
     
     if request.method == "POST":
         form_connection_id = request.form.get('connection_id')
@@ -1083,7 +1137,8 @@ def bot_settings():
             connections=[],
             selected_connection_id=None,
             selected_connection=None,
-            conversation_templates=conversation_templates
+            conversation_templates=conversation_templates,
+            special_conversation_groups=special_conversation_groups,
         )
 
     if connection_id is None:
@@ -1113,6 +1168,12 @@ def bot_settings():
             reply_value = reply_value.strip()
             if reply_value:
                 conversation_samples[template['key']] = reply_value
+        for group in special_conversation_groups:
+            for prompt in group["prompts"]:
+                reply_value = request.form.get(f"sample_reply_{prompt['key']}", "")
+                reply_value = reply_value.strip()
+                if reply_value:
+                    conversation_samples[prompt['key']] = reply_value
 
         settings = {
             'bot_personality': request.form.get('bot_personality', '').strip(),
@@ -1141,7 +1202,8 @@ def bot_settings():
                          connections=connections_list,
         selected_connection_id=connection_id,
         selected_connection=selected_connection,
-        conversation_templates=conversation_templates
+        conversation_templates=conversation_templates,
+        special_conversation_groups=special_conversation_groups,
     )
 
 @app.route("/dashboard/account-settings", methods=["GET", "POST"])
@@ -1613,10 +1675,13 @@ def build_personality_prompt(settings):
 
     dm_examples_lines = []
     samples = settings.get('conversation_samples') or {}
-    if isinstance(samples, dict) and samples:
-        for key, reply in samples.items():
-            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(key, "")
-            formatted_fan = fan_message or key
+    if isinstance(samples, dict):
+        for prompt in ALL_CONVERSATION_PROMPTS:
+            reply = samples.get(prompt["key"])
+            if not reply:
+                continue
+            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(prompt["key"], "")
+            formatted_fan = fan_message or prompt["key"]
             dm_examples_lines.append(f'"{formatted_fan}" → "{reply}"')
             if len(dm_examples_lines) >= 30:
                 break
