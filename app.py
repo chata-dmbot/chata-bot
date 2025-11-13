@@ -69,11 +69,6 @@ CONVERSATION_TEMPLATES = [
 CONVERSATION_TEMPLATE_LOOKUP = {item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES}
 
 MODEL_CONFIG = {
-    "gpt-5-mini": {
-        "token_param": "max_completion_tokens",
-        "supports_temperature": False,
-        "max_completion_cap": 3000,
-    },
     "gpt-5-nano": {
         "token_param": "max_completion_tokens",
         "supports_temperature": False,
@@ -762,35 +757,35 @@ def instagram_callback():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-        # Normal user flow
-        user = get_user_by_id(session['user_id'])
-        if not user:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('login'))
-        
-        # Get user's Instagram connections
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
-            FROM instagram_connections 
-            WHERE user_id = {placeholder} 
-            ORDER BY created_at DESC
-        """, (user['id'],))
-        connections = cursor.fetchall()
-        conn.close()
-        
-        connections_list = []
-        for conn_data in connections:
-            connections_list.append({
-                'id': conn_data[0],
-                'instagram_user_id': conn_data[1],
-                'instagram_page_id': conn_data[2],
-                'is_active': conn_data[3],
-                'created_at': conn_data[4]
-            })
-    
+    # Normal user flow
+    user = get_user_by_id(session['user_id'])
+    if not user:
+        flash('User not found. Please log in again.', 'error')
+        return redirect(url_for('login'))
+
+    # Get user's Instagram connections
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+        FROM instagram_connections 
+        WHERE user_id = {placeholder} 
+        ORDER BY created_at DESC
+    """, (user['id'],))
+    connections = cursor.fetchall()
+    conn.close()
+
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
+            'is_active': conn_data[3],
+            'created_at': conn_data[4]
+        })
+
     return render_template("dashboard.html", user=user, connections=connections_list)
 
 # ---- Bot Settings Management ----
@@ -904,7 +899,7 @@ def get_client_settings(user_id, connection_id=None):
         'instagram_url': '',
         'avoid_topics': '',
         'temperature': 0.7,
-        'max_tokens': 2000,
+        'max_tokens': 3000,
         'auto_reply': True
     }
 
@@ -937,7 +932,7 @@ def save_client_settings(user_id, settings, connection_id=None):
     links_json = json.dumps(settings.get('links', []))
     posts_json = json.dumps(settings.get('posts', []))
     samples_json = json.dumps(settings.get('conversation_samples', {}))
-    max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 2000))
+    max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
     
     # Use different syntax for PostgreSQL vs SQLite
     if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
@@ -1007,35 +1002,35 @@ def save_client_settings(user_id, settings, connection_id=None):
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, max_tokens_value,
               settings.get('auto_reply', True)))
-        else:
-            cursor.execute(f"""
-                INSERT OR REPLACE INTO client_settings 
-                (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
-                 bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
-                 confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
-                 backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
-                 instagram_url, avoid_topics, temperature, max_tokens, is_active)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            """, (user_id, connection_id, 
-                  settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
-                  settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
-                  settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
-                  settings.get('tone_of_voice', ''), settings.get('habits_quirks', ''), settings.get('confidence_level', ''),
-                  settings.get('emotional_range', ''), settings.get('main_goal', ''), settings.get('fears_insecurities', ''),
-                  settings.get('what_drives_them', ''), settings.get('obstacles', ''), settings.get('backstory', ''),
-                  settings.get('family_relationships', ''), settings.get('culture_environment', ''), settings.get('hobbies_interests', ''),
-                  settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
-                  settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
-                  settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
+    else:
+        cursor.execute(f"""
+            INSERT OR REPLACE INTO client_settings 
+            (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
+             bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
+             confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
+             backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
+             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
+             instagram_url, avoid_topics, temperature, max_tokens, is_active)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+        """, (user_id, connection_id, 
+              settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
+              settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
+              settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
+              settings.get('tone_of_voice', ''), settings.get('habits_quirks', ''), settings.get('confidence_level', ''),
+              settings.get('emotional_range', ''), settings.get('main_goal', ''), settings.get('fears_insecurities', ''),
+              settings.get('what_drives_them', ''), settings.get('obstacles', ''), settings.get('backstory', ''),
+              settings.get('family_relationships', ''), settings.get('culture_environment', ''), settings.get('hobbies_interests', ''),
+              settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
+              settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
+              settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, max_tokens_value,
-                  settings.get('auto_reply', True)))
+              settings.get('auto_reply', True)))
     
     conn.commit()
     conn.close()
@@ -1440,7 +1435,7 @@ def get_ai_reply(history):
         system_prompt = get_setting("bot_personality",
             "You are a helpful and friendly Instagram bot.")
         temperature = float(get_setting("temperature", "0.7"))
-        max_tokens = normalize_max_tokens(get_setting("max_tokens", "2000"))
+        max_tokens = normalize_max_tokens(get_setting("max_tokens", "3000"))
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1508,7 +1503,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 settings = get_client_settings(user_id, connection_id)
                 system_prompt = build_personality_prompt(settings)
                 temperature = settings['temperature']
-                max_tokens = normalize_max_tokens(settings.get('max_tokens', 2000))
+                max_tokens = normalize_max_tokens(settings.get('max_tokens', 3000))
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
                 print(f"📝 Prompt length: {len(system_prompt)} chars")
                 print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
@@ -1521,7 +1516,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 }
                 system_prompt = build_personality_prompt(fallback_settings)
                 temperature = 0.7
-                max_tokens = 2000
+                max_tokens = 3000
         else:
             # Use global settings (for original Chata account)
             print("⚠️ No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
@@ -1531,7 +1526,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
             }
             system_prompt = build_personality_prompt(fallback_settings)
             temperature = 0.7
-            max_tokens = 2000
+            max_tokens = 3000
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -1804,16 +1799,16 @@ def webhook():
                 if 'messaging' not in entry:
                     continue
                 entry_page_id = entry.get('id')
-                    for event in entry['messaging']:
-                        if event.get('message', {}).get('is_echo'):
-                            continue
+                for event in entry['messaging']:
+                    if event.get('message', {}).get('is_echo'):
+                        continue
                     message_payload = event.get('message', {})
                     message_text = message_payload.get('text')
                     if not message_text:
                         continue
-                        sender_id = event['sender']['id']
+                    sender_id = event['sender']['id']
                     recipient_id = event.get('recipient', {}).get('id')
-                                print(f"📨 Received a message from {sender_id}: {message_text}")
+                    print(f"📨 Received a message from {sender_id}: {message_text}")
                     incoming_by_sender.setdefault(sender_id, []).append({
                         "text": message_text,
                         "timestamp": event.get('timestamp', 0),
@@ -1833,10 +1828,10 @@ def webhook():
             print(f"🎯 Message batch targeted Instagram account: {recipient_id}")
             print(f"📄 Page ID from entry: {entry_page_id}")
 
-                                instagram_connection = None
-                                if recipient_id:
-                                    print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
-                                    instagram_connection = get_instagram_connection_by_id(recipient_id)
+            instagram_connection = None
+            if recipient_id:
+                print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
+                instagram_connection = get_instagram_connection_by_id(recipient_id)
                 if instagram_connection:
                     print("✅ Found connection by Instagram User ID!")
                 else:
@@ -1849,8 +1844,8 @@ def webhook():
                     print("✅ Found connection by Page ID!")
                 else:
                     print(f"❌ No connection found with Page ID: {entry_page_id}")
-                                
-                                if not instagram_connection:
+
+            if not instagram_connection:
                 print(f"❌ No Instagram connection found for account {recipient_id} or page {entry_page_id}")
                 print("💡 This might be the original Chata account or an unregistered account")
                 if recipient_id == Config.INSTAGRAM_USER_ID:
@@ -1858,49 +1853,49 @@ def webhook():
                     access_token = Config.ACCESS_TOKEN
                     instagram_user_id = Config.INSTAGRAM_USER_ID
                     connection_id = None
-                                    else:
+                else:
                     print(f"❌ Unknown Instagram account {recipient_id} - skipping message batch")
-                                        continue
-                                else:
-                                    print(f"✅ Found Instagram connection: {instagram_connection}")
-                                    access_token = instagram_connection['page_access_token']
-                                    instagram_user_id = instagram_connection['instagram_user_id']
-                                    connection_id = instagram_connection['id']
+                    continue
+            else:
+                print(f"✅ Found Instagram connection: {instagram_connection}")
+                access_token = instagram_connection['page_access_token']
+                instagram_user_id = instagram_connection['instagram_user_id']
+                connection_id = instagram_connection['id']
 
             handler_start = time.time()
-                                
+
             for event in events:
                 save_message(sender_id, event["text"], "")
             print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
 
-                                history = get_last_messages(sender_id, n=35)
-                                print(f"📚 History for {sender_id}: {len(history)} messages")
+            history = get_last_messages(sender_id, n=35)
+            print(f"📚 History for {sender_id}: {len(history)} messages")
 
             ai_start = time.time()
-                                reply_text = get_ai_reply_with_connection(history, connection_id)
+            reply_text = get_ai_reply_with_connection(history, connection_id)
             ai_duration = time.time() - ai_start
             print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
-                                print(f"🤖 AI generated reply: {reply_text[:50]}...")
+            print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                                save_message(sender_id, "", reply_text)
-                                print(f"✅ Saved bot response for {sender_id}")
+            save_message(sender_id, "", reply_text)
+            print(f"✅ Saved bot response for {sender_id}")
 
             page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
             url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
-                                payload = {
-                                    "recipient": {"id": sender_id},
-                                    "message": {"text": reply_text}
-                                }
+            payload = {
+                "recipient": {"id": sender_id},
+                "message": {"text": reply_text}
+            }
 
             send_start = time.time()
             r = requests.post(url, json=payload, timeout=45)
             send_duration = time.time() - send_start
             print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
-                                if r.status_code != 200:
-                                    print(f"❌ Error sending reply: {r.text}")
-                                else:
-                                    print(f"✅ Reply sent successfully to {sender_id}")
-                                    
+            if r.status_code != 200:
+                print(f"❌ Error sending reply: {r.text}")
+            else:
+                print(f"✅ Reply sent successfully to {sender_id}")
+
             total_duration = time.time() - handler_start
             print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
 
@@ -1915,13 +1910,13 @@ def admin_prompt():
     if flask_request.method == "POST":
         set_setting("bot_personality", flask_request.form.get("bot_personality", ""))
         set_setting("temperature", flask_request.form.get("temperature", "0.7"))
-        max_tokens_input = normalize_max_tokens(flask_request.form.get("max_tokens", "2000"))
+        max_tokens_input = normalize_max_tokens(flask_request.form.get("max_tokens", "3000"))
         set_setting("max_tokens", str(max_tokens_input))
         message = "Bot settings updated successfully!"
 
     current_prompt = get_setting("bot_personality", "")
     current_temperature = get_setting("temperature", "0.7")
-    current_max_tokens = str(normalize_max_tokens(get_setting("max_tokens", "2000")))
+    current_max_tokens = str(normalize_max_tokens(get_setting("max_tokens", "3000")))
 
     return render_template_string("""
         <!doctype html>
