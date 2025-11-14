@@ -400,21 +400,6 @@
       transform: translateY(-2px);
     }
 
-    .special-conversation-groups {
-      margin-top: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .special-group h3 {
-      margin: 0 0 1rem;
-      font-size: 1rem;
-      letter-spacing: 0.24em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.75);
-    }
-
     .fan-message span {
       font-size: 0.7rem;
       text-transform: uppercase;
@@ -433,6 +418,30 @@
 
     .conversation-input {
       min-height: 110px;
+    }
+
+    /* Scrollbar styling for textareas */
+    textarea::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    textarea::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    textarea::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    textarea::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Firefox scrollbar */
+    textarea {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     }
 
     .item-collection {
@@ -736,36 +745,11 @@
                   <span>Follower</span>
                   <p>{{ template.fan_message }}</p>
                 </div>
-                <textarea id="sample_reply_{{ template.key }}" name="sample_reply_{{ template.key }}" class="auto-resize conversation-input" rows="3" maxlength="480" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
-                <div class="char-counter" data-for="sample_reply_{{ template.key }}">{{ sample_value|length }}/480</div>
+                <textarea id="sample_reply_{{ template.key }}" name="sample_reply_{{ template.key }}" class="auto-resize conversation-input" rows="3" maxlength="200" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
+                <div class="char-counter" data-for="sample_reply_{{ template.key }}">{{ sample_value|length }}/200</div>
               </div>
             {% endfor %}
           </div>
-          {% if special_conversation_groups %}
-            <div class="special-conversation-groups">
-              {% for group in special_conversation_groups %}
-                <div class="special-group">
-                  <h3>{{ group.title }}</h3>
-                  <div class="conversation-grid">
-                    {% for prompt in group.prompts %}
-                      {% set sample_value = '' %}
-                      {% if settings and settings.conversation_samples and prompt.key in settings.conversation_samples %}
-                        {% set sample_value = settings.conversation_samples[prompt.key] %}
-                      {% endif %}
-                      <div class="conversation-card">
-                        <div class="fan-message">
-                          <span>{{ group.title }}</span>
-                          <p>{{ prompt.fan_message }}</p>
-                        </div>
-                        <textarea id="sample_reply_{{ prompt.key }}" name="sample_reply_{{ prompt.key }}" class="auto-resize conversation-input" rows="3" maxlength="480" placeholder="Keep replies true to your tone for this situation.">{{ sample_value }}</textarea>
-                        <div class="char-counter" data-for="sample_reply_{{ prompt.key }}">{{ sample_value|length }}/480</div>
-                      </div>
-                    {% endfor %}
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% endif %}
         </section>
 
         <section class="section-card">

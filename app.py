@@ -67,59 +67,11 @@ CONVERSATION_TEMPLATES = [
     {"key": "hope_good_today", "fan_message": "hope you’re doing good today"}
 ]
 
-SPECIAL_CONVERSATION_GROUPS = [
-    {
-        "key": "emotional_support",
-        "title": "Emotional Support",
-        "prompts": [
-            {"key": "emotional_support_heavy_day", "fan_message": "today was kinda heavy for me, your posts helped more than you know"},
-            {"key": "emotional_support_feel_better", "fan_message": "idk why but your content always makes me feel a bit better"},
-        ],
-    },
-    {
-        "key": "hype_fan",
-        "title": "Hype / Fan",
-        "prompts": [
-            {"key": "hype_fan_insanely_good", "fan_message": "bro your stuff is insanely good, keep going"},
-            {"key": "hype_fan_makes_my_day", "fan_message": "every time you post it makes my day tbh"},
-        ],
-    },
-    {
-        "key": "curious_follower",
-        "title": "Curious Follower",
-        "prompts": [
-            {"key": "curious_follower_get_into", "fan_message": "how did you first get into all this"},
-            {"key": "curious_follower_usual_day", "fan_message": "what does your usual day look like"},
-        ],
-    },
-    {
-        "key": "boundary_testing",
-        "title": "Boundary Testing",
-        "prompts": [
-            {"key": "boundary_testing_personal", "fan_message": "can you send something personal for me real quick"},
-            {"key": "boundary_testing_shoutout", "fan_message": "could you shout out my page"},
-        ],
-    },
-    {
-        "key": "business_like",
-        "title": "Business-like",
-        "prompts": [
-            {"key": "business_like_work_with_brands", "fan_message": "do you work with brands or do promos"},
-            {"key": "business_like_best_way_reach", "fan_message": "what’s the best way to reach you for a project"},
-        ],
-    },
-]
-
 CONVERSATION_TEMPLATE_LOOKUP = {
     item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES
 }
-for group in SPECIAL_CONVERSATION_GROUPS:
-    for prompt in group["prompts"]:
-        CONVERSATION_TEMPLATE_LOOKUP[prompt["key"]] = prompt["fan_message"]
 
-ALL_CONVERSATION_PROMPTS = CONVERSATION_TEMPLATES + [
-    prompt for group in SPECIAL_CONVERSATION_GROUPS for prompt in group["prompts"]
-]
+ALL_CONVERSATION_PROMPTS = CONVERSATION_TEMPLATES
 
 MODEL_CONFIG = {
     "gpt-5-nano": {
@@ -1097,7 +1049,6 @@ def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
     conversation_templates = CONVERSATION_TEMPLATES
-    special_conversation_groups = SPECIAL_CONVERSATION_GROUPS
     
     if request.method == "POST":
         form_connection_id = request.form.get('connection_id')
@@ -1138,7 +1089,6 @@ def bot_settings():
             selected_connection_id=None,
             selected_connection=None,
             conversation_templates=conversation_templates,
-            special_conversation_groups=special_conversation_groups,
         )
 
     if connection_id is None:
@@ -1168,12 +1118,6 @@ def bot_settings():
             reply_value = reply_value.strip()
             if reply_value:
                 conversation_samples[template['key']] = reply_value
-        for group in special_conversation_groups:
-            for prompt in group["prompts"]:
-                reply_value = request.form.get(f"sample_reply_{prompt['key']}", "")
-                reply_value = reply_value.strip()
-                if reply_value:
-                    conversation_samples[prompt['key']] = reply_value
 
         settings = {
             'bot_personality': request.form.get('bot_personality', '').strip(),
@@ -1203,7 +1147,6 @@ def bot_settings():
         selected_connection_id=connection_id,
         selected_connection=selected_connection,
         conversation_templates=conversation_templates,
-        special_conversation_groups=special_conversation_groups,
     )
 
 @app.route("/dashboard/account-settings", methods=["GET", "POST"])
