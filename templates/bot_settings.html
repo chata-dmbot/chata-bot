@@ -3,45 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot Settings - CHATA</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Bot Settings - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
-  <style>
-    :root {
-      --chata-blue: #3366ff;
-      --chata-blue-light: #4d7cff;
-      --chata-blue-dark: #1a4dcc;
+    <style>
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
       --glass-border: rgba(255, 255, 255, 0.08);
       --glass-bg: rgba(15, 20, 35, 0.55);
       --glass-bg-strong: rgba(18, 25, 46, 0.75);
-    }
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
+        body {
       margin: 0;
-      font-family: 'Inter', sans-serif;
+            font-family: 'Inter', sans-serif;
       background: #000;
       color: #fff;
-      min-height: 100vh;
+            min-height: 100vh;
       letter-spacing: 0.06em;
       overflow-x: hidden;
-      position: relative;
-    }
+            position: relative;
+        }
 
-    body::before {
-      content: '';
-      position: fixed;
+        body::before {
+            content: '';
+            position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.12);
       backdrop-filter: blur(2px);
-      z-index: 1;
-      pointer-events: none;
-    }
+            z-index: 1;
+            pointer-events: none;
+        }
 
     a {
       color: inherit;
@@ -53,7 +53,7 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: 100%;
+      height: 600%;
       z-index: -1;
       background: #000;
       background-image:
@@ -65,17 +65,17 @@
       pointer-events: none;
     }
 
-    .grid-cell {
-      position: absolute;
-      width: 50px;
-      height: 50px;
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
       border: 1px solid rgba(51, 102, 255, 0.08);
       transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease, transform 0.6s ease;
-      background: transparent;
+            background: transparent;
       pointer-events: none;
-    }
-
-    .grid-cell.active {
+        }
+        
+        .grid-cell.active {
       background: rgba(51, 102, 255, 0.15);
       border-color: rgba(51, 102, 255, 0.45);
       box-shadow: 0 0 25px rgba(51, 102, 255, 0.4);
@@ -95,12 +95,12 @@
 
     .nav-container {
       max-width: 1200px;
-      margin: 0 auto;
+             margin: 0 auto;
       padding: 0 1.5rem;
       height: 72px;
       display: flex;
       align-items: center;
-      position: relative;
+             position: relative;
     }
 
     .logo {
@@ -114,9 +114,9 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      display: flex;
+            display: flex;
       align-items: center;
-      gap: 2rem;
+            gap: 2rem;
       font-size: 0.85rem;
       letter-spacing: 0.18em;
     }
@@ -149,7 +149,7 @@
     .nav-actions {
       position: absolute;
       right: 1.5rem;
-      display: flex;
+            display: flex;
       gap: 1rem;
       font-size: 0.85rem;
       letter-spacing: 0.18em;
@@ -218,12 +218,16 @@
       font-size: 0.85rem;
       letter-spacing: 0.12em;
       text-transform: none;
+      position: relative;
+      z-index: 20;
     }
 
     .alert-success {
       background: rgba(51, 102, 255, 0.08);
       border-color: rgba(51, 102, 255, 0.4);
       color: #cdd9ff;
+      position: relative;
+      z-index: 20;
     }
 
     .alert-error,
@@ -231,6 +235,8 @@
       background: rgba(255, 107, 107, 0.08);
       border-color: rgba(255, 107, 107, 0.35);
       color: #ffd6d6;
+      position: relative;
+      z-index: 20;
     }
 
     .connection-banner {
@@ -240,7 +246,7 @@
       background: var(--glass-bg-strong);
       border: 1px solid var(--glass-border);
       backdrop-filter: blur(18px);
-      display: flex;
+            display: flex;
       flex-wrap: wrap;
       gap: 1.5rem;
       align-items: center;
@@ -261,8 +267,8 @@
     }
 
     .settings-form {
-      display: flex;
-      flex-direction: column;
+            display: flex;
+            flex-direction: column;
       gap: 1.75rem;
     }
 
@@ -289,21 +295,21 @@
 
     .section-header p {
       margin: 0;
-      font-size: 0.9rem;
+            font-size: 0.9rem;
       letter-spacing: 0.08em;
       color: rgba(255, 255, 255, 0.65);
       text-transform: none;
     }
 
     .form-grid {
-      display: grid;
+            display: grid;
       gap: 1.25rem 1.5rem;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     .form-group {
-      display: flex;
-      flex-direction: column;
+            display: flex;
+            flex-direction: column;
       gap: 0.45rem;
       text-transform: none;
       letter-spacing: 0.05em;
@@ -368,8 +374,8 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(10, 15, 32, 0.7);
       padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
+            display: flex;
+            flex-direction: column;
       gap: 0.85rem;
       box-shadow: inset 0 0 0 rgba(0,0,0,0);
       transition: border-color 0.3s ease, transform 0.3s ease;
@@ -377,10 +383,10 @@
 
     .conversation-card textarea {
       width: 100%;
-      border-radius: 12px;
+            border-radius: 12px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(255, 255, 255, 0.05);
-      color: #fff;
+            color: #fff;
       padding: 0.9rem 1rem;
       font-size: 0.92rem;
       letter-spacing: 0.05em;
@@ -426,7 +432,7 @@
     }
 
     textarea::-webkit-scrollbar-track {
-      background: transparent;
+             background: transparent;
     }
 
     textarea::-webkit-scrollbar-thumb {
@@ -445,8 +451,8 @@
     }
 
     .item-collection {
-      display: flex;
-      flex-direction: column;
+             display: flex;
+             flex-direction: column;
       gap: 1rem;
     }
 
@@ -456,14 +462,14 @@
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       align-items: start;
       padding: 1rem;
-      border-radius: 16px;
+            border-radius: 16px;
       background: rgba(6, 12, 26, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      position: relative;
-    }
+            position: relative;
+        }
 
     .remove-row-btn {
-      position: absolute;
+            position: absolute;
       top: 0.75rem;
       right: 0.75rem;
       width: 36px;
@@ -486,7 +492,7 @@
     .btn-secondary,
     .btn-ghost {
       display: inline-flex;
-      align-items: center;
+            align-items: center;
       gap: 0.6rem;
       border-radius: 999px;
       padding: 0.9rem 1.8rem;
@@ -495,13 +501,13 @@
       font-size: 0.8rem;
       font-weight: 600;
       letter-spacing: 0.24em;
-      text-transform: uppercase;
+            text-transform: uppercase;
       transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-      color: #fff;
+             color: #fff;
       box-shadow: 0 16px 35px rgba(51, 102, 255, 0.34);
     }
 
@@ -531,14 +537,14 @@
     }
 
     .btn-ghost:hover {
-      background: rgba(51, 102, 255, 0.2);
+            background: rgba(51, 102, 255, 0.2);
       border-style: solid;
     }
 
-    .action-buttons {
-      display: flex;
+        .action-buttons {
+            display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
+            gap: 1rem;
       justify-content: flex-end;
       margin-top: 1rem;
     }
@@ -564,11 +570,11 @@
     .empty-state p {
       margin: 0 0 1.5rem;
       color: rgba(255, 255, 255, 0.6);
-      font-size: 0.9rem;
-    }
+            font-size: 0.9rem;
+        }
 
     .empty-state a {
-      display: inline-block;
+            display: inline-block;
       padding: 0.85rem 1.7rem;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.16);
@@ -582,8 +588,8 @@
 
     .empty-state a:hover {
       background: rgba(255, 255, 255, 0.14);
-      transform: translateY(-2px);
-    }
+            transform: translateY(-2px);
+        }
 
     @media (max-width: 960px) {
       .nav-links {
@@ -610,7 +616,7 @@
         padding-top: 120px;
       }
 
-      .bot-settings-hero h1 {
+            .bot-settings-hero h1 {
         font-size: 2.2rem;
         letter-spacing: 0.28em;
       }
@@ -622,23 +628,23 @@
       }
 
       .item-row {
-        grid-template-columns: 1fr;
+                grid-template-columns: 1fr;
         padding-right: 3rem;
       }
 
       .remove-row-btn {
         top: 0.6rem;
         right: 0.6rem;
-      }
+            }
 
-      .action-buttons {
+            .action-buttons {
         justify-content: center;
-      }
-    }
-  </style>
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="interactive-grid" id="interactiveGrid"></div>
+    <div class="interactive-grid" id="interactiveGrid"></div>
 
   <nav>
     <div class="nav-container">
@@ -646,49 +652,41 @@
       <div class="nav-links">
         <a href="{{ url_for('dashboard') }}">DASHBOARD</a>
         <a href="{{ url_for('home') }}">HOME</a>
-      </div>
+                </div>
       <div class="nav-actions">
         <a href="{{ url_for('account_settings') }}">SETTINGS</a>
         <a href="{{ url_for('logout') }}" class="logout">LOGOUT</a>
-      </div>
-    </div>
-  </nav>
+            </div>
+        </div>
+    </nav>
 
-  <section class="bot-settings-hero">
-    <div>
-      <h1>Bot Settings</h1>
+    <section class="bot-settings-hero">
+        <div>
+            <h1>Bot Settings</h1>
       <p>Give the bot your personality, your go-to lines, and the replies your fans expect.</p>
-    </div>
-  </section>
+        </div>
+    </section>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ 'error' if category in ['error', 'danger', 'warning'] else category }}">
-          {{ message }}
-        </div>
-      {% endfor %}
+      <div class="bot-settings-content" style="z-index: 20; position: relative;">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'error' if category in ['error', 'danger', 'warning'] else category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
     {% endif %}
   {% endwith %}
 
-  <main class="bot-settings-content">
+     <main class="bot-settings-content">
     {% if not connections %}
       <div class="empty-state">
         <h2>NO INSTAGRAM CONNECTION</h2>
         <p>Hook up your Instagram account first so we know who we're mimicking.</p>
         <a href="{{ url_for('dashboard') }}">GO TO DASHBOARD</a>
-      </div>
+                            </div>
     {% else %}
-      {% if selected_connection %}
-        <div class="connection-banner">
-          <strong>Currently Editing</strong>
-          <span>Instagram User ID: {{ selected_connection.instagram_user_id }}</span>
-          <span>Page ID: {{ selected_connection.instagram_page_id }}</span>
-          {% if not selected_connection.is_active %}
-            <span>Status: Inactive</span>
-          {% endif %}
-        </div>
-      {% endif %}
       <form id="botSettingsForm" method="POST" class="settings-form">
         <input type="hidden" name="connection_id" value="{{ selected_connection_id }}">
 
@@ -696,44 +694,44 @@
           <div class="section-header">
             <h2>Essentials</h2>
             <p>Baseline details your bot will casually reuse in conversation.</p>
-          </div>
+                            </div>
           <div class="form-grid">
-            <div class="form-group">
+                             <div class="form-group">
               <label for="bot_name">Name</label>
               <input type="text" id="bot_name" name="bot_name" placeholder="What do people call you?" value="{{ settings.bot_name if settings else '' }}">
-            </div>
-            <div class="form-group">
+                             </div>
+                             <div class="form-group">
               <label for="bot_age">Age</label>
               <input type="text" id="bot_age" name="bot_age" placeholder="Optional, keep it human." value="{{ settings.bot_age if settings else '' }}">
-            </div>
-            <div class="form-group">
+                             </div>
+                             <div class="form-group">
               <label for="bot_location">Location</label>
               <input type="text" id="bot_location" name="bot_location" placeholder="Where are you based?" value="{{ settings.bot_location if settings else '' }}">
-            </div>
-            <div class="form-group">
+                             </div>
+                             <div class="form-group">
               <label for="bot_occupation">What you do</label>
               <input type="text" id="bot_occupation" name="bot_occupation" placeholder="Creator, coach, artist, founder..." value="{{ settings.bot_occupation if settings else '' }}">
-            </div>
-          </div>
+                             </div>
+                             </div>
         </section>
 
         <section class="section-card">
           <div class="section-header">
             <h2>About Me</h2>
             <p>Write this the way you'd actually describe yourself. 1000 characters max.</p>
-          </div>
-          <div class="form-group">
+                                     </div>
+                             <div class="form-group">
             <label for="bot_personality">Bio / vibe</label>
             <textarea id="bot_personality" name="bot_personality" class="auto-resize" rows="4" maxlength="1000" placeholder="Let the bot know the story, the vibe, the energy it should keep.">{{ settings.bot_personality if settings and settings.bot_personality else '' }}</textarea>
             <div class="char-counter" data-for="bot_personality">{{ settings.bot_personality|length if settings and settings.bot_personality else 0 }}/1000</div>
-          </div>
+                             </div>
         </section>
 
         <section class="section-card">
           <div class="section-header">
             <h2>Conversation Samples</h2>
             <p>Answer like you're in your DMs. Short, natural, same slang, same energy.</p>
-          </div>
+                                     </div>
           <div class="conversation-grid">
             {% for template in conversation_templates %}
               {% set sample_value = '' %}
@@ -744,52 +742,52 @@
                 <div class="fan-message">
                   <span>Follower</span>
                   <p>{{ template.fan_message }}</p>
-                </div>
+                                 </div>
                 <textarea id="sample_reply_{{ template.key }}" name="sample_reply_{{ template.key }}" class="auto-resize conversation-input" rows="3" maxlength="200" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
                 <div class="char-counter" data-for="sample_reply_{{ template.key }}">{{ sample_value|length }}/200</div>
-              </div>
+                             </div>
             {% endfor %}
-          </div>
+                         </div>
         </section>
 
         <section class="section-card">
           <div class="section-header">
             <h2>Promotional Links</h2>
             <p>Drop anything the bot can plug when people ask (store, booking link, etc.).</p>
-          </div>
+                             </div>
           <div id="links-list" class="item-collection">
             {% if settings and settings.links and settings.links|length > 0 %}
               {% for link in settings.links %}
                 <div class="link-item item-row">
-                  <div class="form-group">
+                             <div class="form-group">
                     <label>Link title</label>
                     <input type="text" name="link_titles[]" placeholder="Store, newsletter, booking..." value="{{ link.title or '' }}">
-                  </div>
-                  <div class="form-group">
+                             </div>
+                             <div class="form-group">
                     <label>URL</label>
                     <input type="url" name="link_urls[]" placeholder="https://..." value="{{ link.url or '' }}">
-                  </div>
+                             </div>
                   <button type="button" class="remove-row-btn" data-action="remove-link">
                     <i class="fas fa-times"></i>
-                  </button>
-                </div>
-              {% endfor %}
-            {% else %}
+                                         </button>
+                                     </div>
+                                     {% endfor %}
+                                 {% else %}
               <div class="link-item item-row">
-                <div class="form-group">
+                                     <div class="form-group">
                   <label>Link title</label>
                   <input type="text" name="link_titles[]" placeholder="Store, newsletter, booking...">
-                </div>
-                <div class="form-group">
+                                     </div>
+                                     <div class="form-group">
                   <label>URL</label>
                   <input type="url" name="link_urls[]" placeholder="https://...">
-                </div>
+                                     </div>
                 <button type="button" class="remove-row-btn" data-action="remove-link">
                   <i class="fas fa-times"></i>
                 </button>
-              </div>
-            {% endif %}
-          </div>
+                                 </div>
+                                 {% endif %}
+                             </div>
           <button type="button" id="add-link-btn" class="btn-ghost">+ Add Link</button>
         </section>
 
@@ -798,35 +796,35 @@
             <h2>Content Highlights</h2>
             <p>Give the bot context on what you post so it can reference it naturally.</p>
           </div>
-          <div class="form-group">
+                             <div class="form-group">
             <label for="instagram_url">Instagram profile link</label>
             <input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/username" value="{{ settings.instagram_url if settings else '' }}">
-          </div>
+                             </div>
           <div id="posts-list" class="item-collection">
             {% if settings and settings.posts and settings.posts|length > 0 %}
-              {% for post in settings.posts %}
+                                     {% for post in settings.posts %}
                 <div class="post-item item-row">
-                  <div class="form-group">
+                                         <div class="form-group">
                     <label>Post description</label>
                     <textarea name="post_descriptions[]" class="auto-resize" rows="2" maxlength="400" placeholder="How you'd describe the post.">{{ post.description or '' }}</textarea>
-                  </div>
+                                         </div>
                   <button type="button" class="remove-row-btn" data-action="remove-post">
                     <i class="fas fa-times"></i>
                   </button>
-                </div>
-              {% endfor %}
-            {% else %}
+                                     </div>
+                                     {% endfor %}
+                                 {% else %}
               <div class="post-item item-row">
-                <div class="form-group">
+                                     <div class="form-group">
                   <label>Post description</label>
                   <textarea name="post_descriptions[]" class="auto-resize" rows="2" maxlength="400" placeholder="How you'd describe the post."></textarea>
-                </div>
+                                     </div>
                 <button type="button" class="remove-row-btn" data-action="remove-post">
                   <i class="fas fa-times"></i>
                 </button>
-              </div>
-            {% endif %}
-          </div>
+                                 </div>
+                                 {% endif %}
+                             </div>
           <button type="button" id="add-post-btn" class="btn-ghost">+ Add Post</button>
         </section>
 
@@ -834,29 +832,29 @@
           <div class="section-header">
             <h2>Topics To Avoid</h2>
             <p>Hard no's, sensitive subjects, anything the bot should steer away from.</p>
-          </div>
-          <div class="form-group">
+                             </div>
+                            <div class="form-group">
             <label for="avoid_topics">Keep away from...</label>
             <textarea id="avoid_topics" name="avoid_topics" class="auto-resize" rows="3" maxlength="500" placeholder="e.g. politics, pricing unless they ask, personal family details, NDAs">{{ settings.avoid_topics if settings and settings.avoid_topics else '' }}</textarea>
             <div class="char-counter" data-for="avoid_topics">{{ settings.avoid_topics|length if settings and settings.avoid_topics else 0 }}/500</div>
-          </div>
+                            </div>
         </section>
 
-        <div class="action-buttons">
-          <button type="submit" class="btn-primary">
+            <div class="action-buttons">
+                <button type="submit" class="btn-primary">
             <i class="fas fa-save"></i>
             Save Settings
-          </button>
+                </button>
           <button type="button" class="btn-secondary" onclick="resetSettings()">
             <i class="fas fa-undo"></i>
             Reset Form
-          </button>
-        </div>
-      </form>
+                </button>
+            </div>
+        </form>
     {% endif %}
-  </main>
+    </main>
 
-  <script>
+    <script>
     (function () {
       const GRID_ID = 'interactiveGrid';
       const GRID_SIZE = 50;
@@ -870,41 +868,41 @@
         const grid = document.getElementById(GRID_ID);
         if (!grid) return;
         const cols = Math.ceil(window.innerWidth / GRID_SIZE) + 2;
-        const rows = Math.ceil(window.innerHeight * 6 / GRID_SIZE);
-        grid.innerHTML = '';
+        const rows = Math.ceil(window.innerHeight * 6 / GRID_SIZE); // 6x height for extended page coverage (matches 600% CSS height)
+            grid.innerHTML = '';
         cellTimeouts.clear();
-
+            
         for (let row = 0; row < rows; row++) {
           for (let col = 0; col < cols; col++) {
-            const cell = document.createElement('div');
-            cell.className = 'grid-cell';
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
             cell.style.left = `${(col - 1) * GRID_SIZE}px`;
             cell.style.top = `${(row - 1) * GRID_SIZE}px`;
-            grid.appendChild(cell);
-          }
-        }
+                    grid.appendChild(cell);
+                }
+            }
 
         gridEl = grid;
-      }
-
-      function updateGridOnScroll() {
+        }
+        
+        function updateGridOnScroll() {
         if (!gridEl) return;
-        if (!ticking) {
+            if (!ticking) {
           requestAnimationFrame(() => {
             const scrollY = window.pageYOffset || window.scrollY || 0;
             gridEl.style.transform = `translateY(-${scrollY * 0.6}px)`;
-            ticking = false;
-          });
-          ticking = true;
+                    ticking = false;
+                });
+                ticking = true;
+            }
         }
-      }
-
+        
       document.addEventListener('mousemove', event => {
         mouseX = event.clientX;
         mouseY = event.clientY;
       });
 
-      function updateGridLighting() {
+        function updateGridLighting() {
         if (!gridEl) {
           gridEl = document.getElementById(GRID_ID);
           if (!gridEl) {
@@ -914,34 +912,34 @@
         }
 
         const cells = gridEl.querySelectorAll('.grid-cell');
-        cells.forEach(cell => {
-          const rect = cell.getBoundingClientRect();
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
           const isMouseOver =
             mouseX >= rect.left &&
-            mouseX < rect.right &&
-            mouseY >= rect.top &&
-            mouseY < rect.bottom;
-
-          if (isMouseOver) {
-            if (cellTimeouts.has(cell)) {
-              clearTimeout(cellTimeouts.get(cell));
-              cellTimeouts.delete(cell);
-            }
-
-            cell.classList.add('active');
-            const timeoutId = setTimeout(() => {
-              cell.classList.remove('active');
-              cellTimeouts.delete(cell);
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    cell.classList.add('active');
+                    const timeoutId = setTimeout(() => {
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
             }, 1200);
-
-            cellTimeouts.set(cell, timeoutId);
-          }
-        });
-
+                    
+                    cellTimeouts.set(cell, timeoutId);
+                }
+            });
+            
         requestAnimationFrame(updateGridLighting);
-      }
-
-      function createAmbientLighting() {
+        }
+        
+        function createAmbientLighting() {
         function lightRandomCell() {
           if (!gridEl) return;
           const cells = gridEl.querySelectorAll('.grid-cell');
@@ -1029,8 +1027,8 @@
           if (!item) return;
           if (list.children.length === 1) {
             item.querySelectorAll('input').forEach(input => (input.value = ''));
-            return;
-          }
+                         return;
+                     }
           item.remove();
         });
       }
@@ -1069,8 +1067,8 @@
               autoResize(textarea);
               attachCounters();
             }
-            return;
-          }
+                         return;
+                     }
           item.remove();
         });
       }
@@ -1108,6 +1106,6 @@
 
       window.addEventListener('scroll', updateGridOnScroll, { passive: true });
     })();
-  </script>
+    </script>
 </body>
 </html>

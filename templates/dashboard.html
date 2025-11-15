@@ -109,7 +109,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 600%;
             z-index: -1;
             background: #000000;
             background-image: 
@@ -433,12 +433,16 @@
             border-radius: 10px;
             margin: 1rem 0;
             text-align: center;
+            position: relative;
+            z-index: 20;
         }
 
         .alert-success {
             background: rgba(34, 197, 94, 0.1);
             border-color: rgba(34, 197, 94, 0.3);
             color: #22c55e;
+            position: relative;
+            z-index: 20;
         }
 
         /* Animations */
@@ -533,11 +537,13 @@
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
+            <div class="dashboard-content" style="z-index: 20; position: relative;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
     {% endwith %}
 
@@ -642,7 +648,7 @@
             const grid = document.getElementById('interactiveGrid');
             const gridSize = 50;
             const cols = Math.ceil(window.innerWidth / gridSize);
-            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage (matches 600% CSS height)
             
             // Clear existing grid
             grid.innerHTML = '';
