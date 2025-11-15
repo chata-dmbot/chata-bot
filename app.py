@@ -1535,6 +1535,15 @@ def get_ai_reply_with_connection(history, connection_id=None):
     try:
         client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
 
+        # Extract latest message from follower
+        latest_message = ""
+        if history and len(history) > 0:
+            # Get the last user message
+            for msg in reversed(history):
+                if msg.get('role') == 'user':
+                    latest_message = msg.get('content', '').strip()
+                    break
+
         # Get settings for this specific connection
         if connection_id:
             # Get user_id from connection
@@ -1548,12 +1557,13 @@ def get_ai_reply_with_connection(history, connection_id=None):
             if result:
                 user_id = result[0]
                 settings = get_client_settings(user_id, connection_id)
-                system_prompt = build_personality_prompt(settings)
+                system_prompt = build_personality_prompt(settings, history=history, latest_message=latest_message)
                 temperature = settings['temperature']
                 max_tokens = normalize_max_tokens(settings.get('max_tokens', 3000))
                 print(f"🎯 Using connection-specific settings for connection {connection_id}")
                 print(f"📝 Prompt length: {len(system_prompt)} chars")
                 print(f"🌡️  Temperature: {temperature}, Max tokens: {max_tokens}")
+                print(f"💬 Latest message: {latest_message[:50]}...")
             else:
                 # Fallback to global settings
                 print(f"⚠️ Connection {connection_id} not found, using neutral persona fallback")
@@ -1561,7 +1571,7 @@ def get_ai_reply_with_connection(history, connection_id=None):
                     'bot_name': '',
                     'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
                 }
-                system_prompt = build_personality_prompt(fallback_settings)
+                system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
                 temperature = 0.7
                 max_tokens = 3000
         else:
@@ -1571,12 +1581,12 @@ def get_ai_reply_with_connection(history, connection_id=None):
                 'bot_name': '',
                 'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
             }
-            system_prompt = build_personality_prompt(fallback_settings)
+            system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
             temperature = 0.7
             max_tokens = 3000
 
+        # Since everything is now in the system prompt, we only send the system message
         messages = [{"role": "system", "content": system_prompt}]
-        messages += history
 
         model_name = "gpt-5-nano"
         model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
@@ -1621,11 +1631,10 @@ def get_ai_reply_with_connection(history, connection_id=None):
         return "Sorry, I'm having trouble replying right now."
 
 
-def build_personality_prompt(settings):
+def build_personality_prompt(settings, history=None, latest_message=None):
     """
-    Build the system prompt using the latest structured format provided by the user.
+    Build the system prompt using the new structured format.
     """
-
     def clean(value):
         if not value:
             return ""
@@ -1633,35 +1642,43 @@ def build_personality_prompt(settings):
             return "Yes" if value else "No"
         return str(value).strip()
 
-    name = clean(settings.get('bot_name'))
-    age = clean(settings.get('bot_age'))
-    location = clean(settings.get('bot_location'))
-    occupation = clean(settings.get('bot_occupation'))
-    about = clean(settings.get('bot_personality'))
-    avoid_topics = clean(settings.get('avoid_topics'))
+    name = clean(settings.get('bot_name')) or "you"
+    age = clean(settings.get('bot_age')) or ""
+    location = clean(settings.get('bot_location')) or ""
+    occupation = clean(settings.get('bot_occupation')) or ""
+    about = clean(settings.get('bot_personality')) or ""
+    avoid_topics = clean(settings.get('avoid_topics')) or ""
 
+    # Build promo links
     promo_links = []
     for link in settings.get('links') or []:
         url = clean(link.get('url'))
         title = clean(link.get('title'))
         if url:
             promo_links.append(f"{title}: {url}" if title else url)
-    if not promo_links:
-        promo_links.append("None provided.")
+    promo_links_text = ", ".join(promo_links) if promo_links else "None provided."
 
+    # Build content highlights
     content_highlights = []
     posts = settings.get('posts') or []
     for idx, post in enumerate(posts, start=1):
         description = clean(post.get('description'))
         if description:
             content_highlights.append(f"{idx}. {description}")
-    if not content_highlights:
-        content_highlights.append("None provided.")
+    content_highlights_text = ", ".join(content_highlights) if content_highlights else "None provided."
 
-    dm_examples_lines = []
+    # Build post descriptions list
+    post_descriptions = []
+    for idx, post in enumerate(posts, start=1):
+        description = clean(post.get('description'))
+        if description:
+            post_descriptions.append(f"{{POST_DESCRIPTION_{idx}}}")
+    post_descriptions_text = ", ".join(post_descriptions) if post_descriptions else "None provided."
+
+    # Format conversation examples
+    example_conversations = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict):
-        # Process the new conversation examples structure
         for example in CONVERSATION_EXAMPLES:
             conversation_parts = []
             has_replies = False
@@ -1676,95 +1693,100 @@ def build_personality_prompt(settings):
                     conversation_parts.append(f'You: "{reply}"')
             
             if has_replies and conversation_parts:
-                # Format as a full conversation
                 conversation_text = '\n'.join(conversation_parts)
-                dm_examples_lines.append(conversation_text)
-                
-            if len(dm_examples_lines) >= 4:  # Limit to 4 conversations
-                break
+                example_conversations.append(conversation_text)
     
-    if not dm_examples_lines:
-        dm_examples_lines.append("No DM examples supplied.")
+    example_conversations_text = '\n\n'.join(example_conversations) if example_conversations else "No example conversations provided."
 
-    prompt = f"""IDENTITY
+    # Format recent chat (last 20 messages)
+    recent_chat_text = "No recent chat history."
+    if history and len(history) > 0:
+        # Get last 20 messages (10 from follower, 10 from bot ideally)
+        last_messages = history[-20:] if len(history) > 20 else history
+        chat_lines = []
+        for msg in last_messages:
+            role = msg.get('role', '')
+            content = msg.get('content', '').strip()
+            if content:
+                if role == 'user':
+                    chat_lines.append(f'Follower: "{content}"')
+                elif role == 'assistant':
+                    chat_lines.append(f'You: "{content}"')
+        recent_chat_text = '\n'.join(chat_lines) if chat_lines else "No recent chat history."
 
-You are {name}, a {age} year old {occupation} from {location}.
-Role-play this person authentically in every message.
-Speak only in first person.
-Never imply or mention anything automated.
+    # Format latest message
+    latest_message_text = latest_message if latest_message else ""
 
-PERSONA DETAILS
+    # Build the prompt using the new structure
+    prompt = f"""You are {{NAME}}, a {{AGE}} year old {{WHAT_YOU_DO}} from {{LOCATION}}.
 
-About me: {about}
-Avoid these topics: {avoid_topics}.
-If a follower brings them up, politely redirect in a way that matches your personality.
+About you: {{ABOUT}}.
 
-COMMUNICATION STYLE
+Stay fully in character. Never mention or imply anything automated.
 
-Match the follower's tone, pacing, casing, and warmth.
-Adapt to how they speak.
-If they use emojis, slang, abbreviations, formal writing, or casual flow, mirror it naturally.
-Reply in short, human-sized messages, usually one or two sentences unless the follower clearly invites a longer reply.
-Avoid sounding scripted, polished, or robotic.
-Never act like a guide, coach, or assistant. Do not offer help, advice, tips, explanations, or direction unless the follower directly asks for it.
-Do not proactively offer assistance or options. Only respond to what the follower explicitly expresses interest in.
+Follow these rules:
 
-PUNCTUATION RULES
+1. Stay in character at all times.
 
-Use only periods, commas, question marks, exclamation points, or ellipses.
-Never use em dashes or double hyphens.
-Avoid list formatting or anything that looks templated.
+2. Match the follower's tone, energy, slang, emojis, and length.
 
-REPLY SHAPE & FLOW
+3. Keep replies short and natural, usually one or two sentences.
 
-Choose your reply style based on what the follower sends: reaction, statement, or question.
-Do not default to a question after every message. Only ask questions when the follower invites them or when it naturally fits the conversation.
-Vary openings and closings so replies feel natural.
-Mix quick reactions with slightly longer thoughts depending on the follower's tone.
-Do not introduce new topics or continue the conversation if the follower is closing it. Match their tone and end the chat naturally.
-If the follower says thank you, says goodbye, or wraps up the topic, reply with a light, simple closing instead of adding new information.
+4. Do not act like an assistant. Only help or give tips if the follower asks.
 
-CONVERSATION MEMORY
+5. Let the follower lead. Do not force new topics or keep the chat going if they are closing it.
 
-You must stay consistent with recent messages.
-Build on what the follower said instead of repeating it.
-Do not contradict earlier context unless the persona would naturally correct themselves.
-Once you answer a follower's question or give an update, do not repeat the same information again in later replies.
+6. Avoid repeating information you already gave.
 
-REALISM GUIDELINES
+7. Small imperfections are fine if they feel natural. Do not overdo them.
 
-Write as if typing casually on a phone.
-Use natural rhythm and spontaneous phrasing.
-Small imperfections are allowed when they feel natural, such as a slightly shortened word, a mild filler, or an occasional soft typo.
-Do not overuse these.
-Let your personality and the follower's style guide your voice.
-Your replies do not need to be perfect or helpful. Allow small moments of casual randomness or simplicity, the way real people talk.
+8. Sound like a real person texting. No lists, no templates, no em dashes or double hyphens.
 
-CONTENT CONTEXT
+Avoid these topics: {{TOPICS_TO_AVOID}}.
 
-You can naturally reference your work using the following:
+If the follower brings them up, redirect gently in your own tone.
 
-promotional links: {", ".join(promo_links)}
+You can reference your content only when it fits naturally:
 
-content highlights: {", ".join(content_highlights)}
+- Promo links: {{PROMO_LINKS}}
 
-important posts: {", ".join(content_highlights)}
+- Content highlights: {{CONTENT_HIGHLIGHTS}}
 
-Use them only when relevant, never forcefully.
+- Posts: {{POST_DESCRIPTIONS}}
 
-DM BASELINE
+Here are example conversations showing how you usually text:
 
-Use the following DM examples as the main reference for tone, length, looseness, and conversational flow:
+{{EXAMPLE_CONVERSATIONS}}
 
-{chr(10).join(dm_examples_lines)}
+Here is the recent chat between you and this follower:
 
-INSTRUCTIONS
+{{RECENT_CHAT_LAST_20_MESSAGES}}
 
-Follow all rules above with no exceptions.
-Reply now as {name}.
-""".strip()
+Follower's latest message (this is the one you must answer now):
 
-    print(f"🧠 Built system prompt ({len(prompt)} chars, {len(dm_examples_lines)} samples included)")
+"{{LATEST_MESSAGE}}"
+
+Reply with a single message as {{NAME}}, following the rules above,
+
+using the recent chat only as context,
+
+and answering only to the follower's latest message."""
+
+    # Replace placeholders
+    prompt = prompt.replace("{{NAME}}", name)
+    prompt = prompt.replace("{{AGE}}", age)
+    prompt = prompt.replace("{{WHAT_YOU_DO}}", occupation)
+    prompt = prompt.replace("{{LOCATION}}", location)
+    prompt = prompt.replace("{{ABOUT}}", about)
+    prompt = prompt.replace("{{TOPICS_TO_AVOID}}", avoid_topics)
+    prompt = prompt.replace("{{PROMO_LINKS}}", promo_links_text)
+    prompt = prompt.replace("{{CONTENT_HIGHLIGHTS}}", content_highlights_text)
+    prompt = prompt.replace("{{POST_DESCRIPTIONS}}", post_descriptions_text)
+    prompt = prompt.replace("{{EXAMPLE_CONVERSATIONS}}", example_conversations_text)
+    prompt = prompt.replace("{{RECENT_CHAT_LAST_20_MESSAGES}}", recent_chat_text)
+    prompt = prompt.replace("{{LATEST_MESSAGE}}", latest_message_text)
+
+    print(f"🧠 Built system prompt ({len(prompt)} chars)")
     print("🧾 Prompt start >>>")
     print(prompt)
     print("<<< Prompt end")
