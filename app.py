@@ -1667,12 +1667,12 @@ def build_personality_prompt(settings, history=None, latest_message=None):
             content_highlights.append(f"{idx}. {description}")
     content_highlights_text = ", ".join(content_highlights) if content_highlights else "None provided."
 
-    # Build post descriptions list
+    # Build post descriptions list - just list the descriptions directly
     post_descriptions = []
-    for idx, post in enumerate(posts, start=1):
+    for post in posts:
         description = clean(post.get('description'))
         if description:
-            post_descriptions.append(f"{{POST_DESCRIPTION_{idx}}}")
+            post_descriptions.append(description)
     post_descriptions_text = ", ".join(post_descriptions) if post_descriptions else "None provided."
 
     # Format conversation examples
