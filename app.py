@@ -33,45 +33,85 @@ except ValueError as e:
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
-# Predefined DM scenarios for conversation samples
-CONVERSATION_TEMPLATES = [
-    {"key": "enjoy_content", "fan_message": "hey, just wanted to say I really enjoy your content"},
-    {"key": "day_check", "fan_message": "how’s your day going"},
-    {"key": "new_fan", "fan_message": "omg I just found your profile and I’m obsessed"},
-    {"key": "inspires_me", "fan_message": "you inspire me a lot, fr"},
-    {"key": "getting_started", "fan_message": "quick question, how did you get started with what you do"},
-    {"key": "one_tip", "fan_message": "can you give me one tip to improve"},
-    {"key": "posting_soon", "fan_message": "are you posting anything new this week"},
-    {"key": "where_from", "fan_message": "where are you from again"},
-    {"key": "meetups", "fan_message": "do you ever do meetups or events"},
-    {"key": "motivation_bad_days", "fan_message": "what keeps you motivated on bad days"},
-    {"key": "sorry_spam", "fan_message": "sorry if I’m spamming, your stuff is really cool"},
-    {"key": "gear_tools", "fan_message": "do you use any specific gear or tools"},
-    {"key": "schedule_like", "fan_message": "what’s your schedule like these days"},
-    {"key": "plans_coming", "fan_message": "do you have any plans coming up"},
-    {"key": "how_long_doing", "fan_message": "how long have you been doing this"},
-    {"key": "random_question", "fan_message": "can I ask you something kinda random"},
-    {"key": "rough_day_helped", "fan_message": "I had a rough day today, your posts helped"},
-    {"key": "dm_often", "fan_message": "do you answer DMs often"},
-    {"key": "why_this_path", "fan_message": "what made you choose this path"},
-    {"key": "current_goals", "fan_message": "do you have any goals you’re working on right now"},
-    {"key": "beginner_recommend", "fan_message": "can you recommend something for beginners"},
-    {"key": "friend_loves", "fan_message": "omg I showed your page to my friend and they loved it"},
-    {"key": "favorite_thing", "fan_message": "what’s your favorite thing about what you do"},
-    {"key": "take_breaks", "fan_message": "do you ever take breaks or do you push through"},
-    {"key": "wish_knew_earlier", "fan_message": "what’s something you wish you knew earlier"},
-    {"key": "feel_stuck", "fan_message": "I feel stuck lately, any advice"},
-    {"key": "dropping_new", "fan_message": "are you dropping anything new soon"},
-    {"key": "check_something", "fan_message": "can you check something for me real quick"},
-    {"key": "passing_by", "fan_message": "yo just passing by to say keep it up"},
-    {"key": "hope_good_today", "fan_message": "hope you’re doing good today"}
+# Four conversation examples for training the bot
+CONVERSATION_EXAMPLES = [
+    {
+        "key": "conv_example_1",
+        "title": "Conversation Example 1",
+        "exchanges": [
+            {
+                "follower_message": "hey, just wanted to say I really liked your last post, how did you pull that off",
+                "bot_reply_key": "reply_1"
+            },
+            {
+                "follower_message": "nice, thanks for the explanation, do you have more stuff like that coming soon",
+                "bot_reply_key": "reply_2"
+            },
+            {
+                "follower_message": "cool, appreciate you taking the time to answer, keep doing your thing",
+                "bot_reply_key": "reply_3"
+            }
+        ]
+    },
+    {
+        "key": "conv_example_2",
+        "title": "Conversation Example 2",
+        "exchanges": [
+            {
+                "follower_message": "idk why but your content helped a lot today, been going through some stuff",
+                "bot_reply_key": "reply_1"
+            },
+            {
+                "follower_message": "thanks, really means something right now, I've just been overwhelmed lately",
+                "bot_reply_key": "reply_2"
+            },
+            {
+                "follower_message": "anyway I don't wanna keep you, hope everything's good on your side too",
+                "bot_reply_key": "reply_3"
+            }
+        ]
+    },
+    {
+        "key": "conv_example_3",
+        "title": "Conversation Example 3",
+        "exchanges": [
+            {
+                "follower_message": "hey quick question, do you ever do shoutouts or promos",
+                "bot_reply_key": "reply_1"
+            },
+            {
+                "follower_message": "ah ok cool, how does it usually work for you",
+                "bot_reply_key": "reply_2"
+            },
+            {
+                "follower_message": "got it, thanks for clearing that up, keep doing your thing",
+                "bot_reply_key": "reply_3"
+            }
+        ]
+    },
+    {
+        "key": "conv_example_4",
+        "title": "Conversation Example 4",
+        "exchanges": [
+            {
+                "follower_message": "yo I saw something in one of your older posts, do you still do stuff like that",
+                "bot_reply_key": "reply_1"
+            },
+            {
+                "follower_message": "nice, where can I check some of the new things you've been doing",
+                "bot_reply_key": "reply_2"
+            },
+            {
+                "follower_message": "sweet, I'll look through it later, thanks for the quick answer",
+                "bot_reply_key": "reply_3"
+            }
+        ]
+    }
 ]
 
-CONVERSATION_TEMPLATE_LOOKUP = {
-    item["key"]: item["fan_message"] for item in CONVERSATION_TEMPLATES
-}
-
-ALL_CONVERSATION_PROMPTS = CONVERSATION_TEMPLATES
+# Keep for backward compatibility in prompt building
+CONVERSATION_TEMPLATES = CONVERSATION_EXAMPLES
+ALL_CONVERSATION_PROMPTS = CONVERSATION_EXAMPLES
 
 MODEL_CONFIG = {
     "gpt-5-nano": {
@@ -1048,7 +1088,7 @@ def save_client_settings(user_id, settings, connection_id=None):
 def bot_settings():
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
-    conversation_templates = CONVERSATION_TEMPLATES
+    conversation_templates = CONVERSATION_EXAMPLES
     
     if request.method == "POST":
         form_connection_id = request.form.get('connection_id')
@@ -1113,11 +1153,13 @@ def bot_settings():
                 posts.append({'description': desc.strip()})
 
         conversation_samples = {}
-        for template in conversation_templates:
-            reply_value = request.form.get(f"sample_reply_{template['key']}", "")
-            reply_value = reply_value.strip()
-            if reply_value:
-                conversation_samples[template['key']] = reply_value
+        for example in conversation_templates:
+            for exchange in example.get('exchanges', []):
+                reply_key = f"{example['key']}_{exchange['bot_reply_key']}"
+                reply_value = request.form.get(f"sample_reply_{reply_key}", "")
+                reply_value = reply_value.strip()
+                if reply_value:
+                    conversation_samples[reply_key] = reply_value
 
         settings = {
             'bot_personality': request.form.get('bot_personality', '').strip(),
@@ -1619,15 +1661,28 @@ def build_personality_prompt(settings):
     dm_examples_lines = []
     samples = settings.get('conversation_samples') or {}
     if isinstance(samples, dict):
-        for prompt in ALL_CONVERSATION_PROMPTS:
-            reply = samples.get(prompt["key"])
-            if not reply:
-                continue
-            fan_message = CONVERSATION_TEMPLATE_LOOKUP.get(prompt["key"], "")
-            formatted_fan = fan_message or prompt["key"]
-            dm_examples_lines.append(f'"{formatted_fan}" → "{reply}"')
-            if len(dm_examples_lines) >= 30:
+        # Process the new conversation examples structure
+        for example in CONVERSATION_EXAMPLES:
+            conversation_parts = []
+            has_replies = False
+            
+            for exchange in example.get('exchanges', []):
+                reply_key = f"{example['key']}_{exchange['bot_reply_key']}"
+                reply = samples.get(reply_key)
+                
+                if reply:
+                    has_replies = True
+                    conversation_parts.append(f'Follower: "{exchange["follower_message"]}"')
+                    conversation_parts.append(f'You: "{reply}"')
+            
+            if has_replies and conversation_parts:
+                # Format as a full conversation
+                conversation_text = '\n'.join(conversation_parts)
+                dm_examples_lines.append(conversation_text)
+                
+            if len(dm_examples_lines) >= 4:  # Limit to 4 conversations
                 break
+    
     if not dm_examples_lines:
         dm_examples_lines.append("No DM examples supplied.")
 
