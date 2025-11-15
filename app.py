@@ -1717,10 +1717,10 @@ def build_personality_prompt(settings, history=None, latest_message=None):
     # Format latest message
     latest_message_text = latest_message if latest_message else ""
 
-    # Build the prompt using the new structure
-    prompt = f"""You are {{NAME}}, a {{AGE}} year old {{WHAT_YOU_DO}} from {{LOCATION}}.
+    # Build the prompt using the new structure (using regular string, not f-string)
+    prompt_template = """You are {NAME}, a {AGE} year old {WHAT_YOU_DO} from {LOCATION}.
 
-About you: {{ABOUT}}.
+About you: {ABOUT}.
 
 Stay fully in character. Never mention or imply anything automated.
 
@@ -1742,49 +1742,49 @@ Follow these rules:
 
 8. Sound like a real person texting. No lists, no templates, no em dashes or double hyphens.
 
-Avoid these topics: {{TOPICS_TO_AVOID}}.
+Avoid these topics: {TOPICS_TO_AVOID}.
 
 If the follower brings them up, redirect gently in your own tone.
 
 You can reference your content only when it fits naturally:
 
-- Promo links: {{PROMO_LINKS}}
+- Promo links: {PROMO_LINKS}
 
-- Content highlights: {{CONTENT_HIGHLIGHTS}}
+- Content highlights: {CONTENT_HIGHLIGHTS}
 
-- Posts: {{POST_DESCRIPTIONS}}
+- Posts: {POST_DESCRIPTIONS}
 
 Here are example conversations showing how you usually text:
 
-{{EXAMPLE_CONVERSATIONS}}
+{EXAMPLE_CONVERSATIONS}
 
 Here is the recent chat between you and this follower:
 
-{{RECENT_CHAT_LAST_20_MESSAGES}}
+{RECENT_CHAT_LAST_20_MESSAGES}
 
 Follower's latest message (this is the one you must answer now):
 
-"{{LATEST_MESSAGE}}"
+"{LATEST_MESSAGE}"
 
-Reply with a single message as {{NAME}}, following the rules above,
+Reply with a single message as {NAME}, following the rules above,
 
 using the recent chat only as context,
 
 and answering only to the follower's latest message."""
 
-    # Replace placeholders
-    prompt = prompt.replace("{{NAME}}", name)
-    prompt = prompt.replace("{{AGE}}", age)
-    prompt = prompt.replace("{{WHAT_YOU_DO}}", occupation)
-    prompt = prompt.replace("{{LOCATION}}", location)
-    prompt = prompt.replace("{{ABOUT}}", about)
-    prompt = prompt.replace("{{TOPICS_TO_AVOID}}", avoid_topics)
-    prompt = prompt.replace("{{PROMO_LINKS}}", promo_links_text)
-    prompt = prompt.replace("{{CONTENT_HIGHLIGHTS}}", content_highlights_text)
-    prompt = prompt.replace("{{POST_DESCRIPTIONS}}", post_descriptions_text)
-    prompt = prompt.replace("{{EXAMPLE_CONVERSATIONS}}", example_conversations_text)
-    prompt = prompt.replace("{{RECENT_CHAT_LAST_20_MESSAGES}}", recent_chat_text)
-    prompt = prompt.replace("{{LATEST_MESSAGE}}", latest_message_text)
+    # Replace placeholders (using single braces since we're not using f-string)
+    prompt = prompt_template.replace("{NAME}", name)
+    prompt = prompt.replace("{AGE}", age)
+    prompt = prompt.replace("{WHAT_YOU_DO}", occupation)
+    prompt = prompt.replace("{LOCATION}", location)
+    prompt = prompt.replace("{ABOUT}", about)
+    prompt = prompt.replace("{TOPICS_TO_AVOID}", avoid_topics)
+    prompt = prompt.replace("{PROMO_LINKS}", promo_links_text)
+    prompt = prompt.replace("{CONTENT_HIGHLIGHTS}", content_highlights_text)
+    prompt = prompt.replace("{POST_DESCRIPTIONS}", post_descriptions_text)
+    prompt = prompt.replace("{EXAMPLE_CONVERSATIONS}", example_conversations_text)
+    prompt = prompt.replace("{RECENT_CHAT_LAST_20_MESSAGES}", recent_chat_text)
+    prompt = prompt.replace("{LATEST_MESSAGE}", latest_message_text)
 
     print(f"🧠 Built system prompt ({len(prompt)} chars)")
     print("🧾 Prompt start >>>")
