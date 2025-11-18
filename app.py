@@ -802,28 +802,28 @@ def instagram_callback():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-        # Normal user flow
-        user = get_user_by_id(session['user_id'])
-        if not user:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('login'))
-        
+    # Normal user flow
+    user = get_user_by_id(session['user_id'])
+    if not user:
+        flash('User not found. Please log in again.', 'error')
+        return redirect(url_for('login'))
+    
     user_id = user['id']
     
     # Check and reset monthly counter if needed
     check_user_reply_limit(user_id)
     
-        # Get user's Instagram connections
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
-            FROM instagram_connections 
-            WHERE user_id = {placeholder} 
-            ORDER BY created_at DESC
+    # Get user's Instagram connections
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+        FROM instagram_connections 
+        WHERE user_id = {placeholder} 
+        ORDER BY created_at DESC
     """, (user_id,))
-        connections = cursor.fetchall()
+    connections = cursor.fetchall()
     
     # Get user's reply counts
     cursor.execute(f"""
@@ -851,17 +851,17 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
-        conn.close()
-        
-        connections_list = []
-        for conn_data in connections:
-            connections_list.append({
-                'id': conn_data[0],
-                'instagram_user_id': conn_data[1],
-                'instagram_page_id': conn_data[2],
-                'is_active': conn_data[3],
-                'created_at': conn_data[4]
-            })
+    conn.close()
+    
+    connections_list = []
+    for conn_data in connections:
+        connections_list.append({
+            'id': conn_data[0],
+            'instagram_user_id': conn_data[1],
+            'instagram_page_id': conn_data[2],
+            'is_active': conn_data[3],
+            'created_at': conn_data[4]
+        })
     
     return render_template("dashboard.html", 
                          user=user, 
