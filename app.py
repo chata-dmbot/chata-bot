@@ -1096,7 +1096,7 @@ def save_client_settings(user_id, settings, connection_id=None):
                  bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
                  confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
                  backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
+                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
                  instagram_url, avoid_topics, temperature, max_tokens, is_active)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
@@ -2152,16 +2152,16 @@ def webhook():
                 if 'messaging' not in entry:
                     continue
                 entry_page_id = entry.get('id')
-                    for event in entry['messaging']:
-                        if event.get('message', {}).get('is_echo'):
-                            continue
+                for event in entry['messaging']:
+                    if event.get('message', {}).get('is_echo'):
+                        continue
                     message_payload = event.get('message', {})
                     message_text = message_payload.get('text')
                     if not message_text:
                         continue
-                        sender_id = event['sender']['id']
+                    sender_id = event['sender']['id']
                     recipient_id = event.get('recipient', {}).get('id')
-                                print(f"📨 Received a message from {sender_id}: {message_text}")
+                    print(f"📨 Received a message from {sender_id}: {message_text}")
                     incoming_by_sender.setdefault(sender_id, []).append({
                         "text": message_text,
                         "timestamp": event.get('timestamp', 0),
@@ -2181,10 +2181,10 @@ def webhook():
             print(f"🎯 Message batch targeted Instagram account: {recipient_id}")
             print(f"📄 Page ID from entry: {entry_page_id}")
 
-                                instagram_connection = None
-                                if recipient_id:
-                                    print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
-                                    instagram_connection = get_instagram_connection_by_id(recipient_id)
+            instagram_connection = None
+            if recipient_id:
+                print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
+                instagram_connection = get_instagram_connection_by_id(recipient_id)
                 if instagram_connection:
                     print("✅ Found connection by Instagram User ID!")
                 else:
@@ -2197,8 +2197,8 @@ def webhook():
                     print("✅ Found connection by Page ID!")
                 else:
                     print(f"❌ No connection found with Page ID: {entry_page_id}")
-                                
-                                if not instagram_connection:
+
+            if not instagram_connection:
                 print(f"❌ No Instagram connection found for account {recipient_id} or page {entry_page_id}")
                 print("💡 This might be the original Chata account or an unregistered account")
                 if recipient_id == Config.INSTAGRAM_USER_ID:
@@ -2207,14 +2207,14 @@ def webhook():
                     instagram_user_id = Config.INSTAGRAM_USER_ID
                     connection_id = None
                     user_id = None  # No user_id for original Chata account
-                                    else:
+                else:
                     print(f"❌ Unknown Instagram account {recipient_id} - skipping message batch")
-                                        continue
-                                else:
-                                    print(f"✅ Found Instagram connection: {instagram_connection}")
-                                    access_token = instagram_connection['page_access_token']
-                                    instagram_user_id = instagram_connection['instagram_user_id']
-                                    connection_id = instagram_connection['id']
+                    continue
+            else:
+                print(f"✅ Found Instagram connection: {instagram_connection}")
+                access_token = instagram_connection['page_access_token']
+                instagram_user_id = instagram_connection['instagram_user_id']
+                connection_id = instagram_connection['id']
                 user_id = instagram_connection['user_id']
 
             handler_start = time.time()
@@ -2234,33 +2234,33 @@ def webhook():
                 else:
                     print(f"✅ User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
 
-                                history = get_last_messages(sender_id, n=35)
-                                print(f"📚 History for {sender_id}: {len(history)} messages")
+            history = get_last_messages(sender_id, n=35)
+            print(f"📚 History for {sender_id}: {len(history)} messages")
 
             ai_start = time.time()
-                                reply_text = get_ai_reply_with_connection(history, connection_id)
+            reply_text = get_ai_reply_with_connection(history, connection_id)
             ai_duration = time.time() - ai_start
             print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
-                                print(f"🤖 AI generated reply: {reply_text[:50]}...")
+            print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                                save_message(sender_id, "", reply_text)
-                                print(f"✅ Saved bot response for {sender_id}")
+            save_message(sender_id, "", reply_text)
+            print(f"✅ Saved bot response for {sender_id}")
 
             page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
             url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
-                                payload = {
-                                    "recipient": {"id": sender_id},
-                                    "message": {"text": reply_text}
-                                }
+            payload = {
+                "recipient": {"id": sender_id},
+                "message": {"text": reply_text}
+            }
 
             send_start = time.time()
             r = requests.post(url, json=payload, timeout=45)
             send_duration = time.time() - send_start
             print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
-                                if r.status_code != 200:
-                                    print(f"❌ Error sending reply: {r.text}")
-                                else:
-                                    print(f"✅ Reply sent successfully to {sender_id}")
+            if r.status_code != 200:
+                print(f"❌ Error sending reply: {r.text}")
+            else:
+                print(f"✅ Reply sent successfully to {sender_id}")
                 # Increment reply count only for registered users and only on successful send
                 if instagram_connection and user_id:
                     increment_reply_count(user_id)
