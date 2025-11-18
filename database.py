@@ -60,6 +60,24 @@ def init_database():
         # Insert default settings
         _insert_default_settings(cursor, is_postgres)
         
+        # Update existing users' reply limits to 5 for testing (if they don't have the column set)
+        try:
+            if is_postgres:
+                cursor.execute("""
+                    UPDATE users 
+                    SET replies_limit_monthly = 5 
+                    WHERE replies_limit_monthly IS NULL OR replies_limit_monthly = 1000
+                """)
+            else:
+                cursor.execute("""
+                    UPDATE users 
+                    SET replies_limit_monthly = 5 
+                    WHERE replies_limit_monthly IS NULL OR replies_limit_monthly = 1000
+                """)
+            print("✅ Updated existing users' reply limits to 5 for testing")
+        except Exception as e:
+            print(f"Note: Could not update existing users' limits: {e}")
+        
         conn.commit()
         print("Database initialized successfully")
         return True
@@ -87,10 +105,25 @@ def _create_postgres_tables(cursor):
             id SERIAL PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            replies_sent_monthly INTEGER DEFAULT 0,
+            replies_limit_monthly INTEGER DEFAULT 5,
+            replies_purchased INTEGER DEFAULT 0,
+            replies_used_purchased INTEGER DEFAULT 0,
+            last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Add new columns to existing users table if they don't exist
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_sent_monthly INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_limit_monthly INTEGER DEFAULT 5")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_purchased INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_used_purchased INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except Exception as e:
+        print(f"Note: Some columns may already exist: {e}")
     
     # Create instagram_connections table
     cursor.execute("""
@@ -211,6 +244,20 @@ def _create_postgres_tables(cursor):
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Create purchases table for tracking purchased additional replies
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS purchases (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            amount_paid DECIMAL(10, 2) NOT NULL,
+            replies_added INTEGER NOT NULL,
+            payment_provider VARCHAR(50),
+            payment_id VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'completed',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
 def _create_sqlite_tables(cursor):
     """Create SQLite tables"""
@@ -220,10 +267,37 @@ def _create_sqlite_tables(cursor):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            replies_sent_monthly INTEGER DEFAULT 0,
+            replies_limit_monthly INTEGER DEFAULT 5,
+            replies_purchased INTEGER DEFAULT 0,
+            replies_used_purchased INTEGER DEFAULT 0,
+            last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Add new columns to existing users table if they don't exist (SQLite doesn't support IF NOT EXISTS for ALTER TABLE)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN replies_sent_monthly INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN replies_limit_monthly INTEGER DEFAULT 5")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN replies_purchased INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN replies_used_purchased INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except:
+        pass
     
     # Create instagram_connections table
     cursor.execute("""
@@ -342,6 +416,20 @@ def _create_sqlite_tables(cursor):
             value TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Create purchases table for tracking purchased additional replies
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(id),
+            amount_paid REAL NOT NULL,
+            replies_added INTEGER NOT NULL,
+            payment_provider TEXT,
+            payment_id TEXT,
+            status TEXT DEFAULT 'completed',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 

@@ -1252,28 +1252,39 @@ def disconnect_instagram(connection_id):
 def usage_analytics():
     user_id = session['user_id']
     
+    # Check and reset monthly counter if needed
+    check_user_reply_limit(user_id)
+    
     # Get usage statistics for the current month
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
-    # Get message count for current month
+    # Get user's reply counts
     cursor.execute(f"""
-        SELECT COUNT(*) FROM messages 
-        WHERE instagram_user_id IN (SELECT instagram_user_id FROM instagram_connections WHERE user_id = {placeholder})
-        AND created_at >= date('now', 'start of month')
+        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+        FROM users
+        WHERE id = {placeholder}
     """, (user_id,))
-    messages_this_month = cursor.fetchone()[0]
+    reply_data = cursor.fetchone()
     
-    # Get API usage for current month
-    cursor.execute(f"""
-        SELECT SUM(tokens_used), SUM(cost) FROM usage_logs 
-        WHERE user_id = {placeholder} 
-        AND created_at >= date('now', 'start of month')
-    """, (user_id,))
-    usage_data = cursor.fetchone()
-    api_calls_this_month = usage_data[0] or 0
-    cost_this_month = (usage_data[1] or 0) / 100.0  # Convert cents to dollars
+    if reply_data:
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
+        total_replies_used = replies_sent_monthly + replies_used_purchased
+        total_replies_available = replies_limit_monthly + replies_purchased
+        remaining_replies = max(0, total_replies_available - total_replies_used)
+        # Calculate minutes saved (3 minutes per reply)
+        MINUTES_PER_REPLY = 3
+        minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
+    else:
+        replies_sent_monthly = 0
+        replies_limit_monthly = 5  # Testing mode: 5 replies
+        replies_purchased = 0
+        replies_used_purchased = 0
+        total_replies_used = 0
+        total_replies_available = 5
+        remaining_replies = 5
+        minutes_saved = 0
     
     # Get recent activity
     cursor.execute(f"""
@@ -1288,10 +1299,259 @@ def usage_analytics():
     conn.close()
     
     return render_template("usage_analytics.html", 
-                         messages_this_month=messages_this_month,
-                         api_calls_this_month=api_calls_this_month,
-                         cost_this_month=cost_this_month,
+                         replies_sent=replies_sent_monthly,
+                         replies_limit=replies_limit_monthly,
+                         replies_purchased=replies_purchased,
+                         replies_used_purchased=replies_used_purchased,
+                         total_replies_used=total_replies_used,
+                         total_replies_available=total_replies_available,
+                         remaining_replies=remaining_replies,
+                         minutes_saved=minutes_saved,
                          recent_activity=recent_activity)
+
+@app.route("/dashboard/usage/test-payment", methods=["POST"])
+@login_required
+def test_payment():
+    """Test route to simulate a payment and add 5 additional replies"""
+    user_id = session['user_id']
+    
+    # Simulate payment: 1€ = 5 replies (for testing)
+    success = add_purchased_replies(user_id, 1.0, payment_provider="test", payment_id=f"test_{int(time.time())}")
+    
+    if success:
+        flash("✅ Test payment successful! Added 5 additional replies.", "success")
+        log_activity(user_id, 'test_payment', 'Test payment: Added 5 replies')
+    else:
+        flash("❌ Test payment failed. Please try again.", "error")
+    
+    return redirect(url_for('usage_analytics'))
+
+# ---- Reply Tracking Helpers ----
+
+def check_user_reply_limit(user_id):
+    """
+    Check if user has remaining replies available.
+    Returns: (has_limit: bool, remaining: int, total_used: int, total_available: int)
+    """
+    conn = get_db_connection()
+    if not conn:
+        return (False, 0, 0, 0)
+    
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get user's reply counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, last_monthly_reset
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return (False, 0, 0, 0)
+        
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, last_monthly_reset = result
+        
+        # Reset monthly counter if new month
+        reset_monthly_replies_if_needed(user_id, replies_sent_monthly, last_monthly_reset)
+        
+        # Re-fetch after potential reset
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        result = cursor.fetchone()
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
+        
+        # Calculate remaining
+        total_used = replies_sent_monthly + replies_used_purchased
+        total_available = replies_limit_monthly + replies_purchased
+        remaining = max(0, total_available - total_used)
+        has_limit = remaining > 0
+        
+        conn.close()
+        return (has_limit, remaining, total_used, total_available)
+        
+    except Exception as e:
+        print(f"Error checking reply limit: {e}")
+        if conn:
+            conn.close()
+        return (False, 0, 0, 0)
+
+def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None):
+    """Reset monthly reply counter if a new month has started"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get current reset timestamp if not provided
+        if last_reset is None:
+            cursor.execute(f"SELECT last_monthly_reset FROM users WHERE id = {placeholder}", (user_id,))
+            result = cursor.fetchone()
+            if not result:
+                conn.close()
+                return False
+            last_reset = result[0]
+        
+        # Parse last_reset if it's a string or handle datetime object
+        if isinstance(last_reset, str):
+            try:
+                # Try ISO format first
+                last_reset = datetime.fromisoformat(last_reset.replace('Z', '+00:00'))
+            except:
+                try:
+                    # Try standard format
+                    last_reset = datetime.strptime(last_reset.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                except:
+                    # Try date only
+                    last_reset = datetime.strptime(last_reset.split(' ')[0], '%Y-%m-%d')
+        elif not isinstance(last_reset, datetime):
+            # If it's not a datetime object, try to convert it
+            last_reset = datetime.now()
+        
+        # Check if we're in a new month
+        now = datetime.now()
+        # Handle timezone-aware datetime objects
+        if hasattr(last_reset, 'replace') and hasattr(last_reset, 'tzinfo') and last_reset.tzinfo:
+            last_reset = last_reset.replace(tzinfo=None)
+        
+        last_reset_month = last_reset.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        if current_month > last_reset_month:
+            # New month - reset monthly counter
+            print(f"📅 New month detected for user {user_id}, resetting monthly reply counter")
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_sent_monthly = 0,
+                    last_monthly_reset = {placeholder}
+                WHERE id = {placeholder}
+            """, (datetime.now(), user_id))
+            conn.commit()
+            conn.close()
+            return True
+        
+        conn.close()
+        return False
+        
+    except Exception as e:
+        print(f"Error resetting monthly replies: {e}")
+        if conn:
+            conn.close()
+        return False
+
+def increment_reply_count(user_id):
+    """
+    Increment the appropriate reply counter for a user.
+    Uses monthly replies first, then purchased replies.
+    Returns: True if successful, False otherwise
+    """
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get current counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return False
+        
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
+        
+        # Use monthly replies first
+        if replies_sent_monthly < replies_limit_monthly:
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_sent_monthly = replies_sent_monthly + 1
+                WHERE id = {placeholder}
+            """, (user_id,))
+            print(f"✅ Incremented monthly reply count for user {user_id} ({replies_sent_monthly + 1}/{replies_limit_monthly})")
+        # Then use purchased replies
+        elif replies_used_purchased < replies_purchased:
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_used_purchased = replies_used_purchased + 1
+                WHERE id = {placeholder}
+            """, (user_id,))
+            print(f"✅ Incremented purchased reply count for user {user_id} ({replies_used_purchased + 1}/{replies_purchased})")
+        else:
+            print(f"⚠️ Attempted to increment reply count but user {user_id} has no remaining replies")
+            conn.close()
+            return False
+        
+        conn.commit()
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"Error incrementing reply count: {e}")
+        if conn:
+            conn.close()
+        return False
+
+def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=None):
+    """
+    Add purchased replies to a user's account.
+    For future Stripe integration: call this when payment is confirmed.
+    Returns: True if successful, False otherwise
+    """
+    # TESTING MODE: 1€ = 5 replies (for testing)
+    # PRODUCTION: 5€ = 250 replies (REPLIES_PER_EURO = 50)
+    REPLIES_PER_EURO = 5  # Changed for testing - change back to 50 for production
+    
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        replies_to_add = int(amount * REPLIES_PER_EURO)
+        
+        # Add to user's purchased replies
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_purchased = replies_purchased + {placeholder}
+            WHERE id = {placeholder}
+        """, (replies_to_add, user_id))
+        
+        # Record purchase
+        cursor.execute(f"""
+            INSERT INTO purchases (user_id, amount_paid, replies_added, payment_provider, payment_id, status)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 'completed')
+        """, (user_id, amount, replies_to_add, payment_provider, payment_id))
+        
+        conn.commit()
+        print(f"✅ Added {replies_to_add} purchased replies for user {user_id} (€{amount})")
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"Error adding purchased replies: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
 
 # ---- SQLite settings helpers ----
 
@@ -1902,6 +2162,7 @@ def webhook():
                     access_token = Config.ACCESS_TOKEN
                     instagram_user_id = Config.INSTAGRAM_USER_ID
                     connection_id = None
+                    user_id = None  # No user_id for original Chata account
                 else:
                     print(f"❌ Unknown Instagram account {recipient_id} - skipping message batch")
                     continue
@@ -1910,12 +2171,24 @@ def webhook():
                 access_token = instagram_connection['page_access_token']
                 instagram_user_id = instagram_connection['instagram_user_id']
                 connection_id = instagram_connection['id']
+                user_id = instagram_connection['user_id']
 
             handler_start = time.time()
             
             for event in events:
                 save_message(sender_id, event["text"], "")
             print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
+
+            # Check reply limit before generating response (only for registered users)
+            if instagram_connection and user_id:
+                has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id)
+                if not has_limit:
+                    print(f"⛔ User {user_id} has reached reply limit ({total_used}/{total_available}). Skipping reply.")
+                    total_duration = time.time() - handler_start
+                    print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                    continue
+                else:
+                    print(f"✅ User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
 
             history = get_last_messages(sender_id, n=35)
             print(f"📚 History for {sender_id}: {len(history)} messages")
@@ -1944,6 +2217,9 @@ def webhook():
                 print(f"❌ Error sending reply: {r.text}")
             else:
                 print(f"✅ Reply sent successfully to {sender_id}")
+                # Increment reply count only for registered users and only on successful send
+                if instagram_connection and user_id:
+                    increment_reply_count(user_id)
                 
             total_duration = time.time() - handler_start
             print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
