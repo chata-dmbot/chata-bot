@@ -563,17 +563,31 @@
                 <h2><i class="fas fa-chart-bar"></i> This Month</h2>
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-number">0</div>
-                        <div class="stat-label">Messages Sent</div>
+                        <div class="stat-number">{{ replies_sent }}</div>
+                        <div class="stat-label">Replies Sent</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">0</div>
-                        <div class="stat-label">API Calls</div>
+                        <div class="stat-number">{{ minutes_saved }}</div>
+                        <div class="stat-label">Minutes Saved</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">$0.00</div>
-                        <div class="stat-label">Cost</div>
+                        <div class="stat-number">{{ remaining_replies }}</div>
+                        <div class="stat-label">Remaining Replies</div>
                     </div>
+                </div>
+                {% if replies_purchased > 0 %}
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">
+                        <strong>Purchased:</strong> {{ replies_used_purchased }} / {{ replies_purchased }} used
+                    </p>
+                </div>
+                {% endif %}
+                <div style="margin-top: 1rem;">
+                    <form method="POST" action="{{ url_for('test_payment') }}" style="display: inline-block;">
+                        <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #3fcf64 0%, #2fb85a 100%); width: 100%;">
+                            <i class="fas fa-coins"></i> Test Payment (Add 5 Replies)
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
