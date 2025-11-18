@@ -1089,8 +1089,8 @@ def save_client_settings(user_id, settings, connection_id=None):
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               0.7, max_tokens_value,
               settings.get('auto_reply', True)))
-        else:
-            cursor.execute(f"""
+    else:
+        cursor.execute(f"""
                 INSERT OR REPLACE INTO client_settings 
                 (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
                  bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
