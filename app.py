@@ -1519,6 +1519,8 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
     # PRODUCTION: 5€ = 250 replies (REPLIES_PER_EURO = 50)
     REPLIES_PER_EURO = 5  # Changed for testing - change back to 50 for production
     
+    # This is a test mode deployment
+    
     conn = get_db_connection()
     if not conn:
         return False
