@@ -1023,7 +1023,7 @@ def save_client_settings(user_id, settings, connection_id=None):
     
     # Use different syntax for PostgreSQL vs SQLite
     if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
-            cursor.execute(f"""
+        cursor.execute(f"""
             INSERT INTO client_settings 
             (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
              bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
