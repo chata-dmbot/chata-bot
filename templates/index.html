@@ -745,6 +745,12 @@
                 font-size: 1.1rem;
                 padding: 16px 32px;
             }
+            
+            /* Pricing section responsive - stack plans on mobile */
+            #pricing .solo-plan-fade {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+            }
         }
     </style>
 </head>
@@ -1507,65 +1513,107 @@
       </div>
     </section>
 
-    <!-- Ready to Save Section -->
+    <!-- Ready to Get Started Section -->
     <section id="pricing" style="margin-top: 100px; margin-bottom: 100px; overflow: hidden; position: relative; z-index: 10;">
         <div style="width: 100vw; margin-left: calc(-50vw + 50%); padding: 0 1rem;">
             <!-- Title -->
-            <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="text-align: center; margin-bottom: 3rem;">
                 <h2 style="font-size: 2.5rem; font-weight: 700; color: #fff; letter-spacing: 0.1em; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3);">
                     READY TO GET STARTED?
                 </h2>
-      </div>
-          </div>
-    </section>
+            </div>
 
-    <!-- Solo Plan Section -->
-    <section style="margin-top: -20px; margin-bottom: 100px; overflow: hidden; position: relative; z-index: 10;">
-        <div style="width: 100vw; margin-left: calc(-50vw + 50%); padding: 0 1rem;">
-            <div style="max-width: 800px; margin: 0 auto; text-align: center; opacity: 0; transform: translateY(50px); transition: all 0.8s ease-out;" class="solo-plan-fade">
-                <!-- Plan Card -->
-                <div style="padding: 1rem 2rem;">
+            <!-- Two Plans Side by Side -->
+            <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; opacity: 0; transform: translateY(50px); transition: all 0.8s ease-out;" class="solo-plan-fade">
+                
+                <!-- Starter Plan (Left) -->
+                <div style="text-align: center; padding: 2rem;">
+                    <!-- Price -->
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <span style="font-size: 4rem; font-weight: 800; color: #fff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);">€9</span>
+                        <span style="font-size: 1.4rem; color: rgba(255, 255, 255, 0.8); margin-left: 0.5rem;">/MONTH</span>
+                    </div>
+                    
+                    <!-- Plan Name -->
+                    <p style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); font-weight: 500; margin-bottom: 2rem;">
+                        STARTER
+                    </p>
+                    
+                    <!-- Features -->
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <p style="font-size: 1.1rem; color: #fff; font-weight: 500; margin-bottom: 1.5rem;">
+                            INCLUDES EVERYTHING ABOVE
+                        </p>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">+ 150 AI REPLIES/MONTH</span>
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">ADD-ONS: +150 REPLIES FOR €5</span>
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center;">
+                        {% if session.get('user_id') %}
+                        <form method="POST" action="{{ url_for('create_subscription_checkout') }}" style="display: inline-block;">
+                            <button type="submit" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block; border: none; cursor: pointer;">
+                                GET STARTED
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
+                            GET STARTED
+                        </a>
+                        {% endif %}
+                        
+                        <!-- Small Comment -->
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0; font-weight: 400; margin-top: 1rem;">
+                            CANCEL ANYTIME. NO SURPRISES.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Standard Plan (Right) -->
+                <div style="text-align: center; padding: 2rem;">
                     <!-- Price -->
                     <div style="text-align: center; margin-bottom: 2rem;">
                         <span style="font-size: 4rem; font-weight: 800; color: #fff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);">€39</span>
-                        <span style="font-size: 1.4rem; color: rgba(255, 255, 255, 0.8); margin-left: 0.5rem;">/month</span>
-        </div>
-        
-                    <!-- Features and Pricing Details -->
+                        <span style="font-size: 1.4rem; color: rgba(255, 255, 255, 0.8); margin-left: 0.5rem;">/MONTH</span>
+                    </div>
+                    
+                    <!-- Plan Name -->
+                    <p style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); font-weight: 500; margin-bottom: 2rem;">
+                        STANDARD
+                    </p>
+                    
+                    <!-- Features -->
                     <div style="text-align: center; margin-bottom: 2rem;">
-                        <p style="font-size: 1.3rem; color: #fff; font-weight: 500; margin-bottom: 1rem;">
-                            Includes everything above
+                        <p style="font-size: 1.1rem; color: #fff; font-weight: 500; margin-bottom: 1.5rem;">
+                            INCLUDES EVERYTHING ABOVE
                         </p>
                         <div style="margin-bottom: 0.5rem;">
-                            <span style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.8);">+ 1,000 AI replies/month</span>
-          </div>
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">+ 1,000 AI REPLIES/MONTH</span>
+                        </div>
                         <div style="margin-bottom: 1.5rem;">
-                            <span style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.8);">Add-ons: +250 replies for €5</span>
-        </div>
-        
-                        <!-- Free Trial Info -->
-                        <div style="background: rgba(51, 102, 255, 0.1); border: 1px solid rgba(51, 102, 255, 0.3); border-radius: 10px; padding: 1.2rem; margin: 0 auto 2rem auto; max-width: 300px;">
-                            <p style="color: #3366FF; font-size: 1.1rem; margin: 0; font-weight: 500;">
-                                🎁 Get 100 replies free<br>
-                                Try before you pay!
-                            </p>
-          </div>
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">ADD-ONS: +150 REPLIES FOR €5</span>
+                        </div>
                     </div>
                     
                     <!-- CTA Button -->
                     <div style="text-align: center;">
                         <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
-                            START FREE
+                            GET STARTED
                         </a>
                         
                         <!-- Small Comment -->
-                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.95rem; margin: 0; font-weight: 400; margin-top: 1rem;">
-                            Cancel anytime. No surprises.
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0; font-weight: 400; margin-top: 1rem;">
+                            CANCEL ANYTIME. NO SURPRISES.
                         </p>
                     </div>
                 </div>
+
+            </div>
         </div>
-      </div>
     </section>
 
     <!-- Testimonials Section Title -->
