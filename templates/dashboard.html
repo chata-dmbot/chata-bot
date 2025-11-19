@@ -575,13 +575,6 @@
                         <div class="stat-label">Remaining Replies</div>
                     </div>
                 </div>
-                {% if replies_purchased > 0 %}
-                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                    <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">
-                        <strong>Purchased:</strong> {{ replies_used_purchased }} / {{ replies_purchased }} used
-                    </p>
-                </div>
-                {% endif %}
                 <div style="margin-top: 1rem;">
                     <form method="POST" action="{{ url_for('test_payment') }}" style="display: inline-block;">
                         <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #3fcf64 0%, #2fb85a 100%); width: 100%;">

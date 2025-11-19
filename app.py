@@ -1382,7 +1382,7 @@ def test_payment():
     else:
         flash("❌ Test payment failed. Please try again.", "error")
     
-    return redirect(url_for('usage_analytics'))
+    return redirect(url_for('dashboard'))
 
 # ---- Reply Tracking Helpers ----
 

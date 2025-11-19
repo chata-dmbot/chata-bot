@@ -1,223 +1,686 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usage Analytics - Chata</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usage Analytics - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay - behind animations, in front of grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 600%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Hero Section */
+        .dashboard-hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 80px;
+            z-index: 10;
+        }
+
+        .dashboard-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dashboard-hero p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: #888;
+            text-transform: none;
+        }
+
+        /* Content Section */
+        .dashboard-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-section-block {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-section-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+            opacity: 0.3;
+        }
+
+        .dashboard-section-block:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(51, 102, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-section-block h2 {
+            color: var(--chata-blue);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dashboard-section-block h3 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-section-block p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(51, 102, 255, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--chata-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.1em;
+        }
+
+        /* Limit Progress Bars */
+        .limit-item {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .limit-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 0.5rem;
+        }
+
+        .limit-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .limit-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .limit-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .limit-text {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            white-space: nowrap;
+        }
+
+        /* Metric Items */
+        .metric-item {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--chata-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
+            border-radius: 3px;
+        }
+
+        /* Activity List */
+        .activity-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(51, 102, 255, 0.3);
+        }
+
+        .activity-icon {
+            font-size: 1.5rem;
+            color: var(--chata-blue);
+            width: 40px;
+            text-align: center;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* Flash Messages */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .alert-success {
+            background: rgba(63, 207, 100, 0.2);
+            border: 1px solid rgba(63, 207, 100, 0.5);
+            color: #3fcf64;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata" class="nav-logo">
-            </div>
-            <div class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
-                <a href="{{ url_for('bot_settings') }}" class="nav-link">Bot Settings</a>
-                <a href="{{ url_for('account_settings') }}" class="nav-link">Account</a>
-                <a href="{{ url_for('usage_analytics') }}" class="nav-link active">Usage</a>
-                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('usage_analytics') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">USAGE</a>
+                        <a href="{{ url_for('bot_settings') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">ACCOUNT</a>
+                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    </div>
+                </div>
+  
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1><i class="fas fa-chart-line"></i> Usage Analytics</h1>
+    <!-- Hero Section -->
+    <section class="dashboard-hero">
+        <div>
+            <h1>Usage Analytics</h1>
             <p>Track your bot's performance and usage statistics</p>
         </div>
+    </section>
 
-        <div class="analytics-grid">
-            <!-- Current Month Overview -->
-            <div class="analytics-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-calendar-alt"></i> This Month</h3>
-                </div>
-                <div class="card-content">
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-number">{{ replies_sent }}</div>
-                            <div class="stat-label">Replies Sent</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">{{ minutes_saved }}</div>
-                            <div class="stat-label">Minutes Saved</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">{{ remaining_replies }}</div>
-                            <div class="stat-label">Remaining Replies</div>
-                        </div>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="dashboard-content" style="z-index: 20; position: relative;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
+                        {{ message }}
                     </div>
-                </div>
+                {% endfor %}
             </div>
+        {% endif %}
+    {% endwith %}
 
-            <!-- Reply Usage Breakdown -->
-            <div class="analytics-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-chart-pie"></i> Reply Usage Breakdown</h3>
-                </div>
-                <div class="card-content">
-                    <div class="cost-item">
-                        <div class="cost-label">Monthly Replies Used</div>
-                        <div class="cost-value">{{ replies_sent }} / {{ replies_limit }}</div>
+    <!-- Content -->
+    <main class="dashboard-content">
+        <div class="dashboard-row">
+            <!-- This Month -->
+            <div class="dashboard-section-block">
+                <h2><i class="fas fa-calendar-alt"></i> This Month</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ replies_sent }}</div>
+                        <div class="stat-label">Replies Sent</div>
                     </div>
-                    {% if replies_purchased > 0 %}
-                    <div class="cost-item">
-                        <div class="cost-label">Purchased Replies Used</div>
-                        <div class="cost-value">{{ replies_used_purchased }} / {{ replies_purchased }}</div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ minutes_saved }}</div>
+                        <div class="stat-label">Minutes Saved</div>
                     </div>
-                    {% endif %}
-                    <div class="cost-total">
-                        <div class="cost-label">Total Used</div>
-                        <div class="cost-value">{{ total_replies_used }} / {{ total_replies_available }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Performance Metrics -->
-            <div class="analytics-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-tachometer-alt"></i> Performance</h3>
-                </div>
-                <div class="card-content">
-                    <div class="metric-item">
-                        <div class="metric-label">Response Time</div>
-                        <div class="metric-value">~2.3s</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: 85%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="metric-item">
-                        <div class="metric-label">Uptime</div>
-                        <div class="metric-value">99.9%</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: 99%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="metric-item">
-                        <div class="metric-label">Success Rate</div>
-                        <div class="metric-value">98.5%</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: 98%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Usage History -->
-            <div class="analytics-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-history"></i> Recent Activity</h3>
-                </div>
-                <div class="card-content">
-                    <div class="activity-list">
-                        {% if recent_activity %}
-                            {% for activity in recent_activity %}
-                                <div class="activity-item">
-                                    <div class="activity-icon">
-                                        {% if activity[0] == 'login' %}
-                                            <i class="fas fa-sign-in-alt"></i>
-                                        {% elif activity[0] == 'settings_updated' %}
-                                            <i class="fas fa-cog"></i>
-                                        {% elif activity[0] == 'profile_updated' %}
-                                            <i class="fas fa-user-edit"></i>
-                                        {% else %}
-                                            <i class="fas fa-info-circle"></i>
-                                        {% endif %}
-                                    </div>
-                                    <div class="activity-content">
-                                        <div class="activity-title">
-                                            {% if activity[0] == 'login' %}
-                                                User logged in
-                                            {% elif activity[0] == 'settings_updated' %}
-                                                Bot settings updated
-                                            {% elif activity[0] == 'profile_updated' %}
-                                                Profile updated
-                                            {% else %}
-                                                {{ activity[1] or activity[0] }}
-                                            {% endif %}
-                                        </div>
-                                        <div class="activity-time">{{ activity[2] }}</div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p>No recent activity</p>
-                            </div>
-                        {% endif %}
+                    <div class="stat-item">
+                        <div class="stat-number">{{ remaining_replies }}</div>
+                        <div class="stat-label">Remaining Replies</div>
                     </div>
                 </div>
             </div>
 
             <!-- Reply Limits -->
-            <div class="analytics-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-shield-alt"></i> Reply Limits</h3>
+            <div class="dashboard-section-block">
+                <h2><i class="fas fa-shield-alt"></i> Reply Limits</h2>
+                <div class="limit-item">
+                    <div class="limit-label">Monthly Replies ({{ replies_sent }} / {{ replies_limit }})</div>
+                    <div class="limit-progress">
+                        <div class="limit-bar">
+                            {% set monthly_percent = (replies_sent / replies_limit * 100) if replies_limit > 0 else 0 %}
+                            {% set monthly_percent_limited = monthly_percent if monthly_percent <= 100 else 100 %}
+                            <div class="limit-fill" style="width: {{ monthly_percent_limited }}%"></div>
+                        </div>
+                        <span class="limit-text">{{ replies_sent }} / {{ replies_limit }}</span>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <div class="limit-item">
-                        <div class="limit-info">
-                            <div class="limit-label">Monthly Replies ({{ replies_sent }} / {{ replies_limit }})</div>
-                            <div class="limit-progress">
-                                <div class="limit-bar">
-                                    {% set monthly_percent = (replies_sent / replies_limit * 100) if replies_limit > 0 else 0 %}
-                                    {% set monthly_percent_limited = monthly_percent if monthly_percent <= 100 else 100 %}
-                                    <div class="limit-fill" style="width: {{ monthly_percent_limited }}%"></div>
-                                </div>
-                                <span class="limit-text">{{ replies_sent }} / {{ replies_limit }}</span>
-                            </div>
+                
+                {% if replies_purchased > 0 %}
+                <div class="limit-item">
+                    <div class="limit-label">Purchased Replies ({{ replies_used_purchased }} / {{ replies_purchased }})</div>
+                    <div class="limit-progress">
+                        <div class="limit-bar">
+                            {% set purchased_percent = (replies_used_purchased / replies_purchased * 100) if replies_purchased > 0 else 0 %}
+                            {% set purchased_percent_limited = purchased_percent if purchased_percent <= 100 else 100 %}
+                            <div class="limit-fill" style="width: {{ purchased_percent_limited }}%"></div>
                         </div>
+                        <span class="limit-text">{{ replies_used_purchased }} / {{ replies_purchased }}</span>
                     </div>
-                    
-                    {% if replies_purchased > 0 %}
-                    <div class="limit-item">
-                        <div class="limit-info">
-                            <div class="limit-label">Purchased Replies ({{ replies_used_purchased }} / {{ replies_purchased }})</div>
-                            <div class="limit-progress">
-                                <div class="limit-bar">
-                                    {% set purchased_percent = (replies_used_purchased / replies_purchased * 100) if replies_purchased > 0 else 0 %}
-                                    {% set purchased_percent_limited = purchased_percent if purchased_percent <= 100 else 100 %}
-                                    <div class="limit-fill" style="width: {{ purchased_percent_limited }}%"></div>
-                                </div>
-                                <span class="limit-text">{{ replies_used_purchased }} / {{ replies_purchased }}</span>
-                            </div>
+                </div>
+                {% endif %}
+                
+                <div class="limit-item">
+                    <div class="limit-label">Total Remaining</div>
+                    <div class="limit-progress">
+                        <div class="limit-bar">
+                            {% set total_percent = (total_replies_used / total_replies_available * 100) if total_replies_available > 0 else 0 %}
+                            {% set total_percent_limited = total_percent if total_percent <= 100 else 100 %}
+                            <div class="limit-fill" style="width: {{ total_percent_limited }}%"></div>
                         </div>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="limit-item">
-                        <div class="limit-info">
-                            <div class="limit-label">Total Remaining</div>
-                            <div class="limit-progress">
-                                <div class="limit-bar">
-                                    {% set total_percent = (total_replies_used / total_replies_available * 100) if total_replies_available > 0 else 0 %}
-                                    {% set total_percent_limited = total_percent if total_percent <= 100 else 100 %}
-                                    <div class="limit-fill" style="width: {{ total_percent_limited }}%"></div>
-                                </div>
-                                <span class="limit-text">{{ remaining_replies }} remaining</span>
-                            </div>
-                        </div>
+                        <span class="limit-text">{{ remaining_replies }} remaining</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-actions">
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
-            <form method="POST" action="{{ url_for('test_payment') }}" style="display: inline-block; margin-left: 10px;">
-                <button type="submit" class="btn btn-primary" style="background: #3fcf64;">
-                    <i class="fas fa-coins"></i> Test Payment (Add 5 Replies)
-                </button>
-            </form>
+        <div class="dashboard-row">
+            <!-- Performance -->
+            <div class="dashboard-section-block">
+                <h2><i class="fas fa-tachometer-alt"></i> Performance</h2>
+                <div class="metric-item">
+                    <div class="metric-label">Response Time</div>
+                    <div class="metric-value">~2.3s</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 85%"></div>
+                    </div>
+                </div>
+                
+                <div class="metric-item">
+                    <div class="metric-label">Uptime</div>
+                    <div class="metric-value">99.9%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 99%"></div>
+                    </div>
+                </div>
+                
+                <div class="metric-item">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value">98.5%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 98%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="dashboard-section-block">
+                <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                <div class="activity-list">
+                    {% if recent_activity %}
+                        {% for activity in recent_activity %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    {% if activity[0] == 'login' %}
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    {% elif activity[0] == 'settings_updated' %}
+                                        <i class="fas fa-cog"></i>
+                                    {% elif activity[0] == 'profile_updated' %}
+                                        <i class="fas fa-user-edit"></i>
+                                    {% elif activity[0] == 'test_payment' %}
+                                        <i class="fas fa-coins"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">
+                                        {% if activity[0] == 'login' %}
+                                            User logged in
+                                        {% elif activity[0] == 'settings_updated' %}
+                                            Bot settings updated
+                                        {% elif activity[0] == 'profile_updated' %}
+                                            Profile updated
+                                        {% elif activity[0] == 'test_payment' %}
+                                            Test payment: Added replies
+                                        {% else %}
+                                            {{ activity[1] or activity[0] }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-time">{{ activity[2] }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
+
+    <script>
+        // Interactive grid effect (same as dashboard)
+        const grid = document.getElementById('interactiveGrid');
+        const cells = [];
+        const cols = Math.floor(window.innerWidth / 50);
+        const rows = Math.floor(window.innerHeight / 50);
+
+        for (let i = 0; i < cols * rows; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            cell.style.left = col * 50 + 'px';
+            cell.style.top = row * 50 + 'px';
+            grid.appendChild(cell);
+            cells.push(cell);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                const x = e.clientX - rect.left - 25;
+                const y = e.clientY - rect.top - 25;
+                const distance = Math.sqrt(x * x + y * y);
+                
+                if (distance < 100) {
+                    cell.classList.add('active');
+                } else {
+                    cell.classList.remove('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
