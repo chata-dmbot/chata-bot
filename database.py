@@ -258,6 +258,24 @@ def _create_postgres_tables(cursor):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Create subscriptions table for tracking user subscriptions
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            stripe_subscription_id VARCHAR(255) UNIQUE NOT NULL,
+            stripe_customer_id VARCHAR(255) NOT NULL,
+            stripe_price_id VARCHAR(255) NOT NULL,
+            plan_type VARCHAR(50) NOT NULL,
+            status VARCHAR(50) NOT NULL,
+            current_period_start TIMESTAMP,
+            current_period_end TIMESTAMP,
+            cancel_at_period_end BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
 def _create_sqlite_tables(cursor):
     """Create SQLite tables"""
@@ -432,6 +450,27 @@ def _create_sqlite_tables(cursor):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Create subscriptions table for tracking user subscriptions
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER REFERENCES users(id),
+                stripe_subscription_id TEXT UNIQUE NOT NULL,
+                stripe_customer_id TEXT NOT NULL,
+                stripe_price_id TEXT NOT NULL,
+                plan_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                current_period_start TIMESTAMP,
+                current_period_end TIMESTAMP,
+                cancel_at_period_end INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    except Exception as e:
+        print(f"Note: subscriptions table may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""

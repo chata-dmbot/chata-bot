@@ -12,6 +12,7 @@ import sendgrid
 from sendgrid.helpers.mail import Mail
 import json
 import time
+import stripe
 
 # Import our modular components
 from config import Config
@@ -32,6 +33,12 @@ except ValueError as e:
 # Flask app
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
+
+# Initialize Stripe
+if Config.STRIPE_SECRET_KEY:
+    stripe.api_key = Config.STRIPE_SECRET_KEY
+else:
+    print("⚠️ Warning: STRIPE_SECRET_KEY not set. Stripe features will not work.")
 
 # Four conversation examples for training the bot
 CONVERSATION_EXAMPLES = [
@@ -1384,6 +1391,440 @@ def test_payment():
     
     return redirect(url_for('dashboard'))
 
+# ---- Stripe Payment Routes ----
+
+@app.route("/checkout/subscription", methods=["POST"])
+@login_required
+def create_subscription_checkout():
+    """Create Stripe Checkout session for subscription"""
+    if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_STARTER_PLAN_PRICE_ID:
+        flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_id = session['user_id']
+    user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+    
+    try:
+        # Create or retrieve Stripe customer
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Check if user already has a Stripe customer ID
+        cursor.execute(f"""
+            SELECT stripe_customer_id FROM subscriptions 
+            WHERE user_id = {placeholder} 
+            LIMIT 1
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+        else:
+            # Create new Stripe customer
+            customer = stripe.Customer.create(
+                email=user_email,
+                metadata={'user_id': str(user_id)}
+            )
+            customer_id = customer.id
+        
+        conn.close()
+        
+        # Create Checkout Session for subscription
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': Config.STRIPE_STARTER_PLAN_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'subscription'}
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        flash(f"❌ Payment error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error creating subscription checkout: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
+@app.route("/checkout/addon", methods=["POST"])
+@login_required
+def create_addon_checkout():
+    """Create Stripe Checkout session for one-time add-on purchase"""
+    if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_ADDON_PRICE_ID:
+        flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_id = session['user_id']
+    user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+    
+    try:
+        # Create or retrieve Stripe customer
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            SELECT stripe_customer_id FROM subscriptions 
+            WHERE user_id = {placeholder} 
+            LIMIT 1
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+        else:
+            customer = stripe.Customer.create(
+                email=user_email,
+                metadata={'user_id': str(user_id)}
+            )
+            customer_id = customer.id
+        
+        conn.close()
+        
+        # Create Checkout Session for one-time payment
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': Config.STRIPE_ADDON_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'addon'}
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        flash(f"❌ Payment error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error creating addon checkout: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
+@app.route("/checkout/success")
+@login_required
+def checkout_success():
+    """Handle successful checkout"""
+    session_id = request.args.get('session_id')
+    
+    if not session_id:
+        flash("❌ Invalid checkout session.", "error")
+        return redirect(url_for('dashboard'))
+    
+    try:
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
+        
+        if checkout_session.metadata.get('user_id') != str(session['user_id']):
+            flash("❌ Invalid checkout session.", "error")
+            return redirect(url_for('dashboard'))
+        
+        if checkout_session.metadata.get('type') == 'subscription':
+            flash("✅ Subscription activated successfully! You now have 150 replies per month.", "success")
+        elif checkout_session.metadata.get('type') == 'addon':
+            flash("✅ Payment successful! 150 additional replies have been added to your account.", "success")
+        
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        print(f"Error processing checkout success: {e}")
+        flash("✅ Payment processed. Please check your account.", "success")
+        return redirect(url_for('dashboard'))
+
+@app.route("/webhook/stripe", methods=["POST"])
+def stripe_webhook():
+    """Handle Stripe webhook events"""
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    
+    if not Config.STRIPE_WEBHOOK_SECRET:
+        print("⚠️ Warning: STRIPE_WEBHOOK_SECRET not set. Webhook verification skipped.")
+        return jsonify({'status': 'webhook_secret_not_set'}), 200
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, Config.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        print("⚠️ Invalid payload")
+        return jsonify({'status': 'invalid_payload'}), 400
+    except stripe.error.SignatureVerificationError:
+        print("⚠️ Invalid signature")
+        return jsonify({'status': 'invalid_signature'}), 400
+    
+    # Handle the event
+    print(f"📥 Received Stripe webhook: {event['type']}")
+    
+    if event['type'] == 'checkout.session.completed':
+        session_obj = event['data']['object']
+        handle_checkout_session_completed(session_obj)
+    
+    elif event['type'] == 'customer.subscription.created':
+        subscription = event['data']['object']
+        handle_subscription_created(subscription)
+    
+    elif event['type'] == 'customer.subscription.updated':
+        subscription = event['data']['object']
+        handle_subscription_updated(subscription)
+    
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        handle_subscription_deleted(subscription)
+    
+    elif event['type'] == 'invoice.payment_succeeded':
+        invoice = event['data']['object']
+        handle_invoice_payment_succeeded(invoice)
+    
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        handle_invoice_payment_failed(invoice)
+    
+    return jsonify({'status': 'success'}), 200
+
+def handle_checkout_session_completed(session_obj):
+    """Handle completed checkout session"""
+    try:
+        user_id = int(session_obj.metadata.get('user_id'))
+        session_type = session_obj.metadata.get('type')
+        
+        if session_type == 'addon':
+            # Handle one-time add-on purchase
+            amount = session_obj.amount_total / 100  # Convert cents to euros
+            replies_to_add = 150  # €5 for 150 replies
+            success = add_purchased_replies(
+                user_id, 
+                amount, 
+                payment_provider="stripe", 
+                payment_id=session_obj.id
+            )
+            if success:
+                log_activity(user_id, 'stripe_addon_purchase', f'Purchased {replies_to_add} replies via Stripe')
+                print(f"✅ Added {replies_to_add} replies for user {user_id} from Stripe payment")
+    except Exception as e:
+        print(f"Error handling checkout session completed: {e}")
+
+def handle_subscription_created(subscription):
+    """Handle new subscription creation"""
+    try:
+        customer_id = subscription.customer
+        customer = stripe.Customer.retrieve(customer_id)
+        user_id = int(customer.metadata.get('user_id'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Check if using PostgreSQL
+        is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+        
+        if is_postgres:
+            # Insert or update subscription (PostgreSQL)
+            cursor.execute(f"""
+                INSERT INTO subscriptions 
+                (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id, 
+                 plan_type, status, current_period_start, current_period_end)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+                status = EXCLUDED.status,
+                current_period_start = EXCLUDED.current_period_start,
+                current_period_end = EXCLUDED.current_period_end,
+                updated_at = CURRENT_TIMESTAMP
+            """, (
+                user_id,
+                subscription.id,
+                customer_id,
+                subscription.items.data[0].price.id,
+                'starter',
+                subscription.status,
+                datetime.fromtimestamp(subscription.current_period_start),
+                datetime.fromtimestamp(subscription.current_period_end)
+            ))
+        else:
+            # SQLite - use INSERT OR REPLACE
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO subscriptions 
+                (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id, 
+                 plan_type, status, current_period_start, current_period_end)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (
+                user_id,
+                subscription.id,
+                customer_id,
+                subscription.items.data[0].price.id,
+                'starter',
+                subscription.status,
+                datetime.fromtimestamp(subscription.current_period_start),
+                datetime.fromtimestamp(subscription.current_period_end)
+            ))
+        
+        # Update user's monthly limit to 150 for starter plan
+        cursor.execute(f"""
+            UPDATE users 
+            SET replies_limit_monthly = 150 
+            WHERE id = {placeholder}
+        """, (user_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        log_activity(user_id, 'stripe_subscription_created', 'Starter plan subscription activated')
+        print(f"✅ Subscription created for user {user_id}")
+        
+    except Exception as e:
+        print(f"Error handling subscription created: {e}")
+
+def handle_subscription_updated(subscription):
+    """Handle subscription updates"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+        cancel_at_period_end = subscription.cancel_at_period_end if hasattr(subscription, 'cancel_at_period_end') else False
+        
+        if is_postgres:
+            cancel_value = cancel_at_period_end
+        else:
+            cancel_value = 1 if cancel_at_period_end else 0
+        
+        cursor.execute(f"""
+            UPDATE subscriptions 
+            SET status = {placeholder},
+                current_period_start = {placeholder},
+                current_period_end = {placeholder},
+                cancel_at_period_end = {placeholder},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE stripe_subscription_id = {placeholder}
+        """, (
+            subscription.status,
+            datetime.fromtimestamp(subscription.current_period_start),
+            datetime.fromtimestamp(subscription.current_period_end),
+            cancel_value,
+            subscription.id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Subscription updated: {subscription.id}")
+        
+    except Exception as e:
+        print(f"Error handling subscription updated: {e}")
+
+def handle_subscription_deleted(subscription):
+    """Handle subscription cancellation"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            UPDATE subscriptions 
+            SET status = {placeholder},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE stripe_subscription_id = {placeholder}
+        """, ('canceled', subscription.id))
+        
+        # Reset user's monthly limit to 5 (testing mode) or 0
+        customer_id = subscription.customer
+        customer = stripe.Customer.retrieve(customer_id)
+        user_id = int(customer.metadata.get('user_id'))
+        
+        cursor.execute(f"""
+            UPDATE users 
+            SET replies_limit_monthly = 5 
+            WHERE id = {placeholder}
+        """, (user_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        log_activity(user_id, 'stripe_subscription_canceled', 'Starter plan subscription canceled')
+        print(f"✅ Subscription canceled: {subscription.id}")
+        
+    except Exception as e:
+        print(f"Error handling subscription deleted: {e}")
+
+def handle_invoice_payment_succeeded(invoice):
+    """Handle successful monthly subscription payment"""
+    try:
+        subscription_id = invoice.subscription
+        if not subscription_id:
+            return
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get user from subscription
+        cursor.execute(f"""
+            SELECT user_id FROM subscriptions 
+            WHERE stripe_subscription_id = {placeholder}
+        """, (subscription_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            user_id = result[0]
+            # Reset monthly replies at the start of new billing period
+            cursor.execute(f"""
+                UPDATE users 
+                SET replies_sent_monthly = 0,
+                    last_monthly_reset = CURRENT_TIMESTAMP
+                WHERE id = {placeholder}
+            """, (user_id,))
+            
+            conn.commit()
+            log_activity(user_id, 'stripe_invoice_paid', 'Monthly subscription payment succeeded')
+            print(f"✅ Monthly payment succeeded for user {user_id}")
+        
+        conn.close()
+        
+    except Exception as e:
+        print(f"Error handling invoice payment succeeded: {e}")
+
+def handle_invoice_payment_failed(invoice):
+    """Handle failed subscription payment"""
+    try:
+        subscription_id = invoice.subscription
+        if not subscription_id:
+            return
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            SELECT user_id FROM subscriptions 
+            WHERE stripe_subscription_id = {placeholder}
+        """, (subscription_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            user_id = result[0]
+            log_activity(user_id, 'stripe_payment_failed', 'Monthly subscription payment failed')
+            print(f"⚠️ Payment failed for user {user_id}")
+        
+        conn.close()
+        
+    except Exception as e:
+        print(f"Error handling invoice payment failed: {e}")
+
 # ---- Reply Tracking Helpers ----
 
 def check_user_reply_limit(user_id):
@@ -1570,14 +2011,19 @@ def increment_reply_count(user_id):
 def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=None):
     """
     Add purchased replies to a user's account.
-    For future Stripe integration: call this when payment is confirmed.
+    For Stripe integration: call this when payment is confirmed.
     Returns: True if successful, False otherwise
     """
     # TESTING MODE: 1€ = 5 replies (for testing)
-    # PRODUCTION: 5€ = 250 replies (REPLIES_PER_EURO = 50)
-    REPLIES_PER_EURO = 5  # Changed for testing - change back to 50 for production
-    
-    # This is a test mode deployment
+    # PRODUCTION: 5€ = 150 replies (REPLIES_PER_EURO = 30)
+    # For Stripe add-on: €5 = 150 replies (fixed)
+    if payment_provider == "stripe":
+        # Stripe add-on is always €5 for 150 replies
+        replies_to_add = 150
+    else:
+        # Test mode: 1€ = 5 replies
+        REPLIES_PER_EURO = 5
+        replies_to_add = int(amount * REPLIES_PER_EURO)
     
     conn = get_db_connection()
     if not conn:
@@ -1586,7 +2032,6 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
     try:
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
-        replies_to_add = int(amount * REPLIES_PER_EURO)
         
         # Add to user's purchased replies
         cursor.execute(f"""

@@ -33,6 +33,13 @@ class Config:
     # Email Configuration
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
     
+    # Stripe Configuration
+    STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    STRIPE_STARTER_PLAN_PRICE_ID = os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
+    STRIPE_ADDON_PRICE_ID = os.getenv("STRIPE_ADDON_PRICE_ID")
+    
     # Production Settings
     PORT = int(os.environ.get("PORT", 5000))
     

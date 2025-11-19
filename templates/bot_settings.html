@@ -48,22 +48,22 @@
       text-decoration: none;
     }
 
-    .interactive-grid {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
       height: 600%;
-      z-index: -1;
+            z-index: -1;
       background: #000;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 50px 50px;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
       overflow: hidden;
       transition: transform 0.3s ease;
       pointer-events: none;
-    }
+        }
 
         .grid-cell {
             position: absolute;
@@ -374,8 +374,8 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(10, 15, 32, 0.7);
       padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
+            display: flex;
+            flex-direction: column;
       gap: 1rem;
       transition: border-color 0.3s ease, transform 0.3s ease;
     }
@@ -390,18 +390,18 @@
       font-size: 1rem;
       font-weight: 600;
       letter-spacing: 0.2em;
-      text-transform: uppercase;
+            text-transform: uppercase;
       color: rgba(255, 255, 255, 0.85);
-    }
+        }
 
     .dm-thread {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
     }
 
     .dm-message {
-      display: flex;
+            display: flex;
       flex-direction: column;
       gap: 0.4rem;
       max-width: 85%;
@@ -409,7 +409,7 @@
 
     .dm-message.follower-message {
       align-self: flex-start;
-      align-items: flex-start;
+            align-items: flex-start;
     }
 
     .dm-message.bot-message {
@@ -419,7 +419,7 @@
 
     .message-label {
       font-size: 0.7rem;
-      text-transform: uppercase;
+            text-transform: uppercase;
       letter-spacing: 0.2em;
       color: rgba(255, 255, 255, 0.5);
       margin-bottom: 0.2rem;
@@ -718,17 +718,17 @@
         </div>
     </section>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
       <div class="bot-settings-content" style="z-index: 20; position: relative;">
-        {% for category, message in messages %}
+            {% for category, message in messages %}
           <div class="alert alert-{{ 'error' if category in ['error', 'danger', 'warning'] else category }}">
-            {{ message }}
-          </div>
-        {% endfor %}
+                    {{ message }}
+                </div>
+            {% endfor %}
       </div>
-    {% endif %}
-  {% endwith %}
+        {% endif %}
+    {% endwith %}
 
      <main class="bot-settings-content">
     {% if not connections %}
@@ -747,30 +747,30 @@
             <p>Baseline details your bot will casually reuse in conversation.</p>
                             </div>
           <div class="form-grid">
-                             <div class="form-group">
-              <label for="bot_name">Name</label>
+                            <div class="form-group">
+                                <label for="bot_name">Name</label>
               <input type="text" id="bot_name" name="bot_name" placeholder="What do people call you?" value="{{ settings.bot_name if settings else '' }}">
-                             </div>
-                             <div class="form-group">
-              <label for="bot_age">Age</label>
+                            </div>
+                            <div class="form-group">
+                                <label for="bot_age">Age</label>
               <input type="text" id="bot_age" name="bot_age" placeholder="Optional, keep it human." value="{{ settings.bot_age if settings else '' }}">
-                             </div>
-                             <div class="form-group">
+                            </div>
+                            <div class="form-group">
               <label for="bot_location">Location</label>
               <input type="text" id="bot_location" name="bot_location" placeholder="Where are you based?" value="{{ settings.bot_location if settings else '' }}">
-                             </div>
-                             <div class="form-group">
+                            </div>
+                            <div class="form-group">
               <label for="bot_occupation">What you do</label>
               <input type="text" id="bot_occupation" name="bot_occupation" placeholder="Creator, coach, artist, founder..." value="{{ settings.bot_occupation if settings else '' }}">
-                             </div>
-                             </div>
+                            </div>
+                            </div>
         </section>
 
         <section class="section-card">
           <div class="section-header">
             <h2>About Me</h2>
             <p>Write this the way you'd actually describe yourself. 1000 characters max.</p>
-                                     </div>
+                            </div>
                              <div class="form-group">
             <label for="bot_personality">Bio / vibe</label>
             <textarea id="bot_personality" name="bot_personality" class="auto-resize" rows="4" maxlength="1000" placeholder="Let the bot know the story, the vibe, the energy it should keep.">{{ settings.bot_personality if settings and settings.bot_personality else '' }}</textarea>
@@ -782,7 +782,7 @@
           <div class="section-header">
             <h2>Conversation Examples</h2>
             <p>Answer to these simulated conversations to help train the bot to match your style.</p>
-          </div>
+                                     </div>
           <div class="conversation-examples">
             {% for example in conversation_templates %}
               <div class="conversation-example-card">
@@ -792,7 +792,7 @@
                     <div class="dm-message follower-message">
                       <div class="message-label">Follower</div>
                       <div class="message-content">{{ exchange.follower_message }}</div>
-                    </div>
+                                 </div>
                     <div class="dm-message bot-message">
                       <div class="message-label">You</div>
                       {% set reply_key = example.key ~ '_' ~ exchange.bot_reply_key %}
@@ -802,12 +802,12 @@
                       {% endif %}
                       <textarea id="sample_reply_{{ reply_key }}" name="sample_reply_{{ reply_key }}" class="auto-resize message-input" rows="2" maxlength="200" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
                       <div class="char-counter" data-for="sample_reply_{{ reply_key }}">{{ sample_value|length }}/200</div>
-                    </div>
+                             </div>
                   {% endfor %}
-                </div>
-              </div>
+                                 </div>
+                                 </div>
             {% endfor %}
-          </div>
+                             </div>
         </section>
 
         <section class="section-card">
