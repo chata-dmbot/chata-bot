@@ -26,10 +26,10 @@
 Add these to your **Render environment variables** (or `.env` for local):
 
 ```
-STRIPE_PUBLISHABLE_KEY=pk_test_51SUwAW2YobxhcxuMG8tJ1HO5CeI2XNDDOGtUiMEXW41kcZ6MagpvHyO2y1hSXsA2Au72xiAzKs1E5yolSJ8WfmJa00GQXEL9KW
-STRIPE_SECRET_KEY=sk_test_51SUwAW2YobxhcxuMt2HuJLrqlH3MwlHqaeL4iSC0bs8WExeSzOpViut0YPkxAPxI1Mx2s2bm8yBEUKduIYpk16yu008gvnM4SS
-STRIPE_STARTER_PLAN_PRICE_ID=price_1SVIOb2YobxhcxuMQBCaD2cV
-STRIPE_ADDON_PRICE_ID=price_1SVIRv2YobxhcxuMoyUwZhSJ
+STRIPE_PUBLISHABLE_KEY=pk_test_XXXXX
+STRIPE_SECRET_KEY=sk_test_XXXXX
+STRIPE_STARTER_PLAN_PRICE_ID=price_XXXXX
+STRIPE_ADDON_PRICE_ID=price_XXXXX
 STRIPE_WEBHOOK_SECRET=whsec_XXXXX (you'll get this after setting up webhook)
 ```
 
