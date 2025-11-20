@@ -2737,54 +2737,74 @@ def webhook():
 @login_required
 def debug_user_stats():
     """Debug route to check current user stats"""
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    # Get user data
-    cursor.execute(f"""
-        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, 
-               replies_used_purchased, last_monthly_reset, created_at
-        FROM users
-        WHERE id = {placeholder}
-    """, (user_id,))
-    user_data = cursor.fetchone()
-    
-    # Get subscription data
-    cursor.execute(f"""
-        SELECT stripe_subscription_id, plan_type, status, current_period_start, 
-               current_period_end, created_at
-        FROM subscriptions
-        WHERE user_id = {placeholder}
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (user_id,))
-    subscription_data = cursor.fetchone()
-    
-    conn.close()
-    
-    return f"""
-    <h2>Debug User Stats (User ID: {user_id})</h2>
-    <h3>User Data:</h3>
-    <pre>{user_data}</pre>
-    
-    <h3>Subscription Data:</h3>
-    <pre>{subscription_data}</pre>
-    
-    <h3>Calculated Values:</h3>
-    <pre>
-    replies_sent_monthly: {user_data[0] if user_data else 'None'}
-    replies_limit_monthly: {user_data[1] if user_data else 'None'}
-    replies_purchased: {user_data[2] if user_data else 'None'}
-    replies_used_purchased: {user_data[3] if user_data else 'None'}
-    total_available: {(user_data[1] + user_data[2]) if user_data else 'None'}
-    total_used: {(user_data[0] + user_data[3]) if user_data else 'None'}
-    remaining: {max(0, (user_data[1] + user_data[2]) - (user_data[0] + user_data[3])) if user_data else 'None'}
-    </pre>
-    
-    <a href="/dashboard">Back to Dashboard</a>
-    """
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get user data
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, 
+                   replies_used_purchased, last_monthly_reset, created_at
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        user_data = cursor.fetchone()
+        
+        # Get subscription data
+        cursor.execute(f"""
+            SELECT stripe_subscription_id, plan_type, status, current_period_start, 
+                   current_period_end, created_at
+            FROM subscriptions
+            WHERE user_id = {placeholder}
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription_data = cursor.fetchone()
+        
+        conn.close()
+        
+        # Safe string formatting
+        user_data_str = str(user_data) if user_data else 'None'
+        subscription_data_str = str(subscription_data) if subscription_data else 'None'
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Debug User Stats</title></head>
+        <body>
+        <h2>Debug User Stats (User ID: {user_id})</h2>
+        <h3>User Data:</h3>
+        <pre>{user_data_str}</pre>
+        
+        <h3>Subscription Data:</h3>
+        <pre>{subscription_data_str}</pre>
+        
+        <h3>Calculated Values:</h3>
+        <pre>
+        replies_sent_monthly: {user_data[0] if user_data else 'None'}
+        replies_limit_monthly: {user_data[1] if user_data else 'None'}
+        replies_purchased: {user_data[2] if user_data else 'None'}
+        replies_used_purchased: {user_data[3] if user_data else 'None'}
+        total_available: {(user_data[1] + user_data[2]) if user_data else 'None'}
+        total_used: {(user_data[0] + user_data[3]) if user_data else 'None'}
+        remaining: {max(0, (user_data[1] + user_data[2]) - (user_data[0] + user_data[3])) if user_data else 'None'}
+        </pre>
+        
+        <a href="/dashboard">Back to Dashboard</a>
+        </body>
+        </html>
+        """
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@app.route("/debug/test")
+def debug_test():
+    """Simple test route"""
+    return "Debug routes are working!"
 
 @app.route("/admin/prompt", methods=["GET", "POST"])
 def admin_prompt():
