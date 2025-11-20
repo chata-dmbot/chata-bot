@@ -2887,6 +2887,39 @@ def fix_subscription():
     <p><a href="/debug/user-stats">Check Stats</a></p>
     """
 
+@app.route("/debug/stripe-customers")
+@login_required
+def debug_stripe_customers():
+    """Check Stripe customers for current user"""
+    try:
+        user_id = session['user_id']
+        user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+        
+        # Search for customers with this email
+        customers = stripe.Customer.list(email=user_email, limit=10)
+        
+        html = f"""
+        <h2>Stripe Customers for {user_email}</h2>
+        <p>User ID: {user_id}</p>
+        <h3>Found {len(customers.data)} customers:</h3>
+        """
+        
+        for customer in customers.data:
+            html += f"""
+            <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                <p><strong>Customer ID:</strong> {customer.id}</p>
+                <p><strong>Email:</strong> {customer.email}</p>
+                <p><strong>Metadata:</strong> {customer.metadata}</p>
+                <p><strong>Created:</strong> {customer.created}</p>
+            </div>
+            """
+        
+        html += '<p><a href="/dashboard">Back to Dashboard</a></p>'
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 @app.route("/admin/prompt", methods=["GET", "POST"])
 def admin_prompt():
     message = None
