@@ -1609,8 +1609,17 @@ def stripe_webhook():
 def handle_checkout_session_completed(session_obj):
     """Handle completed checkout session"""
     try:
-        user_id = int(session_obj.metadata.get('user_id'))
+        print(f"🛒 Checkout session metadata: {session_obj.metadata}")
+        
+        user_id_str = session_obj.metadata.get('user_id')
+        if not user_id_str:
+            print(f"⚠️ No user_id in checkout session metadata - this is likely a test event")
+            return
+        
+        user_id = int(user_id_str)
         session_type = session_obj.metadata.get('type')
+        
+        print(f"👤 Processing checkout for user {user_id}, type: {session_type}")
         
         if session_type == 'addon':
             # Handle one-time add-on purchase
@@ -1626,7 +1635,9 @@ def handle_checkout_session_completed(session_obj):
                 log_activity(user_id, 'stripe_addon_purchase', f'Purchased {replies_to_add} replies via Stripe')
                 print(f"✅ Added {replies_to_add} replies for user {user_id} from Stripe payment")
     except Exception as e:
-        print(f"Error handling checkout session completed: {e}")
+        print(f"❌ Error handling checkout session completed: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_subscription_created(subscription):
     """Handle new subscription creation"""
@@ -1795,7 +1806,10 @@ def handle_invoice_payment_succeeded(invoice):
     """Handle successful monthly subscription payment"""
     try:
         subscription_id = invoice.subscription
+        print(f"💰 Invoice payment succeeded for subscription: {subscription_id}")
+        
         if not subscription_id:
+            print(f"⚠️ No subscription ID in invoice - this is likely a test event")
             return
         
         conn = get_db_connection()
@@ -1811,6 +1825,8 @@ def handle_invoice_payment_succeeded(invoice):
         
         if result:
             user_id = result[0]
+            print(f"👤 Resetting monthly replies for user {user_id}")
+            
             # Reset monthly replies at the start of new billing period
             cursor.execute(f"""
                 UPDATE users 
@@ -1822,11 +1838,15 @@ def handle_invoice_payment_succeeded(invoice):
             conn.commit()
             log_activity(user_id, 'stripe_invoice_paid', 'Monthly subscription payment succeeded')
             print(f"✅ Monthly payment succeeded for user {user_id}")
+        else:
+            print(f"⚠️ No subscription found in database for subscription_id: {subscription_id}")
         
         conn.close()
         
     except Exception as e:
-        print(f"Error handling invoice payment succeeded: {e}")
+        print(f"❌ Error handling invoice payment succeeded: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_invoice_payment_failed(invoice):
     """Handle failed subscription payment"""
