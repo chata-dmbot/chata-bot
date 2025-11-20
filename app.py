@@ -1567,30 +1567,42 @@ def stripe_webhook():
     
     # Handle the event
     print(f"📥 Received Stripe webhook: {event['type']}")
+    print(f"🔍 Event ID: {event.get('id', 'unknown')}")
     
     if event['type'] == 'checkout.session.completed':
         session_obj = event['data']['object']
+        print(f"🛒 Processing checkout session: {session_obj.get('id')}")
         handle_checkout_session_completed(session_obj)
     
     elif event['type'] == 'customer.subscription.created':
         subscription = event['data']['object']
+        print(f"🔄 Processing subscription created: {subscription.get('id')}")
         handle_subscription_created(subscription)
     
     elif event['type'] == 'customer.subscription.updated':
         subscription = event['data']['object']
+        print(f"🔄 Processing subscription updated: {subscription.get('id')}")
         handle_subscription_updated(subscription)
     
     elif event['type'] == 'customer.subscription.deleted':
         subscription = event['data']['object']
+        print(f"🔄 Processing subscription deleted: {subscription.get('id')}")
         handle_subscription_deleted(subscription)
     
     elif event['type'] == 'invoice.payment_succeeded':
         invoice = event['data']['object']
+        print(f"💰 Processing invoice payment succeeded: {invoice.get('id')}")
         handle_invoice_payment_succeeded(invoice)
     
     elif event['type'] == 'invoice.payment_failed':
         invoice = event['data']['object']
+        print(f"💰 Processing invoice payment failed: {invoice.get('id')}")
         handle_invoice_payment_failed(invoice)
+    
+    else:
+        print(f"⚠️ Unhandled webhook event type: {event['type']}")
+    
+    print(f"✅ Webhook processing completed for {event['type']}")
     
     return jsonify({'status': 'success'}), 200
 
@@ -1619,9 +1631,21 @@ def handle_checkout_session_completed(session_obj):
 def handle_subscription_created(subscription):
     """Handle new subscription creation"""
     try:
+        print(f"🔄 Processing subscription created: {subscription.id}")
+        
         customer_id = subscription.customer
+        print(f"📋 Customer ID: {customer_id}")
+        
         customer = stripe.Customer.retrieve(customer_id)
-        user_id = int(customer.metadata.get('user_id'))
+        print(f"📋 Customer metadata: {customer.metadata}")
+        
+        user_id_str = customer.metadata.get('user_id')
+        if not user_id_str:
+            print(f"❌ No user_id in customer metadata for customer {customer_id}")
+            return
+        
+        user_id = int(user_id_str)
+        print(f"👤 Processing subscription for user ID: {user_id}")
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1672,12 +1696,16 @@ def handle_subscription_created(subscription):
                 datetime.fromtimestamp(subscription.current_period_end)
             ))
         
+        print(f"💾 Subscription record created in database")
+        
         # Update user's monthly limit to 150 for starter plan
         cursor.execute(f"""
             UPDATE users 
             SET replies_limit_monthly = 150 
             WHERE id = {placeholder}
         """, (user_id,))
+        
+        print(f"📈 Updated user {user_id} monthly limit to 150")
         
         conn.commit()
         conn.close()
@@ -1686,7 +1714,9 @@ def handle_subscription_created(subscription):
         print(f"✅ Subscription created for user {user_id}")
         
     except Exception as e:
-        print(f"Error handling subscription created: {e}")
+        print(f"❌ Error handling subscription created: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_subscription_updated(subscription):
     """Handle subscription updates"""
