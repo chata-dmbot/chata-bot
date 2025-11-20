@@ -2806,6 +2806,37 @@ def debug_test():
     """Simple test route"""
     return "Debug routes are working!"
 
+@app.route("/debug/fix-subscription")
+@login_required
+def fix_subscription():
+    """Manually fix subscription for testing"""
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    # Update user to have 150 monthly replies (starter plan)
+    cursor.execute(f"""
+        UPDATE users 
+        SET replies_limit_monthly = 150,
+            replies_sent_monthly = 0
+        WHERE id = {placeholder}
+    """, (user_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return f"""
+    <h2>Subscription Fixed!</h2>
+    <p>Updated User ID {user_id}:</p>
+    <ul>
+        <li>Monthly limit: 150 replies</li>
+        <li>Monthly sent: Reset to 0</li>
+    </ul>
+    <p><a href="/dashboard">Go to Dashboard</a></p>
+    <p><a href="/debug/user-stats">Check Stats</a></p>
+    """
+
 @app.route("/admin/prompt", methods=["GET", "POST"])
 def admin_prompt():
     message = None
