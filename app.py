@@ -1433,7 +1433,7 @@ def create_subscription_checkout():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Check if user already has a Stripe customer ID
+        # Check if user already has a Stripe customer ID in subscriptions table
         cursor.execute(f"""
             SELECT stripe_customer_id FROM subscriptions 
             WHERE user_id = {placeholder} 
@@ -1443,13 +1443,24 @@ def create_subscription_checkout():
         
         if result and result[0]:
             customer_id = result[0]
+            print(f"✅ Found existing customer ID in database: {customer_id}")
         else:
-            # Create new Stripe customer
-            customer = stripe.Customer.create(
-                email=user_email,
-                metadata={'user_id': str(user_id)}
-            )
-            customer_id = customer.id
+            # Check if customer already exists in Stripe by email
+            existing_customers = stripe.Customer.list(email=user_email, limit=1)
+            if existing_customers.data:
+                # Use existing customer
+                customer_id = existing_customers.data[0].id
+                # Update metadata to ensure user_id is set
+                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
+                print(f"✅ Found existing Stripe customer: {customer_id}")
+            else:
+                # Create new Stripe customer
+                customer = stripe.Customer.create(
+                    email=user_email,
+                    metadata={'user_id': str(user_id)}
+                )
+                customer_id = customer.id
+                print(f"✅ Created new Stripe customer: {customer_id}")
         
         conn.close()
         
@@ -1495,6 +1506,7 @@ def create_addon_checkout():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
+        # Check if user already has a Stripe customer ID in subscriptions table
         cursor.execute(f"""
             SELECT stripe_customer_id FROM subscriptions 
             WHERE user_id = {placeholder} 
@@ -1504,12 +1516,24 @@ def create_addon_checkout():
         
         if result and result[0]:
             customer_id = result[0]
+            print(f"✅ Found existing customer ID in database: {customer_id}")
         else:
-            customer = stripe.Customer.create(
-                email=user_email,
-                metadata={'user_id': str(user_id)}
-            )
-            customer_id = customer.id
+            # Check if customer already exists in Stripe by email
+            existing_customers = stripe.Customer.list(email=user_email, limit=1)
+            if existing_customers.data:
+                # Use existing customer
+                customer_id = existing_customers.data[0].id
+                # Update metadata to ensure user_id is set
+                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
+                print(f"✅ Found existing Stripe customer: {customer_id}")
+            else:
+                # Create new Stripe customer
+                customer = stripe.Customer.create(
+                    email=user_email,
+                    metadata={'user_id': str(user_id)}
+                )
+                customer_id = customer.id
+                print(f"✅ Created new Stripe customer: {customer_id}")
         
         conn.close()
         
@@ -1556,7 +1580,7 @@ def checkout_success():
             return redirect(url_for('dashboard'))
         
         if checkout_session.metadata.get('type') == 'subscription':
-            flash("✅ Subscription activated successfully! You now have 150 replies per month.", "success")
+            flash("Subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
             flash("✅ Payment successful! 150 additional replies have been added to your account.", "success")
         
@@ -1685,12 +1709,19 @@ def handle_subscription_created(subscription):
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Get price ID from subscription - retrieve fresh with expanded items for reliability
+        # Get price ID and period dates from subscription - retrieve fresh with expanded items for reliability
         price_id = None
+        current_period_start = None
+        current_period_end = None
+        subscription_status = None
+        
         try:
-            # Retrieve the subscription with expanded items to ensure we can access the price
+            # Retrieve the subscription with expanded items to ensure we can access all fields
             print(f"🔄 Retrieving subscription {subscription.id} with expanded items...")
             expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
+            
+            # Get subscription status
+            subscription_status = expanded_sub.status
             
             # Access the price ID from expanded subscription
             if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
@@ -1702,6 +1733,24 @@ def handle_subscription_created(subscription):
                             price_id = price.id
                             print(f"✅ Found price ID: {price_id}")
             
+            # Get current period dates - safely access from expanded subscription
+            if hasattr(expanded_sub, 'current_period_start') and expanded_sub.current_period_start:
+                current_period_start = datetime.fromtimestamp(expanded_sub.current_period_start)
+                print(f"📅 Current period start: {current_period_start}")
+            else:
+                # Fallback to current time
+                current_period_start = datetime.now()
+                print(f"⚠️ No current_period_start found, using current time")
+            
+            if hasattr(expanded_sub, 'current_period_end') and expanded_sub.current_period_end:
+                current_period_end = datetime.fromtimestamp(expanded_sub.current_period_end)
+                print(f"📅 Current period end: {current_period_end}")
+            else:
+                # Fallback to 1 month from now
+                from datetime import timedelta
+                current_period_end = datetime.now() + timedelta(days=30)
+                print(f"⚠️ No current_period_end found, using 1 month from now")
+            
             # Fallback: use config price ID for starter plan if we couldn't get it
             if not price_id:
                 if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
@@ -1711,13 +1760,17 @@ def handle_subscription_created(subscription):
                     print(f"❌ Could not determine price ID and no fallback configured")
                     
         except Exception as e:
-            print(f"⚠️ Error retrieving price ID: {e}")
+            print(f"⚠️ Error retrieving subscription details: {e}")
             import traceback
             traceback.print_exc()
             # Final fallback
             if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
                 price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID
                 print(f"⚠️ Using fallback price ID after error: {price_id}")
+            subscription_status = 'active'  # Default status
+            current_period_start = datetime.now()
+            from datetime import timedelta
+            current_period_end = datetime.now() + timedelta(days=30)
         
         print(f"💰 Price ID: {price_id}")
         
@@ -1743,9 +1796,9 @@ def handle_subscription_created(subscription):
                 customer_id,
                 price_id,
                 'starter',
-                subscription.status,
-                datetime.fromtimestamp(subscription.current_period_start),
-                datetime.fromtimestamp(subscription.current_period_end)
+                subscription_status,
+                current_period_start,
+                current_period_end
             ))
         else:
             # SQLite - use INSERT OR REPLACE
@@ -1761,9 +1814,9 @@ def handle_subscription_created(subscription):
                 customer_id,
                 price_id,
                 'starter',
-                subscription.status,
-                datetime.fromtimestamp(subscription.current_period_start),
-                datetime.fromtimestamp(subscription.current_period_end)
+                subscription_status,
+                current_period_start,
+                current_period_end
             ))
         
         print(f"💾 Subscription record created in database")
@@ -1864,17 +1917,38 @@ def handle_subscription_deleted(subscription):
 def handle_invoice_payment_succeeded(invoice):
     """Handle successful monthly subscription payment"""
     try:
-        # Get subscription ID - handle both object attribute and dictionary access
+        # Retrieve invoice with expanded subscription to ensure we can access it
+        invoice_id = invoice.id if hasattr(invoice, 'id') else None
         subscription_id = None
-        try:
-            if hasattr(invoice, 'subscription') and invoice.subscription:
-                subscription_id = invoice.subscription.id if hasattr(invoice.subscription, 'id') else str(invoice.subscription)
-            elif isinstance(invoice, dict) and 'subscription' in invoice:
-                subscription_id = invoice['subscription']
-                if isinstance(subscription_id, dict) and 'id' in subscription_id:
-                    subscription_id = subscription_id['id']
-        except Exception as e:
-            print(f"⚠️ Could not access invoice.subscription: {e}")
+        
+        if invoice_id:
+            try:
+                # Retrieve invoice with expanded subscription
+                expanded_invoice = stripe.Invoice.retrieve(invoice_id, expand=['subscription'])
+                
+                # Get subscription ID - can be a string ID or object
+                if hasattr(expanded_invoice, 'subscription'):
+                    if expanded_invoice.subscription is None:
+                        print(f"⚠️ Invoice {invoice_id} has no subscription (one-time payment)")
+                        return
+                    elif isinstance(expanded_invoice.subscription, str):
+                        subscription_id = expanded_invoice.subscription
+                    elif hasattr(expanded_invoice.subscription, 'id'):
+                        subscription_id = expanded_invoice.subscription.id
+                    else:
+                        subscription_id = str(expanded_invoice.subscription)
+                else:
+                    print(f"⚠️ Invoice {invoice_id} has no subscription attribute")
+                    return
+            except Exception as e:
+                print(f"⚠️ Error retrieving invoice: {e}")
+                # Fallback: try direct access
+                if hasattr(invoice, 'subscription') and invoice.subscription:
+                    subscription_id = invoice.subscription.id if hasattr(invoice.subscription, 'id') else str(invoice.subscription)
+                elif isinstance(invoice, dict) and 'subscription' in invoice:
+                    subscription_id = invoice['subscription']
+                    if isinstance(subscription_id, dict) and 'id' in subscription_id:
+                        subscription_id = subscription_id['id']
         
         if not subscription_id:
             print(f"⚠️ No subscription ID in invoice - this might be a one-time payment or test event")
