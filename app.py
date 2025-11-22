@@ -870,10 +870,15 @@ def dashboard():
     
     # Determine current plan based on subscription or replies_limit_monthly
     current_plan = None
+    subscription_status = None
     if subscription_data:
         plan_type, status = subscription_data
+        subscription_status = status
         if status == 'active':
             current_plan = plan_type  # 'starter' or 'standard'
+        # If canceled, still show the plan but buttons will show cancel/upgrade/downgrade
+        elif status == 'canceled':
+            current_plan = plan_type  # Show plan even if canceled
     elif replies_limit_monthly >= 1000:
         current_plan = 'standard'
     elif replies_limit_monthly >= 150:
@@ -903,7 +908,8 @@ def dashboard():
                          total_replies_available=total_replies_available,
                          remaining_replies=remaining_replies,
                          minutes_saved=minutes_saved,
-                         current_plan=current_plan)
+                         current_plan=current_plan,
+                         subscription_status=subscription_status)
 
 # ---- Bot Settings Management ----
 
@@ -1501,39 +1507,45 @@ def create_addon_checkout():
     user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
     
     try:
-        # Create or retrieve Stripe customer
+        # Check if user has an active subscription (required for add-ons)
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Check if user already has a Stripe customer ID in subscriptions table
         cursor.execute(f"""
-            SELECT stripe_customer_id FROM subscriptions 
-            WHERE user_id = {placeholder} 
+            SELECT stripe_customer_id, status, plan_type
+            FROM subscriptions 
+            WHERE user_id = {placeholder}
+            ORDER BY created_at DESC
             LIMIT 1
         """, (user_id,))
         result = cursor.fetchone()
         
-        if result and result[0]:
-            customer_id = result[0]
-            print(f"✅ Found existing customer ID in database: {customer_id}")
-        else:
+        if not result or not result[0]:
+            flash("❌ You need an active subscription to purchase add-ons.", "error")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        customer_id, subscription_status, plan_type = result
+        
+        # Check if subscription is active
+        if subscription_status != 'active':
+            flash("❌ You need an active subscription to purchase add-ons. Please reactivate your subscription.", "error")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        # Check if customer exists in Stripe
+        if not customer_id:
             # Check if customer already exists in Stripe by email
             existing_customers = stripe.Customer.list(email=user_email, limit=1)
             if existing_customers.data:
-                # Use existing customer
                 customer_id = existing_customers.data[0].id
-                # Update metadata to ensure user_id is set
                 stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
                 print(f"✅ Found existing Stripe customer: {customer_id}")
             else:
-                # Create new Stripe customer
-                customer = stripe.Customer.create(
-                    email=user_email,
-                    metadata={'user_id': str(user_id)}
-                )
-                customer_id = customer.id
-                print(f"✅ Created new Stripe customer: {customer_id}")
+                flash("❌ Customer account not found. Please contact support.", "error")
+                conn.close()
+                return redirect(url_for('dashboard'))
         
         conn.close()
         
@@ -1583,12 +1595,196 @@ def checkout_success():
             flash("Subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
             flash("✅ Payment successful! 150 additional replies have been added to your account.", "success")
+        elif checkout_session.metadata.get('type') == 'upgrade':
+            flash("Subscription upgraded successfully! You now have 1000 replies per month.", "success")
+        elif checkout_session.metadata.get('type') == 'downgrade':
+            flash("Subscription downgraded successfully! You now have 150 replies per month.", "success")
         
         return redirect(url_for('dashboard'))
         
     except Exception as e:
         print(f"Error processing checkout success: {e}")
         flash("✅ Payment processed. Please check your account.", "success")
+        return redirect(url_for('dashboard'))
+
+@app.route("/checkout/upgrade", methods=["POST"])
+@login_required
+def create_upgrade_checkout():
+    """Upgrade from Starter to Standard plan"""
+    if not Config.STRIPE_SECRET_KEY:
+        flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_id = session['user_id']
+    
+    # Check if user has active Starter plan
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    cursor.execute(f"""
+        SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
+        FROM subscriptions
+        WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'starter'
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (user_id,))
+    subscription = cursor.fetchone()
+    conn.close()
+    
+    if not subscription:
+        flash("❌ No active Starter plan found to upgrade.", "error")
+        return redirect(url_for('dashboard'))
+    
+    subscription_id, customer_id, _, _ = subscription
+    
+    try:
+        # Update subscription in Stripe to Standard plan (we'll need Standard price ID)
+        # For now, create new checkout session for Standard plan
+        # Note: In production, you'd want to use Stripe's subscription update API
+        # This is a simplified version that creates a new subscription
+        user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+        
+        # Get Standard plan price ID from config
+        standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID
+        if not standard_price_id:
+            flash("❌ Standard plan not configured. Please contact support.", "error")
+            return redirect(url_for('dashboard'))
+        
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': standard_price_id,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'upgrade', 'old_subscription_id': subscription_id}
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error during upgrade: {e}")
+        flash(f"❌ Upgrade error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error during upgrade: {e}")
+        flash("❌ An error occurred during upgrade. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
+@app.route("/checkout/downgrade", methods=["POST"])
+@login_required
+def create_downgrade_checkout():
+    """Downgrade from Standard to Starter plan"""
+    if not Config.STRIPE_SECRET_KEY:
+        flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_id = session['user_id']
+    
+    # Check if user has active Standard plan
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    cursor.execute(f"""
+        SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
+        FROM subscriptions
+        WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'standard'
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (user_id,))
+    subscription = cursor.fetchone()
+    conn.close()
+    
+    if not subscription:
+        flash("❌ No active Standard plan found to downgrade.", "error")
+        return redirect(url_for('dashboard'))
+    
+    subscription_id, customer_id, _, _ = subscription
+    
+    try:
+        # Create checkout session for Starter plan
+        user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+        
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': Config.STRIPE_STARTER_PLAN_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'downgrade', 'old_subscription_id': subscription_id}
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error during downgrade: {e}")
+        flash(f"❌ Downgrade error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error during downgrade: {e}")
+        flash("❌ An error occurred during downgrade. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
+@app.route("/subscription/cancel", methods=["POST"])
+@login_required
+def cancel_subscription():
+    """Cancel subscription - immediate or at period end"""
+    user_id = session['user_id']
+    cancel_immediately = request.form.get('immediate', 'false') == 'true'
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get active subscription
+        cursor.execute(f"""
+            SELECT stripe_subscription_id, plan_type
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription = cursor.fetchone()
+        
+        if not subscription:
+            flash("❌ No active subscription found.", "error")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        subscription_id, plan_type = subscription
+        conn.close()
+        
+        # Cancel subscription in Stripe
+        if cancel_immediately:
+            # Cancel immediately
+            stripe.Subscription.delete(subscription_id)
+            flash("Subscription canceled immediately. You can still use remaining replies, but cannot purchase add-ons.", "success")
+        else:
+            # Cancel at period end
+            stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
+            flash("Subscription will be canceled at the end of the billing period. You can still use remaining replies until then.", "success")
+        
+        # The webhook will handle updating the database status
+        
+        return redirect(url_for('dashboard'))
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error canceling subscription: {e}")
+        flash(f"❌ Error canceling subscription: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error canceling subscription: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard'))
 
 @app.route("/webhook/stripe", methods=["POST"])
@@ -1881,12 +2077,24 @@ def handle_subscription_updated(subscription):
         print(f"Error handling subscription updated: {e}")
 
 def handle_subscription_deleted(subscription):
-    """Handle subscription cancellation"""
+    """Handle subscription cancellation - keep remaining replies but mark as canceled"""
     try:
+        customer_id = subscription.customer
+        customer = stripe.Customer.retrieve(customer_id)
+        user_id_str = customer.metadata.get('user_id')
+        
+        if not user_id_str:
+            print(f"❌ No user_id in customer metadata for canceled subscription")
+            return
+        
+        user_id = int(user_id_str)
+        print(f"🔄 Processing subscription cancellation for user {user_id}")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
+        # Update subscription status to canceled but keep it in database
         cursor.execute(f"""
             UPDATE subscriptions 
             SET status = {placeholder},
@@ -1894,25 +2102,37 @@ def handle_subscription_deleted(subscription):
             WHERE stripe_subscription_id = {placeholder}
         """, ('canceled', subscription.id))
         
-        # Reset user's monthly limit to 5 (testing mode) or 0
-        customer_id = subscription.customer
-        customer = stripe.Customer.retrieve(customer_id)
-        user_id = int(customer.metadata.get('user_id'))
+        # DO NOT reset replies_limit_monthly - let them keep remaining replies
+        # They can still use remaining monthly + purchased replies
+        # But they cannot buy add-ons (enforced in addon checkout route)
+        # Monthly replies will naturally reset when new month comes, but since no subscription,
+        # they won't get new monthly replies
         
+        # Get current reply counts for logging
         cursor.execute(f"""
-            UPDATE users 
-            SET replies_limit_monthly = 5 
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
             WHERE id = {placeholder}
         """, (user_id,))
+        reply_data = cursor.fetchone()
+        
+        if reply_data:
+            replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
+            total_used = replies_sent_monthly + replies_used_purchased
+            total_available = replies_limit_monthly + replies_purchased
+            remaining = max(0, total_available - total_used)
+            print(f"📊 User {user_id} has {remaining} remaining replies after cancellation")
         
         conn.commit()
         conn.close()
         
-        log_activity(user_id, 'stripe_subscription_canceled', 'Starter plan subscription canceled')
-        print(f"✅ Subscription canceled: {subscription.id}")
+        log_activity(user_id, 'stripe_subscription_canceled', 'Subscription canceled - remaining replies preserved')
+        print(f"✅ Subscription canceled for user {user_id} (remaining replies preserved)")
         
     except Exception as e:
-        print(f"Error handling subscription deleted: {e}")
+        print(f"❌ Error handling subscription deleted: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_invoice_payment_succeeded(invoice):
     """Handle successful monthly subscription payment"""
@@ -3075,6 +3295,89 @@ def debug_stripe_customers():
         
     except Exception as e:
         return f"Error: {str(e)}"
+
+@app.route("/debug/simulate-reply", methods=["POST"])
+@login_required
+def debug_simulate_reply():
+    """Simulate sending a reply to test reply counting and limit enforcement"""
+    try:
+        user_id = session['user_id']
+        
+        # Increment reply count (same as if a real reply was sent)
+        success = increment_reply_count(user_id)
+        
+        if success:
+            # Get updated stats
+            has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id)
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            placeholder = get_param_placeholder()
+            
+            cursor.execute(f"""
+                SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+                FROM users
+                WHERE id = {placeholder}
+            """, (user_id,))
+            reply_data = cursor.fetchone()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Reply simulated! Remaining: {remaining}/{total_available}',
+                'stats': {
+                    'replies_sent_monthly': reply_data[0] if reply_data else 0,
+                    'replies_limit_monthly': reply_data[1] if reply_data else 0,
+                    'replies_purchased': reply_data[2] if reply_data else 0,
+                    'replies_used_purchased': reply_data[3] if reply_data else 0,
+                    'remaining': remaining,
+                    'has_limit': has_limit
+                }
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Limit reached! Cannot simulate more replies.'
+            }), 200
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route("/debug/set-reply-count", methods=["POST"])
+@login_required
+def debug_set_reply_count():
+    """Set reply count manually for testing limit enforcement"""
+    try:
+        user_id = session['user_id']
+        data = request.get_json()
+        count = int(data.get('count', 0))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            UPDATE users 
+            SET replies_sent_monthly = {placeholder}
+            WHERE id = {placeholder}
+        """, (count, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reply count set to {count}'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route("/admin/prompt", methods=["GET", "POST"])
 def admin_prompt():

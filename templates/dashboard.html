@@ -562,8 +562,28 @@
                     </p>
                     {% if current_plan == 'starter' %}
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€9/month • 150 replies</p>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <form method="POST" action="{{ url_for('create_upgrade_checkout') }}" style="display: inline-block;">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-arrow-up"></i> Upgrade to Standard
+                                </button>
+                            </form>
+                            <button type="button" class="btn-secondary" onclick="showCancelModal()">
+                                <i class="fas fa-times"></i> Cancel Plan
+                            </button>
+                        </div>
                     {% elif current_plan == 'standard' %}
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€39/month • 1000 replies</p>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <form method="POST" action="{{ url_for('create_downgrade_checkout') }}" style="display: inline-block;">
+                                <button type="submit" class="btn-secondary">
+                                    <i class="fas fa-arrow-down"></i> Downgrade to Starter
+                                </button>
+                            </form>
+                            <button type="button" class="btn-secondary" onclick="showCancelModal()">
+                                <i class="fas fa-times"></i> Cancel Plan
+                            </button>
+                        </div>
                     {% endif %}
                 {% else %}
                     <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.7);"><strong>Current Plan:</strong> None</p>
@@ -828,6 +848,56 @@
         
         // Start ambient lighting after a short delay
         setTimeout(createAmbientLighting, 2000);
+        
+        // Cancel subscription modal
+        function showCancelModal() {
+            const modal = document.getElementById('cancelModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+        
+        function closeCancelModal() {
+            const modal = document.getElementById('cancelModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('cancelModal');
+            if (event.target == modal) {
+                closeCancelModal();
+            }
+        }
     </script>
+    
+    <!-- Cancel Subscription Modal -->
+    <div id="cancelModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center;">
+        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; position: relative;">
+            <span onclick="closeCancelModal()" style="position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: color 0.3s;">&times;</span>
+            <h2 style="color: var(--chata-blue); margin-bottom: 1rem;">Cancel Subscription</h2>
+            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">Are you sure you want to cancel your subscription?</p>
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-bottom: 1.5rem;">You can keep using your remaining replies, but you won't be able to purchase add-ons until you reactivate your subscription.</p>
+            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                <form method="POST" action="{{ url_for('cancel_subscription') }}" style="margin: 0;">
+                    <input type="hidden" name="immediate" value="false">
+                    <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                        Cancel at Period End
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('cancel_subscription') }}" style="margin: 0;">
+                    <input type="hidden" name="immediate" value="true">
+                    <button type="submit" class="btn-secondary" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+                        Cancel Immediately
+                    </button>
+                </form>
+                <button type="button" class="btn-secondary" onclick="closeCancelModal()" style="width: 100%;">
+                    Keep Subscription
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
