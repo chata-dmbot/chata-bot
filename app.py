@@ -1685,6 +1685,42 @@ def handle_subscription_created(subscription):
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
+        # Get price ID from subscription - retrieve fresh with expanded items for reliability
+        price_id = None
+        try:
+            # Retrieve the subscription with expanded items to ensure we can access the price
+            print(f"🔄 Retrieving subscription {subscription.id} with expanded items...")
+            expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
+            
+            # Access the price ID from expanded subscription
+            if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
+                if len(expanded_sub.items.data) > 0:
+                    item = expanded_sub.items.data[0]
+                    if hasattr(item, 'price'):
+                        price = item.price
+                        if hasattr(price, 'id'):
+                            price_id = price.id
+                            print(f"✅ Found price ID: {price_id}")
+            
+            # Fallback: use config price ID for starter plan if we couldn't get it
+            if not price_id:
+                if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
+                    price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID
+                    print(f"⚠️ Using fallback price ID from config: {price_id}")
+                else:
+                    print(f"❌ Could not determine price ID and no fallback configured")
+                    
+        except Exception as e:
+            print(f"⚠️ Error retrieving price ID: {e}")
+            import traceback
+            traceback.print_exc()
+            # Final fallback
+            if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
+                price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID
+                print(f"⚠️ Using fallback price ID after error: {price_id}")
+        
+        print(f"💰 Price ID: {price_id}")
+        
         # Check if using PostgreSQL
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         
@@ -1705,7 +1741,7 @@ def handle_subscription_created(subscription):
                 user_id,
                 subscription.id,
                 customer_id,
-                subscription.items.data[0].price.id,
+                price_id,
                 'starter',
                 subscription.status,
                 datetime.fromtimestamp(subscription.current_period_start),
@@ -1723,7 +1759,7 @@ def handle_subscription_created(subscription):
                 user_id,
                 subscription.id,
                 customer_id,
-                subscription.items.data[0].price.id,
+                price_id,
                 'starter',
                 subscription.status,
                 datetime.fromtimestamp(subscription.current_period_start),
@@ -1828,12 +1864,23 @@ def handle_subscription_deleted(subscription):
 def handle_invoice_payment_succeeded(invoice):
     """Handle successful monthly subscription payment"""
     try:
-        subscription_id = invoice.subscription
-        print(f"💰 Invoice payment succeeded for subscription: {subscription_id}")
+        # Get subscription ID - handle both object attribute and dictionary access
+        subscription_id = None
+        try:
+            if hasattr(invoice, 'subscription') and invoice.subscription:
+                subscription_id = invoice.subscription.id if hasattr(invoice.subscription, 'id') else str(invoice.subscription)
+            elif isinstance(invoice, dict) and 'subscription' in invoice:
+                subscription_id = invoice['subscription']
+                if isinstance(subscription_id, dict) and 'id' in subscription_id:
+                    subscription_id = subscription_id['id']
+        except Exception as e:
+            print(f"⚠️ Could not access invoice.subscription: {e}")
         
         if not subscription_id:
-            print(f"⚠️ No subscription ID in invoice - this is likely a test event")
+            print(f"⚠️ No subscription ID in invoice - this might be a one-time payment or test event")
             return
+        
+        print(f"💰 Invoice payment succeeded for subscription: {subscription_id}")
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1874,8 +1921,20 @@ def handle_invoice_payment_succeeded(invoice):
 def handle_invoice_payment_failed(invoice):
     """Handle failed subscription payment"""
     try:
-        subscription_id = invoice.subscription
+        # Get subscription ID - handle both object attribute and dictionary access
+        subscription_id = None
+        try:
+            if hasattr(invoice, 'subscription') and invoice.subscription:
+                subscription_id = invoice.subscription.id if hasattr(invoice.subscription, 'id') else str(invoice.subscription)
+            elif isinstance(invoice, dict) and 'subscription' in invoice:
+                subscription_id = invoice['subscription']
+                if isinstance(subscription_id, dict) and 'id' in subscription_id:
+                    subscription_id = subscription_id['id']
+        except Exception as e:
+            print(f"⚠️ Could not access invoice.subscription: {e}")
+        
         if not subscription_id:
+            print(f"⚠️ No subscription ID in invoice - skipping payment failure handling")
             return
         
         conn = get_db_connection()
