@@ -556,6 +556,21 @@
                 <h2><i class="fas fa-user"></i> Account Information</h2>
                 <p><strong>Email:</strong> {{ user.email }}</p>
                 <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
+                {% if current_plan %}
+                    <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
+                        <span style="color: var(--chata-blue); text-transform: capitalize; font-weight: 600;">{{ current_plan }}</span>
+                    </p>
+                    {% if current_plan == 'starter' %}
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€9/month • 150 replies</p>
+                    {% elif current_plan == 'standard' %}
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€39/month • 1000 replies</p>
+                    {% endif %}
+                {% else %}
+                    <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.7);"><strong>Current Plan:</strong> None</p>
+                    <a href="{{ url_for('home') }}#pricing" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                        <i class="fas fa-rocket"></i> Get Started
+                    </a>
+                {% endif %}
             </div>
 
             <!-- Quick Stats -->

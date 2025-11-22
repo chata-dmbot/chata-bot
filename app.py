@@ -858,6 +858,28 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
+    # Get subscription data to determine plan
+    cursor.execute(f"""
+        SELECT plan_type, status
+        FROM subscriptions
+        WHERE user_id = {placeholder}
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (user_id,))
+    subscription_data = cursor.fetchone()
+    
+    # Determine current plan based on subscription or replies_limit_monthly
+    current_plan = None
+    if subscription_data:
+        plan_type, status = subscription_data
+        if status == 'active':
+            current_plan = plan_type  # 'starter' or 'standard'
+    elif replies_limit_monthly >= 1000:
+        current_plan = 'standard'
+    elif replies_limit_monthly >= 150:
+        current_plan = 'starter'
+    # If replies_limit_monthly is 5, it's likely testing mode, so no plan
+    
     conn.close()
     
     connections_list = []
@@ -880,7 +902,8 @@ def dashboard():
                          total_replies_used=total_replies_used,
                          total_replies_available=total_replies_available,
                          remaining_replies=remaining_replies,
-                         minutes_saved=minutes_saved)
+                         minutes_saved=minutes_saved,
+                         current_plan=current_plan)
 
 # ---- Bot Settings Management ----
 
