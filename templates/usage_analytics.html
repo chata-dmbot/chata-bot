@@ -650,37 +650,169 @@
     </main>
 
     <script>
-        // Interactive grid effect (same as dashboard)
-        const grid = document.getElementById('interactiveGrid');
-        const cells = [];
-        const cols = Math.floor(window.innerWidth / 50);
-        const rows = Math.floor(window.innerHeight / 50);
-
-        for (let i = 0; i < cols * rows; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'grid-cell';
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            cell.style.left = col * 50 + 'px';
-            cell.style.top = row * 50 + 'px';
-            grid.appendChild(cell);
-            cells.push(cell);
+        // Interactive Grid Background with scroll following
+        function createInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            const gridSize = 50;
+            const cols = Math.ceil(window.innerWidth / gridSize);
+            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage (matches 600% CSS height)
+            
+            // Clear existing grid
+            grid.innerHTML = '';
+            
+            // Create grid cells
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.left = j * gridSize + 'px';
+                    cell.style.top = i * gridSize + 'px';
+                    grid.appendChild(cell);
+                }
+            }
         }
-
-        document.addEventListener('mousemove', (e) => {
+        
+        // Optimized scroll-based grid movement
+        let ticking = false;
+        let grid = null;
+        
+        function updateGridOnScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    if (!grid) {
+                        grid = document.getElementById('interactiveGrid');
+                    }
+                    const scrollY = window.pageYOffset;
+                    
+                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
+                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        
+        // Initialize grid on load
+        window.addEventListener('load', function() {
+            // Ensure page starts at top
+            window.scrollTo(0, 0);
+            createInteractiveGrid();
+            grid = document.getElementById('interactiveGrid');
+        });
+        window.addEventListener('resize', createInteractiveGrid);
+        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+        
+        // Individual square timing system
+        let cellTimeouts = new Map(); // Track individual timeouts for each cell
+        
+        // High refresh rate mouse tracking
+        let mouseX = 0;
+        let mouseY = 0;
+        let animationFrameId = null;
+        
+        // Track mouse position with high frequency
+        document.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Smooth grid lighting with requestAnimationFrame
+        function updateGridLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
             cells.forEach(cell => {
                 const rect = cell.getBoundingClientRect();
-                const x = e.clientX - rect.left - 25;
-                const y = e.clientY - rect.top - 25;
-                const distance = Math.sqrt(x * x + y * y);
                 
-                if (distance < 100) {
+                // Check if mouse is directly over this cell (exact square only)
+                const isMouseOver = mouseX >= rect.left && 
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    // Clear any existing timeout for this cell
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    // Activate only this exact square with solid illumination
+                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
+                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
+                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
+                    cell.style.transform = `scale(1.02)`;
                     cell.classList.add('active');
-                } else {
-                    cell.classList.remove('active');
+                    
+                    // Set individual timeout for this cell
+                    const timeoutId = setTimeout(() => {
+                        cell.style.background = '';
+                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                        cell.style.boxShadow = '';
+                        cell.style.transform = 'scale(1)';
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
+                    }, 1500);
+                    
+                    cellTimeouts.set(cell, timeoutId);
                 }
             });
-        });
+            
+            // Continue the animation loop
+            animationFrameId = requestAnimationFrame(updateGridLighting);
+        }
+        
+        // Start the high refresh rate animation
+        updateGridLighting();
+        
+        // Ambient grid lighting - random squares light up occasionally
+        function createAmbientLighting() {
+            const grid = document.getElementById('interactiveGrid');
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            function lightRandomSquare() {
+                if (cells.length === 0) return;
+                
+                // Pick a random cell
+                const randomCell = cells[Math.floor(Math.random() * cells.length)];
+                
+                // Random intensity (more visible)
+                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
+                
+                // Random duration (1-3 seconds)
+                const duration = Math.random() * 2000 + 1000;
+                
+                // Light up the square with white orb and subtle border
+                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
+                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
+                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
+                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
+                randomCell.classList.add('active');
+                
+                // Fade out after duration
+                setTimeout(() => {
+                    randomCell.style.background = '';
+                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                    randomCell.style.boxShadow = '';
+                    randomCell.style.transform = 'scale(1)';
+                    randomCell.classList.remove('active');
+                }, duration);
+            }
+            
+            // Light up random squares every 2-5 seconds
+            function scheduleNextLight() {
+                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
+                setTimeout(() => {
+                    lightRandomSquare();
+                    scheduleNextLight();
+                }, delay);
+            }
+            
+            scheduleNextLight();
+        }
+        
+        // Start ambient lighting after a short delay
+        setTimeout(createAmbientLighting, 2000);
     </script>
 </body>
 </html>

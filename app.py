@@ -1586,7 +1586,7 @@ def checkout_success():
         if checkout_session.metadata.get('type') == 'subscription':
             flash("Subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
-            flash("✅ Payment successful! 150 additional replies have been added to your account.", "success")
+            flash("Payment successful! 150 additional replies have been added to your account.", "success")
         elif checkout_session.metadata.get('type') == 'upgrade':
             flash("Subscription upgraded successfully! You now have 1000 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'downgrade':
@@ -1596,7 +1596,7 @@ def checkout_success():
         
     except Exception as e:
         print(f"Error processing checkout success: {e}")
-        flash("✅ Payment processed. Please check your account.", "success")
+        flash("Payment processed. Please check your account.", "success")
         return redirect(url_for('dashboard'))
 
 @app.route("/checkout/upgrade", methods=["POST"])
