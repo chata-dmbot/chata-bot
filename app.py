@@ -3470,6 +3470,4 @@ def instagram_setup_help():
 if __name__ == "__main__":
     # Use environment variable for port (Render requirement)
     port = int(os.environ.get("PORT", 5000))
-    # Enable debug mode for local development (auto-reload on code changes)
-    debug_mode = os.environ.get("FLASK_DEBUG", "True").lower() == "true"
-    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+    app.run(host="0.0.0.0", port=port, debug=False)
