@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --chata-blue: #3366ff;
+            --chata-blue-light: #4d7cff;
+            --chata-blue-dark: #1a4dcc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Global subtle blur overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(1px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .glass-nav {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+        }
+        
+        .navigation {
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: slideDown 1s ease-out forwards;
+            position: relative;
+            z-index: 15;
+        }
+
+        .nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            color: var(--chata-blue);
+        }
+        
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--chata-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        .logo-blue {
+            color: #3366ff;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        .cta-button-large {
+            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+            padding: 1rem 3rem;
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+            display: inline-block;
+        }
+        
+        .cta-button-large:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+        }
+
+        /* Interactive Grid Background */
+        .interactive-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 600%;
+            z-index: -1;
+            background: #000000;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-attachment: scroll;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(51, 102, 255, 0.1);
+            transition: all 0.6s ease;
+            pointer-events: auto;
+            background: transparent;
+        }
+        
+        .grid-cell:hover,
+        .grid-cell.active {
+            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+            border-color: var(--chata-blue);
+            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pricing-container {
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.3s forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav navigation" style="padding: 1.5rem 2rem; position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="logo-blue" style="font-size: 1.5rem; font-weight: 700;">CHATA</span>
+        </div>
+        <div style="display: flex; gap: 2rem; align-items: center;">
+            <a href="{{ url_for('home') }}" class="nav-item" style="text-decoration: none; color: #fff;">HOME</a>
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('dashboard') }}" class="nav-item" style="text-decoration: none; color: #fff;">DASHBOARD</a>
+                <a href="{{ url_for('logout') }}" class="nav-item" style="text-decoration: none; color: #fff;">LOGOUT</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="nav-item" style="text-decoration: none; color: #fff;">LOGIN</a>
+                <a href="{{ url_for('signup') }}" class="cta-button" style="padding: 0.5rem 1.5rem; border-radius: 8px; text-decoration: none; color: #fff;">SIGN UP</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Pricing Section -->
+    <section style="margin-top: 120px; margin-bottom: 100px; padding: 2rem; position: relative; z-index: 10;">
+        <div class="pricing-container" style="max-width: 1400px; margin: 0 auto;">
+            <!-- Title -->
+            <div style="text-align: center; margin-bottom: 4rem;">
+                <h1 style="font-size: 3rem; font-weight: 700; color: #fff; letter-spacing: 0.1em; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3);">
+                    PRICING
+                </h1>
+            </div>
+
+            <!-- Two Plans Side by Side -->
+            <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+                
+                <!-- Starter Plan (Left) -->
+                <div style="text-align: center; padding: 3rem 2rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+                    
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <span style="font-size: 4rem; font-weight: 800; color: #fff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);">€9</span>
+                        <span style="font-size: 1.4rem; color: rgba(255, 255, 255, 0.8); margin-left: 0.5rem;">/MONTH</span>
+                    </div>
+                    
+                    <!-- Plan Name -->
+                    <p style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); font-weight: 500; margin-bottom: 2rem;">
+                        STARTER
+                    </p>
+                    
+                    <!-- Features -->
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <p style="font-size: 1.1rem; color: #fff; font-weight: 500; margin-bottom: 1.5rem;">
+                            INCLUDES EVERYTHING ABOVE
+                        </p>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">+ 150 AI REPLIES/MONTH</span>
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">ADD-ONS: +150 REPLIES FOR €5</span>
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center;">
+                        {% if session.get('user_id') %}
+                        <form method="POST" action="{{ url_for('create_subscription_checkout') }}" style="display: inline-block;">
+                            <button type="submit" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block; border: none; cursor: pointer;">
+                                GET STARTED
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
+                            GET STARTED
+                        </a>
+                        {% endif %}
+                        
+                        <!-- Small Comment -->
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0; font-weight: 400; margin-top: 1rem;">
+                            CANCEL ANYTIME. NO SURPRISES.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Standard Plan (Right) -->
+                <div style="text-align: center; padding: 3rem 2rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+                    <!-- Price -->
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <span style="font-size: 4rem; font-weight: 800; color: #fff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);">€39</span>
+                        <span style="font-size: 1.4rem; color: rgba(255, 255, 255, 0.8); margin-left: 0.5rem;">/MONTH</span>
+                    </div>
+                    
+                    <!-- Plan Name -->
+                    <p style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); font-weight: 500; margin-bottom: 2rem;">
+                        STANDARD
+                    </p>
+                    
+                    <!-- Features -->
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <p style="font-size: 1.1rem; color: #fff; font-weight: 500; margin-bottom: 1.5rem;">
+                            INCLUDES EVERYTHING ABOVE
+                        </p>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">+ 1,000 AI REPLIES/MONTH</span>
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.8);">ADD-ONS: +150 REPLIES FOR €5</span>
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
+                            GET STARTED
+                        </a>
+                        
+                        <!-- Small Comment -->
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0; font-weight: 400; margin-top: 1rem;">
+                            CANCEL ANYTIME. NO SURPRISES.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Interactive Grid Background
+        const grid = document.getElementById('interactiveGrid');
+        const gridSize = 50;
+        const cols = Math.ceil(window.innerWidth / gridSize);
+        const rows = Math.ceil(window.innerHeight / gridSize) * 6; // 600% height
+
+        // Create grid cells
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.style.left = `${j * gridSize}px`;
+                cell.style.top = `${i * gridSize}px`;
+                grid.appendChild(cell);
+            }
+        }
+
+        // Mouse interaction
+        const cells = document.querySelectorAll('.grid-cell');
+        
+        cells.forEach(cell => {
+            cell.addEventListener('mouseenter', function() {
+                this.classList.add('active');
+            });
+            
+            cell.addEventListener('mouseleave', function() {
+                this.classList.remove('active');
+            });
+        });
+
+        // Random cell activation
+        function activateRandomCell() {
+            const randomCell = cells[Math.floor(Math.random() * cells.length)];
+            randomCell.classList.add('active');
+            setTimeout(() => {
+                randomCell.classList.remove('active');
+            }, 2000);
+        }
+
+        // Activate random cells periodically
+        setInterval(activateRandomCell, 3000);
+    </script>
+</body>
+</html>
+

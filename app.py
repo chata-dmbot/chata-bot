@@ -1403,22 +1403,14 @@ def usage_analytics():
                          minutes_saved=minutes_saved,
                          recent_activity=recent_activity)
 
-@app.route("/dashboard/usage/test-payment", methods=["POST"])
-@login_required
-def test_payment():
-    """Test route to simulate a payment and add 5 additional replies"""
-    user_id = session['user_id']
-    
-    # Simulate payment: 1€ = 5 replies (for testing)
-    success = add_purchased_replies(user_id, 1.0, payment_provider="test", payment_id=f"test_{int(time.time())}")
-    
-    if success:
-        flash("✅ Test payment successful! Added 5 additional replies.", "success")
-        log_activity(user_id, 'test_payment', 'Test payment: Added 5 replies')
-    else:
-        flash("❌ Test payment failed. Please try again.", "error")
-    
-    return redirect(url_for('dashboard'))
+# Test payment route disabled - use Stripe add-ons instead
+# @app.route("/dashboard/usage/test-payment", methods=["POST"])
+# @login_required
+# def test_payment():
+#     """Test route to simulate a payment and add 5 additional replies"""
+#     # This route is disabled - use Stripe add-ons instead
+#     flash("❌ Test payment is no longer available. Please use the 'Add Replies' button to purchase add-ons.", "error")
+#     return redirect(url_for('dashboard'))
 
 # ---- Stripe Payment Routes ----
 
@@ -3443,6 +3435,16 @@ def home():
     if user_logged_in:
         user = get_user_by_id(session['user_id'])
     return render_template("index.html", user_logged_in=user_logged_in, user=user)
+
+@app.route("/pricing")
+def pricing():
+    """Standalone pricing page"""
+    # Check if user is logged in
+    user_logged_in = 'user_id' in session
+    user = None
+    if user_logged_in:
+        user = get_user_by_id(session['user_id'])
+    return render_template("pricing.html", user_logged_in=user_logged_in, user=user)
 
 
 

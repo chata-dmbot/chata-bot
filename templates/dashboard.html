@@ -561,7 +561,7 @@
                         <span style="color: rgba(255, 255, 255, 0.5); text-transform: capitalize; font-weight: 600; text-decoration: line-through;">{{ current_plan }} (Canceled)</span>
                     </p>
                     <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">You can still use your remaining replies, but cannot purchase add-ons.</p>
-                    <a href="{{ url_for('home') }}#pricing" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                    <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
                         <i class="fas fa-rocket"></i> Reactivate Subscription
                     </a>
                 {% elif current_plan %}
@@ -593,9 +593,17 @@
                             </button>
                         </div>
                     {% endif %}
+                    <!-- Add Replies Button (only when plan exists) -->
+                    <div style="margin-top: 1rem;">
+                        <form method="POST" action="{{ url_for('create_addon_checkout') }}" style="display: inline-block;">
+                            <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-plus"></i> Add Replies (€5 / 150 replies)
+                            </button>
+                        </form>
+                    </div>
                 {% else %}
                     <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.7);"><strong>Current Plan:</strong> None</p>
-                    <a href="{{ url_for('home') }}#pricing" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                    <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
                         <i class="fas fa-rocket"></i> Get Started
                     </a>
                 {% endif %}
@@ -617,13 +625,6 @@
                         <div class="stat-number">{{ remaining_replies }}</div>
                         <div class="stat-label">Remaining Replies</div>
                     </div>
-                </div>
-                <div style="margin-top: 1rem;">
-                    <form method="POST" action="{{ url_for('test_payment') }}" style="display: inline-block;">
-                        <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #3fcf64 0%, #2fb85a 100%); width: 100%;">
-                            <i class="fas fa-coins"></i> Test Payment (Add 5 Replies)
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>
