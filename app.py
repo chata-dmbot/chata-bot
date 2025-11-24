@@ -1737,9 +1737,8 @@ def create_downgrade_checkout():
 @app.route("/subscription/cancel", methods=["POST"])
 @login_required
 def cancel_subscription():
-    """Cancel subscription - immediate or at period end"""
+    """Cancel subscription - cancel at period end"""
     user_id = session['user_id']
-    cancel_immediately = request.form.get('immediate', 'false') == 'true'
     
     try:
         conn = get_db_connection()
@@ -1764,17 +1763,22 @@ def cancel_subscription():
         subscription_id, plan_type = subscription
         conn.close()
         
-        # Cancel subscription in Stripe
-        if cancel_immediately:
-            # Cancel immediately
-            stripe.Subscription.delete(subscription_id)
-            flash("Subscription canceled immediately. You can still use remaining replies, but cannot purchase add-ons.", "success")
-        else:
-            # Cancel at period end
-            stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
-            flash("Subscription will be canceled at the end of the billing period. You can still use remaining replies until then.", "success")
+        # Cancel subscription at period end in Stripe
+        stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
         
-        # The webhook will handle updating the database status
+        # Also update database immediately to reflect canceled status
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            UPDATE subscriptions 
+            SET status = {placeholder},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE stripe_subscription_id = {placeholder}
+        """, ('canceled', subscription_id))
+        conn.commit()
+        conn.close()
+        
+        flash("Subscription canceled. You can still use your remaining replies, but cannot purchase add-ons.", "success")
         
         return redirect(url_for('dashboard'))
         

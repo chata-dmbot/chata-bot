@@ -556,7 +556,15 @@
                 <h2><i class="fas fa-user"></i> Account Information</h2>
                 <p><strong>Email:</strong> {{ user.email }}</p>
                 <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
-                {% if current_plan %}
+                {% if subscription_status == 'canceled' %}
+                    <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
+                        <span style="color: rgba(255, 255, 255, 0.5); text-transform: capitalize; font-weight: 600; text-decoration: line-through;">{{ current_plan }} (Canceled)</span>
+                    </p>
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">You can still use your remaining replies, but cannot purchase add-ons.</p>
+                    <a href="{{ url_for('home') }}#pricing" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                        <i class="fas fa-rocket"></i> Reactivate Subscription
+                    </a>
+                {% elif current_plan %}
                     <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
                         <span style="color: var(--chata-blue); text-transform: capitalize; font-weight: 600;">{{ current_plan }}</span>
                     </p>
@@ -879,18 +887,11 @@
             <span onclick="closeCancelModal()" style="position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: color 0.3s;">&times;</span>
             <h2 style="color: var(--chata-blue); margin-bottom: 1rem;">Cancel Subscription</h2>
             <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">Are you sure you want to cancel your subscription?</p>
-            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-bottom: 1.5rem;">You can keep using your remaining replies, but you won't be able to purchase add-ons until you reactivate your subscription.</p>
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-bottom: 1.5rem;">You can still use your remaining replies, but you won't be able to purchase add-ons until you reactivate your subscription.</p>
             <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                 <form method="POST" action="{{ url_for('cancel_subscription') }}" style="margin: 0;">
-                    <input type="hidden" name="immediate" value="false">
                     <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-                        Cancel at Period End
-                    </button>
-                </form>
-                <form method="POST" action="{{ url_for('cancel_subscription') }}" style="margin: 0;">
-                    <input type="hidden" name="immediate" value="true">
-                    <button type="submit" class="btn-secondary" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
-                        Cancel Immediately
+                        Cancel Plan
                     </button>
                 </form>
                 <button type="button" class="btn-secondary" onclick="closeCancelModal()" style="width: 100%;">
