@@ -1491,8 +1491,23 @@ def create_subscription_checkout():
 @login_required
 def create_standard_checkout():
     """Create Stripe Checkout session for Standard plan subscription"""
-    if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+    # Debug logging to help diagnose the issue
+    print(f"🔍 [STANDARD CHECKOUT] Checking configuration...")
+    print(f"🔍 [STANDARD CHECKOUT] STRIPE_SECRET_KEY exists: {bool(Config.STRIPE_SECRET_KEY)}")
+    print(f"🔍 [STANDARD CHECKOUT] STRIPE_STANDARD_PLAN_PRICE_ID value: '{Config.STRIPE_STANDARD_PLAN_PRICE_ID}'")
+    print(f"🔍 [STANDARD CHECKOUT] STRIPE_STANDARD_PLAN_PRICE_ID is None: {Config.STRIPE_STANDARD_PLAN_PRICE_ID is None}")
+    print(f"🔍 [STANDARD CHECKOUT] STRIPE_STANDARD_PLAN_PRICE_ID is empty string: {Config.STRIPE_STANDARD_PLAN_PRICE_ID == ''}")
+    print(f"🔍 [STANDARD CHECKOUT] STRIPE_STANDARD_PLAN_PRICE_ID bool check: {bool(Config.STRIPE_STANDARD_PLAN_PRICE_ID)}")
+    
+    if not Config.STRIPE_SECRET_KEY:
+        print(f"❌ [STANDARD CHECKOUT] STRIPE_SECRET_KEY is missing")
         flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    if not Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+        print(f"❌ [STANDARD CHECKOUT] STRIPE_STANDARD_PLAN_PRICE_ID is missing or empty")
+        print(f"❌ [STANDARD CHECKOUT] Please verify STRIPE_STANDARD_PLAN_PRICE_ID is set in environment variables")
+        flash("❌ Standard plan is not configured. Please contact support.", "error")
         return redirect(url_for('dashboard'))
     
     user_id = session['user_id']
@@ -3310,6 +3325,30 @@ def debug_user_stats():
         <a href="/dashboard">Back to Dashboard</a>
         </body>
         </html>
+        
+@app.route("/debug/stripe-config")
+@login_required
+def debug_stripe_config():
+    """Debug route to check Stripe configuration"""
+    config_status = {
+        'STRIPE_SECRET_KEY': 'Set' if Config.STRIPE_SECRET_KEY else 'Missing',
+        'STRIPE_PUBLISHABLE_KEY': 'Set' if Config.STRIPE_PUBLISHABLE_KEY else 'Missing',
+        'STRIPE_WEBHOOK_SECRET': 'Set' if Config.STRIPE_WEBHOOK_SECRET else 'Missing',
+        'STRIPE_STARTER_PLAN_PRICE_ID': Config.STRIPE_STARTER_PLAN_PRICE_ID if Config.STRIPE_STARTER_PLAN_PRICE_ID else 'Missing',
+        'STRIPE_STANDARD_PLAN_PRICE_ID': Config.STRIPE_STANDARD_PLAN_PRICE_ID if Config.STRIPE_STANDARD_PLAN_PRICE_ID else 'Missing',
+        'STRIPE_ADDON_PRICE_ID': Config.STRIPE_ADDON_PRICE_ID if Config.STRIPE_ADDON_PRICE_ID else 'Missing',
+    }
+    
+    return f"""
+    <html>
+    <head><title>Stripe Config Debug</title></head>
+    <body style="font-family: monospace; padding: 20px; background: #000; color: #0f0;">
+        <h1>Stripe Configuration Status</h1>
+        <pre>{json.dumps(config_status, indent=2)}</pre>
+        <a href="/dashboard" style="color: #0ff;">Back to Dashboard</a>
+    </body>
+    </html>
+    """
         """
         return html
         
