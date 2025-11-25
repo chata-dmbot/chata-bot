@@ -3325,7 +3325,12 @@ def debug_user_stats():
         <a href="/dashboard">Back to Dashboard</a>
         </body>
         </html>
+        """
+        return html
         
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 @app.route("/debug/stripe-config")
 @login_required
 def debug_stripe_config():
@@ -3349,11 +3354,6 @@ def debug_stripe_config():
     </body>
     </html>
     """
-        """
-        return html
-        
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 @app.route("/debug/test")
 def debug_test():
