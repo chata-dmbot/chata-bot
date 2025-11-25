@@ -868,7 +868,7 @@ def dashboard():
     """, (user_id,))
     subscription_data = cursor.fetchone()
     
-    # Determine current plan based on subscription or replies_limit_monthly
+    # Determine current plan based on subscription status
     current_plan = None
     subscription_status = None
     if subscription_data:
@@ -879,11 +879,8 @@ def dashboard():
         # If canceled, still show the plan but buttons will show cancel/upgrade/downgrade
         elif status == 'canceled':
             current_plan = plan_type  # Show plan even if canceled
-    elif replies_limit_monthly >= 1000:
-        current_plan = 'standard'
-    elif replies_limit_monthly >= 150:
-        current_plan = 'starter'
-    # If replies_limit_monthly is 5, it's likely testing mode, so no plan
+    # Don't infer plan from replies_limit_monthly - only from subscription status
+    # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
     
     conn.close()
     
@@ -1492,13 +1489,20 @@ def create_subscription_checkout():
 def create_standard_checkout():
     """Create Stripe Checkout session for Standard plan subscription"""
     # Try to get from Config first, then fallback to direct os.getenv (for Render env var updates)
-    standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
+    # Also check for common typos
+    standard_price_id = (
+        Config.STRIPE_STANDARD_PLAN_PRICE_ID or 
+        os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID") or
+        os.getenv("SRTPE_STANDARD_PLAN_PRICE_ID")  # Common typo check
+    )
     
     # Debug logging to help diagnose the issue
     print(f"🔍 [STANDARD CHECKOUT] Checking configuration...")
     print(f"🔍 [STANDARD CHECKOUT] STRIPE_SECRET_KEY exists: {bool(Config.STRIPE_SECRET_KEY)}")
     print(f"🔍 [STANDARD CHECKOUT] Config.STRIPE_STANDARD_PLAN_PRICE_ID: '{Config.STRIPE_STANDARD_PLAN_PRICE_ID}'")
     print(f"🔍 [STANDARD CHECKOUT] Direct os.getenv('STRIPE_STANDARD_PLAN_PRICE_ID'): '{os.getenv('STRIPE_STANDARD_PLAN_PRICE_ID')}'")
+    print(f"🔍 [STANDARD CHECKOUT] Typo check os.getenv('SRTPE_STANDARD_PLAN_PRICE_ID'): '{os.getenv('SRTPE_STANDARD_PLAN_PRICE_ID')}'")
+    print(f"🔍 [STANDARD CHECKOUT] All env vars starting with STRIPE: {[k for k in os.environ.keys() if 'STRIPE' in k or 'SRTPE' in k]}")
     print(f"🔍 [STANDARD CHECKOUT] Final standard_price_id (after fallback): '{standard_price_id}'")
     
     if not Config.STRIPE_SECRET_KEY:
@@ -2298,17 +2302,34 @@ def handle_invoice_payment_succeeded(invoice):
             user_id = result[0]
             print(f"👤 Resetting monthly replies for user {user_id}")
             
+            # Get plan type to set correct monthly limit
+            cursor.execute(f"""
+                SELECT plan_type FROM subscriptions 
+                WHERE stripe_subscription_id = {placeholder} AND user_id = {placeholder}
+            """, (subscription_id, user_id))
+            plan_result = cursor.fetchone()
+            
+            if plan_result:
+                plan_type = plan_result[0]
+                if plan_type == 'standard':
+                    monthly_limit = 1000
+                else:
+                    monthly_limit = 150  # starter or default
+            else:
+                monthly_limit = 150  # default if plan not found
+            
             # Reset monthly replies at the start of new billing period
             cursor.execute(f"""
                 UPDATE users 
                 SET replies_sent_monthly = 0,
+                    replies_limit_monthly = {placeholder},
                     last_monthly_reset = CURRENT_TIMESTAMP
                 WHERE id = {placeholder}
-            """, (user_id,))
+            """, (monthly_limit, user_id))
             
             conn.commit()
             log_activity(user_id, 'stripe_invoice_paid', 'Monthly subscription payment succeeded')
-            print(f"✅ Monthly payment succeeded for user {user_id}")
+            print(f"✅ Monthly payment succeeded for user {user_id} - reset to {monthly_limit} replies")
         else:
             print(f"⚠️ No subscription found in database for subscription_id: {subscription_id}")
         
@@ -2415,7 +2436,7 @@ def check_user_reply_limit(user_id):
         return (False, 0, 0, 0)
 
 def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None):
-    """Reset monthly reply counter if a new month has started"""
+    """Reset monthly reply counter if a new month has started AND user has active subscription"""
     conn = get_db_connection()
     if not conn:
         return False
@@ -2425,6 +2446,23 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
         
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
+        
+        # Check if user has an active subscription
+        cursor.execute(f"""
+            SELECT id, plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription = cursor.fetchone()
+        
+        # If no active subscription, don't reset monthly counter
+        # User keeps their remaining replies but won't get new monthly allocation
+        if not subscription:
+            print(f"📅 User {user_id} has no active subscription - skipping monthly reset (keeping remaining replies)")
+            conn.close()
+            return False
         
         # Get current reset timestamp if not provided
         if last_reset is None:
@@ -2461,14 +2499,22 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
         current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         if current_month > last_reset_month:
-            # New month - reset monthly counter
-            print(f"📅 New month detected for user {user_id}, resetting monthly reply counter")
+            # New month - reset monthly counter (only if they have active subscription)
+            # Get the plan type to determine monthly limit
+            plan_type = subscription[1]  # 'starter' or 'standard'
+            if plan_type == 'standard':
+                monthly_limit = 1000
+            else:
+                monthly_limit = 150  # starter or default
+            
+            print(f"📅 New month detected for user {user_id} with {plan_type} plan, resetting monthly reply counter to {monthly_limit}")
             cursor.execute(f"""
                 UPDATE users
                 SET replies_sent_monthly = 0,
+                    replies_limit_monthly = {placeholder},
                     last_monthly_reset = {placeholder}
                 WHERE id = {placeholder}
-            """, (datetime.now(), user_id))
+            """, (monthly_limit, datetime.now(), user_id))
             conn.commit()
             conn.close()
             return True
