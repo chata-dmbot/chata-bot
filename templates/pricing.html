@@ -316,9 +316,17 @@
                     
                     <!-- CTA Button -->
                     <div style="text-align: center;">
+                        {% if session.get('user_id') %}
+                        <form method="POST" action="{{ url_for('create_standard_checkout') }}" style="display: inline-block;">
+                            <button type="submit" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block; border: none; cursor: pointer;">
+                                GET STARTED
+                            </button>
+                        </form>
+                        {% else %}
                         <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
                             GET STARTED
                         </a>
+                        {% endif %}
                         
                         <!-- Small Comment -->
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0; font-weight: 400; margin-top: 1rem;">

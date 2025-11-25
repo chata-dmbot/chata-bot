@@ -1487,6 +1487,79 @@ def create_subscription_checkout():
         flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard'))
 
+@app.route("/checkout/standard", methods=["POST"])
+@login_required
+def create_standard_checkout():
+    """Create Stripe Checkout session for Standard plan subscription"""
+    if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+        flash("❌ Payment system is not configured. Please contact support.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_id = session['user_id']
+    user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+    
+    try:
+        # Create or retrieve Stripe customer
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Check if user already has a Stripe customer ID in subscriptions table
+        cursor.execute(f"""
+            SELECT stripe_customer_id FROM subscriptions 
+            WHERE user_id = {placeholder} 
+            LIMIT 1
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+            print(f"✅ Found existing customer ID in database: {customer_id}")
+        else:
+            # Check if customer already exists in Stripe by email
+            existing_customers = stripe.Customer.list(email=user_email, limit=1)
+            if existing_customers.data:
+                # Use existing customer
+                customer_id = existing_customers.data[0].id
+                # Update metadata to ensure user_id is set
+                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
+                print(f"✅ Found existing Stripe customer: {customer_id}")
+            else:
+                # Create new Stripe customer
+                customer = stripe.Customer.create(
+                    email=user_email,
+                    metadata={'user_id': str(user_id)}
+                )
+                customer_id = customer.id
+                print(f"✅ Created new Stripe customer: {customer_id}")
+        
+        conn.close()
+        
+        # Create Checkout Session for Standard plan subscription
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': Config.STRIPE_STANDARD_PLAN_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'subscription', 'plan': 'standard'}
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        flash(f"❌ Payment error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error creating Standard plan checkout: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
 @app.route("/checkout/addon", methods=["POST"])
 @login_required
 def create_addon_checkout():
@@ -1584,7 +1657,11 @@ def checkout_success():
             return redirect(url_for('dashboard'))
         
         if checkout_session.metadata.get('type') == 'subscription':
-            flash("Subscription activated successfully! You now have 150 replies per month.", "success")
+            plan = checkout_session.metadata.get('plan', 'starter')
+            if plan == 'standard':
+                flash("Subscription activated successfully! You now have 1000 replies per month.", "success")
+            else:
+                flash("Subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
             flash("Payment successful! 150 additional replies have been added to your account.", "success")
         elif checkout_session.metadata.get('type') == 'upgrade':
@@ -1966,6 +2043,22 @@ def handle_subscription_created(subscription):
         
         print(f"💰 Price ID: {price_id}")
         
+        # Determine plan type based on price ID
+        plan_type = 'starter'  # Default
+        replies_limit = 150  # Default for Starter
+        
+        if price_id:
+            if hasattr(Config, 'STRIPE_STANDARD_PLAN_PRICE_ID') and Config.STRIPE_STANDARD_PLAN_PRICE_ID and price_id == Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+                plan_type = 'standard'
+                replies_limit = 1000
+                print(f"✅ Detected Standard plan - setting replies_limit to 1000")
+            elif hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID') and Config.STRIPE_STARTER_PLAN_PRICE_ID and price_id == Config.STRIPE_STARTER_PLAN_PRICE_ID:
+                plan_type = 'starter'
+                replies_limit = 150
+                print(f"✅ Detected Starter plan - setting replies_limit to 150")
+            else:
+                print(f"⚠️ Price ID {price_id} doesn't match known plans, defaulting to Starter")
+        
         # Check if using PostgreSQL
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         
@@ -1987,7 +2080,7 @@ def handle_subscription_created(subscription):
                 subscription.id,
                 customer_id,
                 price_id,
-                'starter',
+                plan_type,
                 subscription_status,
                 current_period_start,
                 current_period_end
@@ -2005,7 +2098,7 @@ def handle_subscription_created(subscription):
                 subscription.id,
                 customer_id,
                 price_id,
-                'starter',
+                plan_type,
                 subscription_status,
                 current_period_start,
                 current_period_end
@@ -2013,14 +2106,14 @@ def handle_subscription_created(subscription):
         
         print(f"💾 Subscription record created in database")
         
-        # Update user's monthly limit to 150 for starter plan
+        # Update user's monthly limit based on plan type
         cursor.execute(f"""
             UPDATE users 
-            SET replies_limit_monthly = 150 
+            SET replies_limit_monthly = {placeholder} 
             WHERE id = {placeholder}
-        """, (user_id,))
+        """, (replies_limit, user_id))
         
-        print(f"📈 Updated user {user_id} monthly limit to 150")
+        print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
         
         conn.commit()
         conn.close()
