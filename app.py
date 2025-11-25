@@ -2128,19 +2128,40 @@ def handle_subscription_created(subscription):
         
         print(f"💾 Subscription record created in database")
         
-        # Update user's monthly limit based on plan type
+        # Check if user already has an active subscription (might be upgrading)
         cursor.execute(f"""
-            UPDATE users 
-            SET replies_limit_monthly = {placeholder} 
-            WHERE id = {placeholder}
-        """, (replies_limit, user_id))
+            SELECT plan_type, replies_limit_monthly
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.user_id = {placeholder} AND s.status = 'active' AND s.stripe_subscription_id != {placeholder}
+            ORDER BY s.created_at DESC
+            LIMIT 1
+        """, (user_id, subscription.id))
+        existing_sub = cursor.fetchone()
         
-        print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
+        if existing_sub and existing_sub[0] == 'starter' and plan_type == 'standard':
+            # This is an upgrade - add 850 replies instead of setting to 1000
+            print(f"🔄 Detected upgrade from Starter to Standard - adding 850 replies")
+            cursor.execute(f"""
+                UPDATE users 
+                SET replies_limit_monthly = replies_limit_monthly + 850
+                WHERE id = {placeholder}
+            """, (user_id,))
+            print(f"📈 Added 850 replies to user {user_id} (upgrade: 150 -> 1000)")
+        else:
+            # New subscription or direct Standard purchase - set to plan limit
+            cursor.execute(f"""
+                UPDATE users 
+                SET replies_limit_monthly = {placeholder} 
+                WHERE id = {placeholder}
+            """, (replies_limit, user_id))
+            print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
         
         conn.commit()
         conn.close()
         
-        log_activity(user_id, 'stripe_subscription_created', 'Starter plan subscription activated')
+        plan_name = 'Standard' if plan_type == 'standard' else 'Starter'
+        log_activity(user_id, 'stripe_subscription_created', f'{plan_name} plan subscription activated')
         print(f"✅ Subscription created for user {user_id}")
         
     except Exception as e:
