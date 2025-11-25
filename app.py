@@ -1681,9 +1681,9 @@ def checkout_success():
         if checkout_session.metadata.get('type') == 'subscription':
             plan = checkout_session.metadata.get('plan', 'starter')
             if plan == 'standard':
-                flash("Subscription activated successfully! You now have 1000 replies per month.", "success")
+                flash("Standard subscription activated successfully! You now have 1000 replies per month.", "success")
             else:
-                flash("Subscription activated successfully! You now have 150 replies per month.", "success")
+                flash("Starter subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
             flash("Payment successful! 150 additional replies have been added to your account.", "success")
         elif checkout_session.metadata.get('type') == 'upgrade':
@@ -2149,11 +2149,60 @@ def handle_subscription_created(subscription):
         traceback.print_exc()
 
 def handle_subscription_updated(subscription):
-    """Handle subscription updates"""
+    """Handle subscription updates (including upgrades/downgrades)"""
     try:
+        customer_id = subscription.customer
+        customer = stripe.Customer.retrieve(customer_id)
+        user_id_str = customer.metadata.get('user_id')
+        
+        if not user_id_str:
+            print(f"❌ No user_id in customer metadata")
+            return
+        
+        user_id = int(user_id_str)
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
+        
+        # Get current subscription from database to check if this is an upgrade
+        cursor.execute(f"""
+            SELECT plan_type, replies_limit_monthly
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.stripe_subscription_id = {placeholder} AND s.user_id = {placeholder}
+        """, (subscription.id, user_id))
+        current_sub = cursor.fetchone()
+        
+        # Get the new plan type from subscription
+        expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
+        price_id = None
+        new_plan_type = 'starter'
+        if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
+            if len(expanded_sub.items.data) > 0:
+                item = expanded_sub.items.data[0]
+                if hasattr(item, 'price') and hasattr(item.price, 'id'):
+                    price_id = item.price.id
+                    if hasattr(Config, 'STRIPE_STANDARD_PLAN_PRICE_ID') and Config.STRIPE_STANDARD_PLAN_PRICE_ID and price_id == Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+                        new_plan_type = 'standard'
+                    elif hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID') and Config.STRIPE_STARTER_PLAN_PRICE_ID and price_id == Config.STRIPE_STARTER_PLAN_PRICE_ID:
+                        new_plan_type = 'starter'
+        
+        # Check if this is an upgrade (Starter -> Standard)
+        is_upgrade = False
+        if current_sub:
+            old_plan_type = current_sub[0]
+            old_limit = current_sub[1] or 0
+            if old_plan_type == 'starter' and new_plan_type == 'standard':
+                is_upgrade = True
+                print(f"🔄 Detected upgrade from Starter to Standard for user {user_id}")
+                # Add 850 replies (to reach 1000 total from 150)
+                cursor.execute(f"""
+                    UPDATE users
+                    SET replies_limit_monthly = replies_limit_monthly + 850
+                    WHERE id = {placeholder}
+                """, (user_id,))
+                print(f"✅ Added 850 replies to user {user_id} (upgrade from Starter to Standard)")
         
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         cancel_at_period_end = subscription.cancel_at_period_end if hasattr(subscription, 'cancel_at_period_end') else False
@@ -2163,9 +2212,12 @@ def handle_subscription_updated(subscription):
         else:
             cancel_value = 1 if cancel_at_period_end else 0
         
+        # Update subscription in database with new plan type
         cursor.execute(f"""
             UPDATE subscriptions 
             SET status = {placeholder},
+                plan_type = {placeholder},
+                stripe_price_id = {placeholder},
                 current_period_start = {placeholder},
                 current_period_end = {placeholder},
                 cancel_at_period_end = {placeholder},
@@ -2173,19 +2225,32 @@ def handle_subscription_updated(subscription):
             WHERE stripe_subscription_id = {placeholder}
         """, (
             subscription.status,
+            new_plan_type,
+            price_id,
             datetime.fromtimestamp(subscription.current_period_start),
             datetime.fromtimestamp(subscription.current_period_end),
             cancel_value,
             subscription.id
         ))
         
+        # If not an upgrade and it's a new Standard plan, set to 1000
+        if not is_upgrade and new_plan_type == 'standard':
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_limit_monthly = 1000
+                WHERE id = {placeholder}
+            """, (user_id,))
+            print(f"✅ Set replies_limit_monthly to 1000 for user {user_id} (new Standard plan)")
+        
         conn.commit()
         conn.close()
         
-        print(f"✅ Subscription updated: {subscription.id}")
+        print(f"✅ Subscription updated: {subscription.id} (plan: {new_plan_type})")
         
     except Exception as e:
         print(f"Error handling subscription updated: {e}")
+        import traceback
+        traceback.print_exc()
 
 def handle_subscription_deleted(subscription):
     """Handle subscription cancellation - keep remaining replies but mark as canceled"""
