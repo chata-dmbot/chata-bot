@@ -1961,6 +1961,31 @@ def handle_checkout_session_completed(session_obj):
         
         print(f"👤 Processing checkout for user {user_id}, type: {session_type}")
         
+        if session_type == 'upgrade':
+            # Handle upgrade - cancel old Starter subscription
+            old_subscription_id = session_obj.metadata.get('old_subscription_id')
+            if old_subscription_id:
+                try:
+                    # Cancel the old subscription in Stripe
+                    stripe.Subscription.modify(old_subscription_id, cancel_at_period_end=False)
+                    stripe.Subscription.delete(old_subscription_id)
+                    print(f"✅ Cancelled old subscription {old_subscription_id} for user {user_id}")
+                    
+                    # Mark old subscription as canceled in database
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    placeholder = get_param_placeholder()
+                    cursor.execute(f"""
+                        UPDATE subscriptions 
+                        SET status = {placeholder}
+                        WHERE stripe_subscription_id = {placeholder}
+                    """, ('canceled', old_subscription_id))
+                    conn.commit()
+                    conn.close()
+                    print(f"✅ Marked old subscription as canceled in database")
+                except Exception as e:
+                    print(f"⚠️ Error canceling old subscription: {e}")
+        
         if session_type == 'addon':
             # Handle one-time add-on purchase
             amount = session_obj.amount_total / 100  # Convert cents to euros
@@ -2020,11 +2045,19 @@ def handle_subscription_created(subscription):
             if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
                 if len(expanded_sub.items.data) > 0:
                     item = expanded_sub.items.data[0]
+                    print(f"🔍 Item data: {item}")
                     if hasattr(item, 'price'):
                         price = item.price
+                        print(f"🔍 Price object: {price}")
                         if hasattr(price, 'id'):
                             price_id = price.id
                             print(f"✅ Found price ID: {price_id}")
+                    else:
+                        print(f"⚠️ Item has no price attribute")
+                else:
+                    print(f"⚠️ No items in subscription.items.data")
+            else:
+                print(f"⚠️ Subscription has no items.data attribute")
             
             # Get current period dates - safely access from expanded subscription
             if hasattr(expanded_sub, 'current_period_start') and expanded_sub.current_period_start:
@@ -2044,22 +2077,18 @@ def handle_subscription_created(subscription):
                 current_period_end = datetime.now() + timedelta(days=30)
                 print(f"⚠️ No current_period_end found, using 1 month from now")
             
-            # Fallback: use config price ID for starter plan if we couldn't get it
+            # Don't use fallback - if we can't get price ID, log error but don't default to Starter
             if not price_id:
-                if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
-                    price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID
-                    print(f"⚠️ Using fallback price ID from config: {price_id}")
-                else:
-                    print(f"❌ Could not determine price ID and no fallback configured")
+                print(f"❌ Could not determine price ID from subscription")
+                print(f"🔍 Subscription object keys: {dir(expanded_sub)}")
+                print(f"🔍 Subscription items: {expanded_sub.items if hasattr(expanded_sub, 'items') else 'No items attr'}")
                     
         except Exception as e:
             print(f"⚠️ Error retrieving subscription details: {e}")
             import traceback
             traceback.print_exc()
-            # Final fallback
-            if hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID'):
-                price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID
-                print(f"⚠️ Using fallback price ID after error: {price_id}")
+            # Don't use fallback - log the error
+            print(f"❌ Could not retrieve subscription details, price_id remains None")
             subscription_status = 'active'  # Default status
             current_period_start = datetime.now()
             from datetime import timedelta
@@ -2067,10 +2096,28 @@ def handle_subscription_created(subscription):
         
         print(f"💰 Price ID: {price_id}")
         
+        # If price_id is None, try to get it from subscription object directly
+        if not price_id:
+            try:
+                # Try alternative method to get price ID
+                if hasattr(subscription, 'items') and hasattr(subscription.items, 'data'):
+                    if len(subscription.items.data) > 0:
+                        item = subscription.items.data[0]
+                        if hasattr(item, 'price'):
+                            if isinstance(item.price, str):
+                                price_id = item.price
+                            elif hasattr(item.price, 'id'):
+                                price_id = item.price.id
+                            print(f"✅ Retrieved price ID via alternative method: {price_id}")
+            except Exception as e:
+                print(f"⚠️ Could not get price ID via alternative method: {e}")
+        
         # Determine plan type based on price ID
         # Use runtime fallback for Standard plan price ID (in case env var wasn't loaded at startup)
         standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
         starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
+        
+        print(f"🔍 Comparing price_id '{price_id}' with standard '{standard_price_id}' and starter '{starter_price_id}'")
         
         plan_type = 'starter'  # Default
         replies_limit = 150  # Default for Starter
@@ -2086,6 +2133,9 @@ def handle_subscription_created(subscription):
                 print(f"✅ Detected Starter plan - setting replies_limit to 150")
             else:
                 print(f"⚠️ Price ID {price_id} doesn't match known plans, defaulting to Starter")
+                print(f"⚠️ This might be an error - please check Stripe configuration")
+        else:
+            print(f"❌ Price ID is None - cannot determine plan type. This is an error!")
                 print(f"⚠️ Standard price ID: {standard_price_id}, Starter price ID: {starter_price_id}")
         
         # Check if using PostgreSQL
@@ -2149,14 +2199,14 @@ def handle_subscription_created(subscription):
         existing_sub = cursor.fetchone()
         
         if existing_sub and existing_sub[0] == 'starter' and plan_type == 'standard':
-            # This is an upgrade - add 850 replies instead of setting to 1000
-            print(f"🔄 Detected upgrade from Starter to Standard - adding 850 replies")
+            # This is an upgrade - add 1000 replies (user gets full Standard plan benefits)
+            print(f"🔄 Detected upgrade from Starter to Standard - adding 1000 replies")
             cursor.execute(f"""
                 UPDATE users 
-                SET replies_limit_monthly = replies_limit_monthly + 850
+                SET replies_limit_monthly = replies_limit_monthly + 1000
                 WHERE id = {placeholder}
             """, (user_id,))
-            print(f"📈 Added 850 replies to user {user_id} (upgrade: 150 -> 1000)")
+            print(f"📈 Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
         else:
             # New subscription or direct Standard purchase - set to plan limit
             cursor.execute(f"""
@@ -2230,13 +2280,13 @@ def handle_subscription_updated(subscription):
             if old_plan_type == 'starter' and new_plan_type == 'standard':
                 is_upgrade = True
                 print(f"🔄 Detected upgrade from Starter to Standard for user {user_id}")
-                # Add 850 replies (to reach 1000 total from 150)
+                # Add 1000 replies (user gets full Standard plan benefits)
                 cursor.execute(f"""
                     UPDATE users
-                    SET replies_limit_monthly = replies_limit_monthly + 850
+                    SET replies_limit_monthly = replies_limit_monthly + 1000
                     WHERE id = {placeholder}
                 """, (user_id,))
-                print(f"✅ Added 850 replies to user {user_id} (upgrade from Starter to Standard)")
+                print(f"✅ Added 1000 replies to user {user_id} (upgrade from Starter to Standard)")
         
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         cancel_at_period_end = subscription.cancel_at_period_end if hasattr(subscription, 'cancel_at_period_end') else False
