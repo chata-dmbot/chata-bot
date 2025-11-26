@@ -2441,15 +2441,6 @@ def handle_subscription_updated(subscription):
             subscription.id
         ))
         
-        # If not an upgrade and it's a new Standard plan, set to 1000
-        if not is_upgrade and new_plan_type == 'standard':
-            cursor.execute(f"""
-                UPDATE users
-                SET replies_limit_monthly = 1000
-                WHERE id = {placeholder}
-            """, (user_id,))
-            print(f"✅ Set replies_limit_monthly to 1000 for user {user_id} (new Standard plan)")
-        
         conn.commit()
         conn.close()
         
