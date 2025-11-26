@@ -593,7 +593,8 @@
                             </button>
                         </div>
                     {% endif %}
-                    <!-- Add Replies Button (only when plan exists) -->
+                    <!-- Add Replies Button (only when plan is active, not canceled) -->
+                    {% if subscription_status != 'canceled' %}
                     <div style="margin-top: 1rem;">
                         <form method="POST" action="{{ url_for('create_addon_checkout') }}" style="display: inline-block;">
                             <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
@@ -601,6 +602,7 @@
                             </button>
                         </form>
                     </div>
+                    {% endif %}
                 {% else %}
                     <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.7);"><strong>Current Plan:</strong> None</p>
                     <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
