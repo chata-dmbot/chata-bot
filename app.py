@@ -2442,26 +2442,58 @@ def handle_subscription_updated(subscription):
         else:
             cancel_value = 1 if cancel_at_period_end else 0
         
-        # Update subscription in database with new plan type
+        # Update subscription in database
+        # IMPORTANT: If subscription is already canceled, preserve the existing plan_type
+        # Only update plan_type if the subscription is active (to handle upgrades/downgrades)
+        # Get current status from database
         cursor.execute(f"""
-            UPDATE subscriptions 
-            SET status = {placeholder},
-                plan_type = {placeholder},
-                stripe_price_id = {placeholder},
-                current_period_start = {placeholder},
-                current_period_end = {placeholder},
-                cancel_at_period_end = {placeholder},
-                updated_at = CURRENT_TIMESTAMP
-            WHERE stripe_subscription_id = {placeholder}
-        """, (
-            subscription.status,
-            new_plan_type,
-            price_id,
-            datetime.fromtimestamp(subscription.current_period_start),
-            datetime.fromtimestamp(subscription.current_period_end),
-            cancel_value,
-            subscription.id
-        ))
+            SELECT status, plan_type FROM subscriptions WHERE stripe_subscription_id = {placeholder}
+        """, (subscription.id,))
+        existing_sub_data = cursor.fetchone()
+        existing_status = existing_sub_data[0] if existing_sub_data else None
+        existing_plan_type = existing_sub_data[1] if existing_sub_data else None
+        
+        # If subscription is canceled, don't change plan_type - preserve it
+        if existing_status == 'canceled':
+            print(f"⚠️ Subscription {subscription.id} is canceled - preserving existing plan_type '{existing_plan_type}'")
+            cursor.execute(f"""
+                UPDATE subscriptions 
+                SET status = {placeholder},
+                    stripe_price_id = {placeholder},
+                    current_period_start = {placeholder},
+                    current_period_end = {placeholder},
+                    cancel_at_period_end = {placeholder},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE stripe_subscription_id = {placeholder}
+            """, (
+                subscription.status,
+                price_id,
+                datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
+                datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                cancel_value,
+                subscription.id
+            ))
+        else:
+            # Active subscription - update plan_type (for upgrades/downgrades)
+            cursor.execute(f"""
+                UPDATE subscriptions 
+                SET status = {placeholder},
+                    plan_type = {placeholder},
+                    stripe_price_id = {placeholder},
+                    current_period_start = {placeholder},
+                    current_period_end = {placeholder},
+                    cancel_at_period_end = {placeholder},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE stripe_subscription_id = {placeholder}
+            """, (
+                subscription.status,
+                new_plan_type,
+                price_id,
+                datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
+                datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                cancel_value,
+                subscription.id
+            ))
         
         conn.commit()
         conn.close()
