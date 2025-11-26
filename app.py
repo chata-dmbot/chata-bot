@@ -858,13 +858,14 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
-    # Get subscription data to determine plan - prioritize active subscriptions
+    # Get subscription data to determine plan - get the most recent subscription (active or canceled)
     cursor.execute(f"""
-        SELECT plan_type, status
+        SELECT plan_type, status, stripe_subscription_id
         FROM subscriptions
         WHERE user_id = {placeholder}
         ORDER BY 
             CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+            updated_at DESC,
             created_at DESC
         LIMIT 1
     """, (user_id,))
@@ -874,13 +875,13 @@ def dashboard():
     current_plan = None
     subscription_status = None
     if subscription_data:
-        plan_type, status = subscription_data
+        plan_type, status, subscription_id = subscription_data
         subscription_status = status
+        # Show plan type whether active or canceled
         if status == 'active':
             current_plan = plan_type  # 'starter' or 'standard'
-        # If canceled, still show the plan but buttons will show cancel/upgrade/downgrade
         elif status == 'canceled':
-            current_plan = plan_type  # Show plan even if canceled
+            current_plan = plan_type  # Show plan even if canceled (so user knows what plan they had)
     # Don't infer plan from replies_limit_monthly - only from subscription status
     # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
     
@@ -1838,7 +1839,7 @@ def cancel_subscription():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Get active subscription
+        # Get active subscription - get the most recent one
         cursor.execute(f"""
             SELECT stripe_subscription_id, plan_type
             FROM subscriptions
@@ -1854,12 +1855,19 @@ def cancel_subscription():
             return redirect(url_for('dashboard'))
         
         subscription_id, plan_type = subscription
+        print(f"🔄 Canceling subscription {subscription_id} (plan: {plan_type}) for user {user_id}")
         conn.close()
         
         # Cancel subscription at period end in Stripe
-        stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
+        try:
+            stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
+            print(f"✅ Set cancel_at_period_end=True in Stripe for subscription {subscription_id}")
+        except Exception as e:
+            print(f"⚠️ Error setting cancel_at_period_end in Stripe: {e}")
+            # Continue anyway - we'll still mark it as canceled in DB
         
-        # Also update database immediately to reflect canceled status
+        # Update database immediately to reflect canceled status
+        # IMPORTANT: Only update status, NOT plan_type - preserve the plan type
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -1868,6 +1876,20 @@ def cancel_subscription():
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
         """, ('canceled', subscription_id))
+        
+        # Verify the update worked and plan_type is preserved
+        cursor.execute(f"""
+            SELECT plan_type, status
+            FROM subscriptions
+            WHERE stripe_subscription_id = {placeholder}
+        """, (subscription_id,))
+        verify = cursor.fetchone()
+        if verify:
+            updated_plan_type, updated_status = verify
+            print(f"✅ Updated subscription status to '{updated_status}', plan_type preserved as '{updated_plan_type}'")
+            if updated_plan_type != plan_type:
+                print(f"⚠️ WARNING: Plan type changed from {plan_type} to {updated_plan_type} - this should not happen!")
+        
         conn.commit()
         conn.close()
         
@@ -2470,12 +2492,44 @@ def handle_subscription_deleted(subscription):
         placeholder = get_param_placeholder()
         
         # Update subscription status to canceled but keep it in database
+        # IMPORTANT: Only update status, NOT plan_type - preserve the plan type
+        # First, get the current plan_type to verify we're not changing it
+        cursor.execute(f"""
+            SELECT plan_type, status
+            FROM subscriptions
+            WHERE stripe_subscription_id = {placeholder}
+        """, (subscription.id,))
+        current_sub = cursor.fetchone()
+        
+        if current_sub:
+            current_plan_type, current_status = current_sub
+            print(f"🔄 Updating subscription {subscription.id} from status '{current_status}' to 'canceled', preserving plan_type '{current_plan_type}'")
+        
         cursor.execute(f"""
             UPDATE subscriptions 
             SET status = {placeholder},
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
         """, ('canceled', subscription.id))
+        
+        # Verify plan_type wasn't changed
+        cursor.execute(f"""
+            SELECT plan_type, status
+            FROM subscriptions
+            WHERE stripe_subscription_id = {placeholder}
+        """, (subscription.id,))
+        verify = cursor.fetchone()
+        if verify:
+            updated_plan_type, updated_status = verify
+            if current_sub and updated_plan_type != current_plan_type:
+                print(f"⚠️ WARNING: Plan type changed from {current_plan_type} to {updated_plan_type} during cancellation!")
+                # Restore the original plan_type
+                cursor.execute(f"""
+                    UPDATE subscriptions 
+                    SET plan_type = {placeholder}
+                    WHERE stripe_subscription_id = {placeholder}
+                """, (current_plan_type, subscription.id))
+                print(f"✅ Restored plan_type to {current_plan_type}")
         
         # DO NOT reset replies_limit_monthly - let them keep remaining replies
         # They can still use remaining monthly + purchased replies
