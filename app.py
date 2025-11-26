@@ -2136,7 +2136,7 @@ def handle_subscription_created(subscription):
                 print(f"⚠️ This might be an error - please check Stripe configuration")
         else:
             print(f"❌ Price ID is None - cannot determine plan type. This is an error!")
-                print(f"⚠️ Standard price ID: {standard_price_id}, Starter price ID: {starter_price_id}")
+            print(f"⚠️ Standard price ID: {standard_price_id}, Starter price ID: {starter_price_id}")
         
         # Check if using PostgreSQL
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
