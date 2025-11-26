@@ -858,12 +858,14 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
-    # Get subscription data to determine plan
+    # Get subscription data to determine plan - prioritize active subscriptions
     cursor.execute(f"""
         SELECT plan_type, status
         FROM subscriptions
         WHERE user_id = {placeholder}
-        ORDER BY created_at DESC
+        ORDER BY 
+            CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+            created_at DESC
         LIMIT 1
     """, (user_id,))
     subscription_data = cursor.fetchone()
@@ -2066,20 +2068,25 @@ def handle_subscription_created(subscription):
         print(f"💰 Price ID: {price_id}")
         
         # Determine plan type based on price ID
+        # Use runtime fallback for Standard plan price ID (in case env var wasn't loaded at startup)
+        standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
+        starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
+        
         plan_type = 'starter'  # Default
         replies_limit = 150  # Default for Starter
         
         if price_id:
-            if hasattr(Config, 'STRIPE_STANDARD_PLAN_PRICE_ID') and Config.STRIPE_STANDARD_PLAN_PRICE_ID and price_id == Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+            if standard_price_id and price_id == standard_price_id:
                 plan_type = 'standard'
                 replies_limit = 1000
                 print(f"✅ Detected Standard plan - setting replies_limit to 1000")
-            elif hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID') and Config.STRIPE_STARTER_PLAN_PRICE_ID and price_id == Config.STRIPE_STARTER_PLAN_PRICE_ID:
+            elif starter_price_id and price_id == starter_price_id:
                 plan_type = 'starter'
                 replies_limit = 150
                 print(f"✅ Detected Starter plan - setting replies_limit to 150")
             else:
                 print(f"⚠️ Price ID {price_id} doesn't match known plans, defaulting to Starter")
+                print(f"⚠️ Standard price ID: {standard_price_id}, Starter price ID: {starter_price_id}")
         
         # Check if using PostgreSQL
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
@@ -2093,6 +2100,8 @@ def handle_subscription_created(subscription):
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+                plan_type = EXCLUDED.plan_type,
+                stripe_price_id = EXCLUDED.stripe_price_id,
                 status = EXCLUDED.status,
                 current_period_start = EXCLUDED.current_period_start,
                 current_period_end = EXCLUDED.current_period_end,
@@ -2198,15 +2207,19 @@ def handle_subscription_updated(subscription):
         # Get the new plan type from subscription
         expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
         price_id = None
+        # Use runtime fallback for env vars
+        standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
+        starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
+        
         new_plan_type = 'starter'
         if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
             if len(expanded_sub.items.data) > 0:
                 item = expanded_sub.items.data[0]
                 if hasattr(item, 'price') and hasattr(item.price, 'id'):
                     price_id = item.price.id
-                    if hasattr(Config, 'STRIPE_STANDARD_PLAN_PRICE_ID') and Config.STRIPE_STANDARD_PLAN_PRICE_ID and price_id == Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+                    if standard_price_id and price_id == standard_price_id:
                         new_plan_type = 'standard'
-                    elif hasattr(Config, 'STRIPE_STARTER_PLAN_PRICE_ID') and Config.STRIPE_STARTER_PLAN_PRICE_ID and price_id == Config.STRIPE_STARTER_PLAN_PRICE_ID:
+                    elif starter_price_id and price_id == starter_price_id:
                         new_plan_type = 'starter'
         
         # Check if this is an upgrade (Starter -> Standard)
