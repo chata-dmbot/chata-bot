@@ -2291,23 +2291,44 @@ def handle_subscription_created(subscription):
         """, (user_id, subscription.id))
         existing_sub = cursor.fetchone()
         
-        if existing_sub and existing_sub[0] == 'starter' and plan_type == 'standard':
-            # This is an upgrade - add 1000 replies (user gets full Standard plan benefits)
-            print(f"🔄 Detected upgrade from Starter to Standard - adding 1000 replies")
-            cursor.execute(f"""
-                UPDATE users 
-                SET replies_limit_monthly = replies_limit_monthly + 1000
-                WHERE id = {placeholder}
-            """, (user_id,))
-            print(f"📈 Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
+        # Check if this is an upgrade or downgrade
+        if existing_sub:
+            old_plan_type = existing_sub[0]
+            
+            if old_plan_type == 'starter' and plan_type == 'standard':
+                # Upgrade: Starter → Standard - add 1000 replies (preserve existing)
+                print(f"🔄 Detected upgrade from Starter to Standard - adding 1000 replies")
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET replies_limit_monthly = replies_limit_monthly + 1000
+                    WHERE id = {placeholder}
+                """, (user_id,))
+                print(f"📈 Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
+            elif old_plan_type == 'standard' and plan_type == 'starter':
+                # Downgrade: Standard → Starter - add 150 replies (preserve existing)
+                print(f"🔄 Detected downgrade from Standard to Starter - adding 150 replies")
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET replies_limit_monthly = replies_limit_monthly + 150
+                    WHERE id = {placeholder}
+                """, (user_id,))
+                print(f"📈 Added 150 replies to user {user_id} (downgrade: existing + 150)")
+            else:
+                # Same plan type or unknown - just set to plan limit
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET replies_limit_monthly = {placeholder} 
+                    WHERE id = {placeholder}
+                """, (replies_limit, user_id))
+                print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
         else:
-            # New subscription or direct Standard purchase - set to plan limit
+            # New subscription (no existing plan) - set to plan limit
             cursor.execute(f"""
                 UPDATE users 
                 SET replies_limit_monthly = {placeholder} 
                 WHERE id = {placeholder}
             """, (replies_limit, user_id))
-            print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
+            print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan - new subscription)")
         
         conn.commit()
         conn.close()
@@ -2365,21 +2386,31 @@ def handle_subscription_updated(subscription):
                     elif starter_price_id and price_id == starter_price_id:
                         new_plan_type = 'starter'
         
-        # Check if this is an upgrade (Starter -> Standard)
-        is_upgrade = False
+        # Check if this is an upgrade or downgrade
         if current_sub:
             old_plan_type = current_sub[0]
             old_limit = current_sub[1] or 0
+            
             if old_plan_type == 'starter' and new_plan_type == 'standard':
-                is_upgrade = True
+                # Upgrade: Starter → Standard - add 1000 replies (preserve existing)
                 print(f"🔄 Detected upgrade from Starter to Standard for user {user_id}")
-                # Add 1000 replies (user gets full Standard plan benefits)
                 cursor.execute(f"""
                     UPDATE users
                     SET replies_limit_monthly = replies_limit_monthly + 1000
                     WHERE id = {placeholder}
                 """, (user_id,))
-                print(f"✅ Added 1000 replies to user {user_id} (upgrade from Starter to Standard)")
+                print(f"✅ Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
+            elif old_plan_type == 'standard' and new_plan_type == 'starter':
+                # Downgrade: Standard → Starter - add 150 replies (preserve existing)
+                print(f"🔄 Detected downgrade from Standard to Starter for user {user_id}")
+                cursor.execute(f"""
+                    UPDATE users
+                    SET replies_limit_monthly = replies_limit_monthly + 150
+                    WHERE id = {placeholder}
+                """, (user_id,))
+                print(f"✅ Added 150 replies to user {user_id} (downgrade: existing + 150)")
+            else:
+                print(f"ℹ️ Plan type unchanged or unknown transition: {old_plan_type} → {new_plan_type}")
         
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         cancel_at_period_end = subscription.cancel_at_period_end if hasattr(subscription, 'cancel_at_period_end') else False
