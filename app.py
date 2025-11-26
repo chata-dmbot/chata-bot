@@ -877,11 +877,14 @@ def dashboard():
     if subscription_data:
         plan_type, status, subscription_id = subscription_data
         subscription_status = status
+        print(f"🔍 Dashboard: Found subscription {subscription_id} with status '{status}' and plan_type '{plan_type}'")
         # Show plan type whether active or canceled
         if status == 'active':
             current_plan = plan_type  # 'starter' or 'standard'
         elif status == 'canceled':
             current_plan = plan_type  # Show plan even if canceled (so user knows what plan they had)
+    else:
+        print(f"🔍 Dashboard: No subscription found for user {user_id}")
     # Don't infer plan from replies_limit_monthly - only from subscription status
     # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
     
@@ -2445,9 +2448,9 @@ def handle_subscription_updated(subscription):
         # Update subscription in database
         # IMPORTANT: If subscription is already canceled, preserve the existing plan_type
         # Only update plan_type if the subscription is active (to handle upgrades/downgrades)
-        # Get current status from database
+        # Get current status from database (including stripe_price_id in case we need it)
         cursor.execute(f"""
-            SELECT status, plan_type FROM subscriptions WHERE stripe_subscription_id = {placeholder}
+            SELECT status, plan_type, stripe_price_id FROM subscriptions WHERE stripe_subscription_id = {placeholder}
         """, (subscription.id,))
         existing_sub_data = cursor.fetchone()
         existing_status = existing_sub_data[0] if existing_sub_data else None
@@ -2456,23 +2459,46 @@ def handle_subscription_updated(subscription):
         # If subscription is canceled, don't change plan_type - preserve it
         if existing_status == 'canceled':
             print(f"⚠️ Subscription {subscription.id} is canceled - preserving existing plan_type '{existing_plan_type}'")
-            cursor.execute(f"""
-                UPDATE subscriptions 
-                SET status = {placeholder},
-                    stripe_price_id = {placeholder},
-                    current_period_start = {placeholder},
-                    current_period_end = {placeholder},
-                    cancel_at_period_end = {placeholder},
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE stripe_subscription_id = {placeholder}
-            """, (
-                subscription.status,
-                price_id,
-                datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
-                datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
-                cancel_value,
-                subscription.id
-            ))
+            # Don't update stripe_price_id if it's None - use existing value or skip the update
+            existing_price_id = existing_sub_data[2] if len(existing_sub_data) > 2 else None
+            final_price_id = price_id if price_id else existing_price_id
+            
+            if final_price_id:
+                cursor.execute(f"""
+                    UPDATE subscriptions 
+                    SET status = {placeholder},
+                        stripe_price_id = {placeholder},
+                        current_period_start = {placeholder},
+                        current_period_end = {placeholder},
+                        cancel_at_period_end = {placeholder},
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE stripe_subscription_id = {placeholder}
+                """, (
+                    subscription.status,
+                    final_price_id,
+                    datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
+                    datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                    cancel_value,
+                    subscription.id
+                ))
+            else:
+                # Skip stripe_price_id update if we don't have a value
+                print(f"⚠️ No price_id available, skipping stripe_price_id update for canceled subscription")
+                cursor.execute(f"""
+                    UPDATE subscriptions 
+                    SET status = {placeholder},
+                        current_period_start = {placeholder},
+                        current_period_end = {placeholder},
+                        cancel_at_period_end = {placeholder},
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE stripe_subscription_id = {placeholder}
+                """, (
+                    subscription.status,
+                    datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
+                    datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                    cancel_value,
+                    subscription.id
+                ))
         else:
             # Active subscription - update plan_type (for upgrades/downgrades)
             cursor.execute(f"""
