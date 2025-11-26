@@ -1985,6 +1985,21 @@ def handle_checkout_session_completed(session_obj):
                     print(f"✅ Marked old subscription as canceled in database")
                 except Exception as e:
                     print(f"⚠️ Error canceling old subscription: {e}")
+            
+            # For upgrades, try to get price ID from checkout session line items
+            try:
+                # Retrieve the full checkout session to get line items
+                full_session = stripe.checkout.Session.retrieve(session_obj.id, expand=['line_items'])
+                if hasattr(full_session, 'line_items') and hasattr(full_session.line_items, 'data'):
+                    line_items = full_session.line_items.data
+                    if line_items and len(line_items) > 0:
+                        line_item = line_items[0]
+                        if hasattr(line_item, 'price') and hasattr(line_item.price, 'id'):
+                            price_id_from_session = line_item.price.id
+                            print(f"✅ Got price ID from checkout session: {price_id_from_session}")
+                            # Store in session metadata for later retrieval (we'll use a different approach)
+            except Exception as e:
+                print(f"⚠️ Could not get price ID from checkout session: {e}")
         
         if session_type == 'addon':
             # Handle one-time add-on purchase
@@ -2042,22 +2057,60 @@ def handle_subscription_created(subscription):
             subscription_status = expanded_sub.status
             
             # Access the price ID from expanded subscription
-            if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
-                if len(expanded_sub.items.data) > 0:
-                    item = expanded_sub.items.data[0]
-                    print(f"🔍 Item data: {item}")
-                    if hasattr(item, 'price'):
-                        price = item.price
-                        print(f"🔍 Price object: {price}")
-                        if hasattr(price, 'id'):
-                            price_id = price.id
-                            print(f"✅ Found price ID: {price_id}")
+            # subscription.items is a ListObject, access via subscription.items.data
+            try:
+                # Method 1: Try accessing items.data directly
+                if hasattr(expanded_sub, 'items'):
+                    items_obj = expanded_sub.items
+                    print(f"🔍 Items object type: {type(items_obj)}")
+                    
+                    # Try to get data attribute
+                    if hasattr(items_obj, 'data'):
+                        items_list = items_obj.data
+                        print(f"🔍 Items list length: {len(items_list) if items_list else 0}")
                     else:
-                        print(f"⚠️ Item has no price attribute")
+                        # Try to iterate or convert to list
+                        try:
+                            items_list = list(items_obj) if items_obj else []
+                            print(f"🔍 Converted items to list, length: {len(items_list)}")
+                        except:
+                            items_list = []
+                            print(f"⚠️ Could not convert items to list")
+                    
+                    if items_list and len(items_list) > 0:
+                        item = items_list[0]
+                        print(f"🔍 Item type: {type(item)}")
+                        print(f"🔍 Item: {item}")
+                        
+                        # Price can be an object (if expanded) or a string ID
+                        if hasattr(item, 'price'):
+                            price_obj = item.price
+                            print(f"🔍 Price object type: {type(price_obj)}")
+                            print(f"🔍 Price object: {price_obj}")
+                            
+                            if isinstance(price_obj, str):
+                                price_id = price_obj
+                                print(f"✅ Found price ID (string): {price_id}")
+                            elif hasattr(price_obj, 'id'):
+                                price_id = price_obj.id
+                                print(f"✅ Found price ID (object): {price_id}")
+                            else:
+                                print(f"⚠️ Price is neither string nor object with id")
+                        else:
+                            print(f"⚠️ Item has no price attribute")
+                            # Try dictionary access
+                            if isinstance(item, dict):
+                                price_id = item.get('price', {}).get('id') if isinstance(item.get('price'), dict) else item.get('price')
+                                if price_id:
+                                    print(f"✅ Found price ID via dict access: {price_id}")
+                    else:
+                        print(f"⚠️ No items found in subscription")
                 else:
-                    print(f"⚠️ No items in subscription.items.data")
-            else:
-                print(f"⚠️ Subscription has no items.data attribute")
+                    print(f"⚠️ Subscription has no items attribute")
+            except Exception as e:
+                print(f"⚠️ Error accessing subscription items: {e}")
+                import traceback
+                traceback.print_exc()
             
             # Get current period dates - safely access from expanded subscription
             if hasattr(expanded_sub, 'current_period_start') and expanded_sub.current_period_start:
@@ -2096,21 +2149,56 @@ def handle_subscription_created(subscription):
         
         print(f"💰 Price ID: {price_id}")
         
-        # If price_id is None, try to get it from subscription object directly
+        # If price_id is None, try alternative methods
         if not price_id:
             try:
-                # Try alternative method to get price ID
-                if hasattr(subscription, 'items') and hasattr(subscription.items, 'data'):
-                    if len(subscription.items.data) > 0:
-                        item = subscription.items.data[0]
+                print(f"🔄 Trying alternative method to get price ID...")
+                # Method 1: Try listing subscription items
+                try:
+                    items_list = stripe.SubscriptionItem.list(subscription=subscription.id, limit=1)
+                    if items_list and len(items_list.data) > 0:
+                        item = items_list.data[0]
                         if hasattr(item, 'price'):
                             if isinstance(item.price, str):
                                 price_id = item.price
                             elif hasattr(item.price, 'id'):
                                 price_id = item.price.id
-                            print(f"✅ Retrieved price ID via alternative method: {price_id}")
+                        if price_id:
+                            print(f"✅ Retrieved price ID via SubscriptionItem.list: {price_id}")
+                except Exception as e1:
+                    print(f"⚠️ SubscriptionItem.list failed: {e1}")
+                
+                # Method 2: Try accessing original subscription object
+                if not price_id:
+                    try:
+                        if isinstance(subscription, dict):
+                            items = subscription.get('items', {}).get('data', [])
+                        else:
+                            # Try to get items as a list
+                            try:
+                                items = list(subscription.items) if hasattr(subscription, 'items') else []
+                            except:
+                                items = []
+                        
+                        if items and len(items) > 0:
+                            item = items[0]
+                            if isinstance(item, dict):
+                                price_id = item.get('price', {}).get('id') if isinstance(item.get('price'), dict) else item.get('price')
+                            elif hasattr(item, 'price'):
+                                price_obj = item.price
+                                if isinstance(price_obj, str):
+                                    price_id = price_obj
+                                elif hasattr(price_obj, 'id'):
+                                    price_id = price_obj.id
+                            
+                            if price_id:
+                                print(f"✅ Retrieved price ID via original subscription: {price_id}")
+                    except Exception as e2:
+                        print(f"⚠️ Original subscription access failed: {e2}")
             except Exception as e:
-                print(f"⚠️ Could not get price ID via alternative method: {e}")
+                print(f"⚠️ All alternative methods failed: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Determine plan type based on price ID
         # Use runtime fallback for Standard plan price ID (in case env var wasn't loaded at startup)
@@ -2137,6 +2225,11 @@ def handle_subscription_created(subscription):
         else:
             print(f"❌ Price ID is None - cannot determine plan type. This is an error!")
             print(f"⚠️ Standard price ID: {standard_price_id}, Starter price ID: {starter_price_id}")
+            # For upgrades, we can try to infer from checkout session metadata
+            # But for now, we'll skip database insertion if price_id is None
+            print(f"⚠️ Skipping database insertion due to missing price_id")
+            conn.close()
+            return
         
         # Check if using PostgreSQL
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
