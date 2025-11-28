@@ -2314,6 +2314,45 @@ def handle_subscription_created(subscription):
         user_data = cursor.fetchone()
         current_replies_limit = user_data[0] if user_data else 0
         
+        # FIRST: Check if this is a reactivation (recently canceled subscription)
+        # This takes priority over upgrade/downgrade logic
+        cursor.execute(f"""
+            SELECT plan_type, status, updated_at
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder} AND status = 'canceled'
+            ORDER BY updated_at DESC
+            LIMIT 1
+        """, (user_id, subscription.id))
+        recent_canceled = cursor.fetchone()
+        
+        # Check if canceled within last 24 hours (reactivation window)
+        is_reactivation = False
+        if recent_canceled:
+            canceled_time = recent_canceled[2] if recent_canceled and len(recent_canceled) > 2 else None
+            if canceled_time:
+                from datetime import timedelta
+                # Handle both datetime objects and timestamps
+                if isinstance(canceled_time, datetime):
+                    time_diff = datetime.now() - canceled_time
+                else:
+                    time_diff = timedelta(hours=24)  # Default if can't calculate
+                
+                if time_diff < timedelta(hours=24):  # Canceled within last 24 hours
+                    is_reactivation = True
+                    print(f"🔄 Detected reactivation (canceled {time_diff} ago) - adding {replies_limit} replies to existing")
+                    cursor.execute(f"""
+                        UPDATE users 
+                        SET replies_limit_monthly = replies_limit_monthly + {placeholder}
+                        WHERE id = {placeholder}
+                    """, (replies_limit, user_id))
+                    print(f"📈 Added {replies_limit} replies to user {user_id} (reactivation: existing {current_replies_limit} + {replies_limit} = {current_replies_limit + replies_limit})")
+                    conn.commit()
+                    conn.close()
+                    plan_name = 'Standard' if plan_type == 'standard' else 'Starter'
+                    log_activity(user_id, 'stripe_subscription_created', f'{plan_name} plan subscription activated (reactivation)')
+                    print(f"✅ Subscription created for user {user_id} (reactivation)")
+                    return
+        
         # Check if user already has an active subscription (might be upgrading from one plan to another)
         cursor.execute(f"""
             SELECT plan_type, status
@@ -2334,7 +2373,7 @@ def handle_subscription_created(subscription):
         """, (user_id, subscription.id))
         existing_any_sub = cursor.fetchone()
         
-        # Determine if this is an upgrade, downgrade, reactivation, or new subscription
+        # Determine if this is an upgrade, downgrade, or new subscription
         if existing_active_sub:
             # User has an active subscription - this is an upgrade/downgrade
             old_plan_type = existing_active_sub[0]
