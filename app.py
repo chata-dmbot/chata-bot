@@ -858,27 +858,20 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
-    # Get subscription data to determine plan - prioritize active subscriptions
-    # First, try to get active subscription
+    # Get subscription data to determine plan - show most recently updated subscription
+    # This ensures that if a user just canceled a subscription, they see that one
+    # Prioritize active subscriptions only if they're the most recent
     cursor.execute(f"""
         SELECT plan_type, status, stripe_subscription_id
         FROM subscriptions
-        WHERE user_id = {placeholder} AND status = 'active'
-        ORDER BY updated_at DESC, created_at DESC
+        WHERE user_id = {placeholder}
+        ORDER BY 
+            updated_at DESC,
+            CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+            created_at DESC
         LIMIT 1
     """, (user_id,))
     subscription_data = cursor.fetchone()
-    
-    # If no active subscription, get canceled one (most recent)
-    if not subscription_data:
-        cursor.execute(f"""
-            SELECT plan_type, status, stripe_subscription_id
-            FROM subscriptions
-            WHERE user_id = {placeholder} AND status = 'canceled'
-            ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
-        """, (user_id,))
-        subscription_data = cursor.fetchone()
     
     # Determine current plan based on subscription status
     current_plan = None
