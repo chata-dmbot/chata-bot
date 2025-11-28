@@ -858,18 +858,27 @@ def dashboard():
         remaining_replies = 5
         minutes_saved = 0
     
-    # Get subscription data to determine plan - get the most recent subscription (active or canceled)
+    # Get subscription data to determine plan - prioritize active subscriptions
+    # First, try to get active subscription
     cursor.execute(f"""
         SELECT plan_type, status, stripe_subscription_id
         FROM subscriptions
-        WHERE user_id = {placeholder}
-        ORDER BY 
-            CASE WHEN status = 'active' THEN 0 ELSE 1 END,
-            updated_at DESC,
-            created_at DESC
+        WHERE user_id = {placeholder} AND status = 'active'
+        ORDER BY updated_at DESC, created_at DESC
         LIMIT 1
     """, (user_id,))
     subscription_data = cursor.fetchone()
+    
+    # If no active subscription, get canceled one (most recent)
+    if not subscription_data:
+        cursor.execute(f"""
+            SELECT plan_type, status, stripe_subscription_id
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'canceled'
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription_data = cursor.fetchone()
     
     # Determine current plan based on subscription status
     current_plan = None
@@ -2305,20 +2314,37 @@ def handle_subscription_created(subscription):
         
         print(f"💾 Subscription record created in database")
         
-        # Check if user already has an active subscription (might be upgrading)
+        # Get current replies_limit_monthly from users table to preserve existing replies
         cursor.execute(f"""
-            SELECT plan_type, replies_limit_monthly
-            FROM subscriptions s
-            JOIN users u ON s.user_id = u.id
-            WHERE s.user_id = {placeholder} AND s.status = 'active' AND s.stripe_subscription_id != {placeholder}
-            ORDER BY s.created_at DESC
+            SELECT replies_limit_monthly FROM users WHERE id = {placeholder}
+        """, (user_id,))
+        user_data = cursor.fetchone()
+        current_replies_limit = user_data[0] if user_data else 0
+        
+        # Check if user already has an active subscription (might be upgrading from one plan to another)
+        cursor.execute(f"""
+            SELECT plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder} AND status = 'active'
+            ORDER BY created_at DESC
             LIMIT 1
         """, (user_id, subscription.id))
-        existing_sub = cursor.fetchone()
+        existing_active_sub = cursor.fetchone()
         
-        # Check if this is an upgrade or downgrade
-        if existing_sub:
-            old_plan_type = existing_sub[0]
+        # Check if user has any previous subscription (including canceled - for reactivation detection)
+        cursor.execute(f"""
+            SELECT plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder}
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id, subscription.id))
+        existing_any_sub = cursor.fetchone()
+        
+        # Determine if this is an upgrade, downgrade, reactivation, or new subscription
+        if existing_active_sub:
+            # User has an active subscription - this is an upgrade/downgrade
+            old_plan_type = existing_active_sub[0]
             
             if old_plan_type == 'starter' and plan_type == 'standard':
                 # Upgrade: Starter → Standard - add 1000 replies (preserve existing)
@@ -2339,18 +2365,36 @@ def handle_subscription_created(subscription):
                 """, (user_id,))
                 print(f"📈 Added 150 replies to user {user_id} (downgrade: existing + 150)")
             else:
-                # Same plan type or unknown - just set to plan limit
+                # Same plan type - preserve existing replies, don't reset
+                print(f"ℹ️ Same plan type detected - preserving existing replies_limit_monthly")
+                print(f"📈 User {user_id} keeps existing {current_replies_limit} replies")
+        elif existing_any_sub:
+            # User has a canceled subscription - this is a reactivation
+            # IMPORTANT: Preserve existing replies and add new plan's replies
+            print(f"🔄 Detected reactivation after cancellation - preserving existing replies")
+            print(f"📈 Current replies_limit_monthly: {current_replies_limit}")
+            
+            if current_replies_limit > 0:
+                # User already has replies - add new plan's replies to existing
                 cursor.execute(f"""
                     UPDATE users 
-                    SET replies_limit_monthly = {placeholder} 
+                    SET replies_limit_monthly = replies_limit_monthly + {placeholder}
                     WHERE id = {placeholder}
                 """, (replies_limit, user_id))
-                print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan)")
+                print(f"📈 Added {replies_limit} replies to existing {current_replies_limit} replies = {current_replies_limit + replies_limit}")
+            else:
+                # No existing replies - set to plan limit
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET replies_limit_monthly = {placeholder}
+                    WHERE id = {placeholder}
+                """, (replies_limit, user_id))
+                print(f"📈 Set replies_limit_monthly to {replies_limit} (reactivation, no existing replies)")
         else:
-            # New subscription (no existing plan) - set to plan limit
+            # Truly new subscription (user never had one before) - set to plan limit
             cursor.execute(f"""
                 UPDATE users 
-                SET replies_limit_monthly = {placeholder} 
+                SET replies_limit_monthly = {placeholder}
                 WHERE id = {placeholder}
             """, (replies_limit, user_id))
             print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan - new subscription)")
