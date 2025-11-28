@@ -1863,12 +1863,12 @@ def cancel_subscription():
         print(f"🔄 Canceling subscription {subscription_id} (plan: {plan_type}) for user {user_id}")
         conn.close()
         
-        # Cancel subscription at period end in Stripe
+        # Cancel subscription immediately in Stripe
         try:
-            stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
-            print(f"✅ Set cancel_at_period_end=True in Stripe for subscription {subscription_id}")
+            stripe.Subscription.delete(subscription_id)
+            print(f"✅ Immediately canceled subscription {subscription_id} in Stripe")
         except Exception as e:
-            print(f"⚠️ Error setting cancel_at_period_end in Stripe: {e}")
+            print(f"⚠️ Error canceling subscription in Stripe: {e}")
             # Continue anyway - we'll still mark it as canceled in DB
         
         # Update database immediately to reflect canceled status
@@ -2314,122 +2314,26 @@ def handle_subscription_created(subscription):
         user_data = cursor.fetchone()
         current_replies_limit = user_data[0] if user_data else 0
         
-        # FIRST: Check if this is a reactivation (recently canceled subscription)
-        # This takes priority over upgrade/downgrade logic
-        cursor.execute(f"""
-            SELECT plan_type, status, updated_at
-            FROM subscriptions
-            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder} AND status = 'canceled'
-            ORDER BY updated_at DESC
-            LIMIT 1
-        """, (user_id, subscription.id))
-        recent_canceled = cursor.fetchone()
+        # SIMPLIFIED: Always add plan's base replies to existing replies (never reset)
+        # This works for new subscriptions, reactivations, upgrades, and downgrades
+        print(f"📈 Adding {replies_limit} replies to user {user_id}'s existing {current_replies_limit} replies")
         
-        # Check if canceled within last 24 hours (reactivation window)
-        is_reactivation = False
-        if recent_canceled:
-            canceled_time = recent_canceled[2] if recent_canceled and len(recent_canceled) > 2 else None
-            if canceled_time:
-                from datetime import timedelta
-                # Handle both datetime objects and timestamps
-                if isinstance(canceled_time, datetime):
-                    time_diff = datetime.now() - canceled_time
-                else:
-                    time_diff = timedelta(hours=24)  # Default if can't calculate
-                
-                if time_diff < timedelta(hours=24):  # Canceled within last 24 hours
-                    is_reactivation = True
-                    print(f"🔄 Detected reactivation (canceled {time_diff} ago) - adding {replies_limit} replies to existing")
-                    cursor.execute(f"""
-                        UPDATE users 
-                        SET replies_limit_monthly = replies_limit_monthly + {placeholder}
-                        WHERE id = {placeholder}
-                    """, (replies_limit, user_id))
-                    print(f"📈 Added {replies_limit} replies to user {user_id} (reactivation: existing {current_replies_limit} + {replies_limit} = {current_replies_limit + replies_limit})")
-                    conn.commit()
-                    conn.close()
-                    plan_name = 'Standard' if plan_type == 'standard' else 'Starter'
-                    log_activity(user_id, 'stripe_subscription_created', f'{plan_name} plan subscription activated (reactivation)')
-                    print(f"✅ Subscription created for user {user_id} (reactivation)")
-                    return
-        
-        # Check if user already has an active subscription (might be upgrading from one plan to another)
-        cursor.execute(f"""
-            SELECT plan_type, status
-            FROM subscriptions
-            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder} AND status = 'active'
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (user_id, subscription.id))
-        existing_active_sub = cursor.fetchone()
-        
-        # Check if user has any previous subscription (including canceled - for reactivation detection)
-        cursor.execute(f"""
-            SELECT plan_type, status
-            FROM subscriptions
-            WHERE user_id = {placeholder} AND stripe_subscription_id != {placeholder}
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (user_id, subscription.id))
-        existing_any_sub = cursor.fetchone()
-        
-        # Determine if this is an upgrade, downgrade, or new subscription
-        if existing_active_sub:
-            # User has an active subscription - this is an upgrade/downgrade
-            old_plan_type = existing_active_sub[0]
-            
-            if old_plan_type == 'starter' and plan_type == 'standard':
-                # Upgrade: Starter → Standard - add 1000 replies (preserve existing)
-                print(f"🔄 Detected upgrade from Starter to Standard - adding 1000 replies")
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = replies_limit_monthly + 1000
-                    WHERE id = {placeholder}
-                """, (user_id,))
-                print(f"📈 Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
-            elif old_plan_type == 'standard' and plan_type == 'starter':
-                # Downgrade: Standard → Starter - add 150 replies (preserve existing)
-                print(f"🔄 Detected downgrade from Standard to Starter - adding 150 replies")
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = replies_limit_monthly + 150
-                    WHERE id = {placeholder}
-                """, (user_id,))
-                print(f"📈 Added 150 replies to user {user_id} (downgrade: existing + 150)")
-            else:
-                # Same plan type - preserve existing replies, don't reset
-                print(f"ℹ️ Same plan type detected - preserving existing replies_limit_monthly")
-                print(f"📈 User {user_id} keeps existing {current_replies_limit} replies")
-        elif existing_any_sub:
-            # User has a canceled subscription - this is a reactivation
-            # IMPORTANT: Preserve existing replies and add new plan's replies
-            print(f"🔄 Detected reactivation after cancellation - preserving existing replies")
-            print(f"📈 Current replies_limit_monthly: {current_replies_limit}")
-            
-            if current_replies_limit > 0:
-                # User already has replies - add new plan's replies to existing
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = replies_limit_monthly + {placeholder}
-                    WHERE id = {placeholder}
-                """, (replies_limit, user_id))
-                print(f"📈 Added {replies_limit} replies to existing {current_replies_limit} replies = {current_replies_limit + replies_limit}")
-            else:
-                # No existing replies - set to plan limit
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = {placeholder}
-                    WHERE id = {placeholder}
-                """, (replies_limit, user_id))
-                print(f"📈 Set replies_limit_monthly to {replies_limit} (reactivation, no existing replies)")
+        if current_replies_limit > 0:
+            # User has existing replies - add new plan's replies on top
+            cursor.execute(f"""
+                UPDATE users 
+                SET replies_limit_monthly = replies_limit_monthly + {placeholder}
+                WHERE id = {placeholder}
+            """, (replies_limit, user_id))
+            print(f"📈 Added {replies_limit} replies (new total: {current_replies_limit + replies_limit})")
         else:
-            # Truly new subscription (user never had one before) - set to plan limit
+            # No existing replies - just set to plan limit (same as adding to 0)
             cursor.execute(f"""
                 UPDATE users 
                 SET replies_limit_monthly = {placeholder}
                 WHERE id = {placeholder}
             """, (replies_limit, user_id))
-            print(f"📈 Updated user {user_id} monthly limit to {replies_limit} ({plan_type} plan - new subscription)")
+            print(f"📈 Set replies_limit_monthly to {replies_limit} (no existing replies)")
         
         conn.commit()
         conn.close()
@@ -2784,18 +2688,18 @@ def handle_invoice_payment_succeeded(invoice):
             else:
                 monthly_limit = 150  # default if plan not found
             
-            # Reset monthly replies at the start of new billing period
+            # Add monthly replies at the start of new billing period (don't reset, just add)
             cursor.execute(f"""
                 UPDATE users 
                 SET replies_sent_monthly = 0,
-                    replies_limit_monthly = {placeholder},
+                    replies_limit_monthly = replies_limit_monthly + {placeholder},
                     last_monthly_reset = CURRENT_TIMESTAMP
                 WHERE id = {placeholder}
             """, (monthly_limit, user_id))
             
             conn.commit()
             log_activity(user_id, 'stripe_invoice_paid', 'Monthly subscription payment succeeded')
-            print(f"✅ Monthly payment succeeded for user {user_id} - reset to {monthly_limit} replies")
+            print(f"✅ Monthly payment succeeded for user {user_id} - added {monthly_limit} replies")
         else:
             print(f"⚠️ No subscription found in database for subscription_id: {subscription_id}")
         
@@ -2973,11 +2877,11 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
             else:
                 monthly_limit = 150  # starter or default
             
-            print(f"📅 New month detected for user {user_id} with {plan_type} plan, resetting monthly reply counter to {monthly_limit}")
+            print(f"📅 New month detected for user {user_id} with {plan_type} plan, adding {monthly_limit} replies")
             cursor.execute(f"""
                 UPDATE users
                 SET replies_sent_monthly = 0,
-                    replies_limit_monthly = {placeholder},
+                    replies_limit_monthly = replies_limit_monthly + {placeholder},
                     last_monthly_reset = {placeholder}
                 WHERE id = {placeholder}
             """, (monthly_limit, datetime.now(), user_id))
