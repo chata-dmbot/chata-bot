@@ -610,20 +610,6 @@
                     </a>
                 {% endif %}
             </div>
-            
-            <!-- Production Cleanup (Admin Only) -->
-            <div style="margin-top: 1rem; padding: 1rem; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px;">
-                <p style="color: #ffc107; font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>⚠️ Production Preparation</strong></p>
-                <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; margin-bottom: 1rem;">
-                    Before going live, clean up test data: Delete all subscriptions and reset all replies to zero.
-                </p>
-                <form method="POST" action="{{ url_for('cleanup_for_production') }}" 
-                      onsubmit="return confirm('⚠️ WARNING: This will DELETE ALL subscriptions and RESET ALL replies to zero for ALL users. This cannot be undone. Are you absolutely sure?');">
-                    <button type="submit" class="btn-secondary" style="background-color: #ff6b6b;">
-                        <i class="fas fa-trash-alt"></i> Clean Up for Production
-                    </button>
-                </form>
-            </div>
 
             <!-- Quick Stats -->
             <div class="dashboard-section-block dashboard-half">
