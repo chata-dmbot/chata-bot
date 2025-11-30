@@ -1325,6 +1325,183 @@ def toggle_bot_pause():
     
     return redirect(url_for('dashboard'))
 
+@app.route("/dashboard/debug/decrease-replies", methods=["POST"])
+@login_required
+def debug_decrease_replies():
+    """Debug route: Decrease remaining replies by 1"""
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # Get current counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            flash("Error: User data not found.", "error")
+            return redirect(url_for('dashboard'))
+        
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
+        
+        # Calculate remaining
+        total_used = replies_sent_monthly + replies_used_purchased
+        total_available = replies_limit_monthly + replies_purchased
+        remaining = max(0, total_available - total_used)
+        
+        if remaining <= 0:
+            flash("No remaining replies to decrease.", "warning")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        # Decrease by using one reply (increment sent count)
+        if replies_sent_monthly < replies_limit_monthly:
+            # Use monthly reply
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_sent_monthly = replies_sent_monthly + 1
+                WHERE id = {placeholder}
+            """, (user_id,))
+            flash("Decreased remaining replies by 1 (used monthly reply).", "success")
+        elif replies_used_purchased < replies_purchased:
+            # Use purchased reply
+            cursor.execute(f"""
+                UPDATE users
+                SET replies_used_purchased = replies_used_purchased + 1
+                WHERE id = {placeholder}
+            """, (user_id,))
+            flash("Decreased remaining replies by 1 (used purchased reply).", "success")
+        else:
+            flash("Error: Could not decrease replies.", "error")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        conn.commit()
+        print(f"🔧 Debug: Decreased replies for user {user_id} by 1")
+        
+    except Exception as e:
+        print(f"❌ Error decreasing replies: {e}")
+        flash("Error decreasing replies. Please try again.", "error")
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/debug/set-replies-zero", methods=["POST"])
+@login_required
+def debug_set_replies_zero():
+    """Debug route: Set remaining replies to 0 (use all replies)"""
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # Get current counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            flash("Error: User data not found.", "error")
+            return redirect(url_for('dashboard'))
+        
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
+        
+        # Set all replies as used
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_sent_monthly = {placeholder},
+                replies_used_purchased = {placeholder}
+            WHERE id = {placeholder}
+        """, (replies_limit_monthly, replies_purchased, user_id))
+        
+        conn.commit()
+        flash("Set remaining replies to 0 (all replies used).", "success")
+        print(f"🔧 Debug: Set replies to 0 for user {user_id}")
+        
+    except Exception as e:
+        print(f"❌ Error setting replies to zero: {e}")
+        flash("Error setting replies to zero. Please try again.", "error")
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/debug/trigger-monthly-addition", methods=["POST"])
+@login_required
+def debug_trigger_monthly_addition():
+    """Debug route: Manually trigger monthly addition (simulate new month)"""
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # Check if user has an active subscription
+        cursor.execute(f"""
+            SELECT id, plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription = cursor.fetchone()
+        
+        if not subscription:
+            flash("You need an active subscription to trigger monthly addition.", "warning")
+            conn.close()
+            return redirect(url_for('dashboard'))
+        
+        plan_type = subscription[1]  # 'starter' or 'standard'
+        if plan_type == 'standard':
+            monthly_limit = 1000
+        else:
+            monthly_limit = 150  # starter or default
+        
+        # Get current replies_limit_monthly
+        cursor.execute(f"""
+            SELECT replies_limit_monthly FROM users WHERE id = {placeholder}
+        """, (user_id,))
+        result = cursor.fetchone()
+        current_limit = result[0] if result else 0
+        
+        # Simulate monthly addition: add plan's base replies and reset sent count
+        from datetime import datetime
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_sent_monthly = 0,
+                replies_limit_monthly = replies_limit_monthly + {placeholder},
+                last_monthly_reset = {placeholder}
+            WHERE id = {placeholder}
+        """, (monthly_limit, datetime.now(), user_id))
+        
+        conn.commit()
+        flash(f"Monthly addition triggered! Added {monthly_limit} replies (new total: {current_limit + monthly_limit}).", "success")
+        print(f"🔧 Debug: Triggered monthly addition for user {user_id} - added {monthly_limit} replies")
+        
+    except Exception as e:
+        print(f"❌ Error triggering monthly addition: {e}")
+        flash("Error triggering monthly addition. Please try again.", "error")
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
+
 @app.route("/dashboard/disconnect-instagram/<int:connection_id>")
 @login_required
 def disconnect_instagram(connection_id):
