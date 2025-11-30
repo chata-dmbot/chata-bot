@@ -558,9 +558,9 @@
                 <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
                 {% if subscription_status == 'canceled' %}
                     <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
-                        <span style="color: rgba(255, 255, 255, 0.5); text-transform: capitalize; font-weight: 600; text-decoration: line-through;">{{ current_plan }} (Canceled)</span>
+                        <span style="color: rgba(255, 255, 255, 0.5); font-weight: 600;">No Active Plan</span>
                     </p>
-                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">You can still use your remaining replies, but cannot purchase add-ons.</p>
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">Your subscription has been canceled. You can still use your remaining replies, but cannot purchase add-ons.</p>
                     <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
                         <i class="fas fa-rocket"></i> Reactivate Subscription
                     </a>

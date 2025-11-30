@@ -859,35 +859,46 @@ def dashboard():
         minutes_saved = 0
         bot_paused = False
     
-    # Get subscription data to determine plan - show most recently updated subscription
-    # This ensures that if a user just canceled a subscription, they see that one
-    # Prioritize active subscriptions only if they're the most recent
+    # Get subscription data - ONLY show plan if subscription is ACTIVE
+    # First, try to find an active subscription
     cursor.execute(f"""
         SELECT plan_type, status, stripe_subscription_id
         FROM subscriptions
-        WHERE user_id = {placeholder}
-        ORDER BY 
-            updated_at DESC,
-            CASE WHEN status = 'active' THEN 0 ELSE 1 END,
-            created_at DESC
+        WHERE user_id = {placeholder} AND status = 'active'
+        ORDER BY created_at DESC
         LIMIT 1
     """, (user_id,))
-    subscription_data = cursor.fetchone()
+    active_subscription = cursor.fetchone()
     
     # Determine current plan based on subscription status
     current_plan = None
     subscription_status = None
-    if subscription_data:
-        plan_type, status, subscription_id = subscription_data
-        subscription_status = status
-        print(f"🔍 Dashboard: Found subscription {subscription_id} with status '{status}' and plan_type '{plan_type}'")
-        # Show plan type whether active or canceled
-        if status == 'active':
-            current_plan = plan_type  # 'starter' or 'standard'
-        elif status == 'canceled':
-            current_plan = plan_type  # Show plan even if canceled (so user knows what plan they had)
+    
+    if active_subscription:
+        # User has an active subscription - show the plan
+        plan_type, status, subscription_id = active_subscription
+        current_plan = plan_type  # 'starter' or 'standard'
+        subscription_status = 'active'
+        print(f"🔍 Dashboard: Found ACTIVE subscription {subscription_id} with plan_type '{plan_type}'")
     else:
-        print(f"🔍 Dashboard: No subscription found for user {user_id}")
+        # No active subscription - check if there's a canceled one (for display purposes only)
+        cursor.execute(f"""
+            SELECT plan_type, status, stripe_subscription_id
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'canceled'
+            ORDER BY updated_at DESC
+            LIMIT 1
+        """, (user_id,))
+        canceled_subscription = cursor.fetchone()
+        
+        if canceled_subscription:
+            plan_type, status, subscription_id = canceled_subscription
+            subscription_status = 'canceled'
+            current_plan = None  # Don't show plan name if canceled
+            print(f"🔍 Dashboard: Found CANCELED subscription {subscription_id} - not showing as current plan")
+        else:
+            print(f"🔍 Dashboard: No subscription found for user {user_id}")
+    
     # Don't infer plan from replies_limit_monthly - only from subscription status
     # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
     
