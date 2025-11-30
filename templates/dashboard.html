@@ -649,6 +649,12 @@
                             <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn-secondary">
                                 <i class="fas fa-robot"></i> Bot Settings
                             </a>
+                            <form method="POST" action="{{ url_for('toggle_bot_pause') }}" style="display: inline-block; margin: 0;">
+                                <button type="submit" class="btn-secondary" style="{% if bot_paused %}background-color: #ff6b6b;{% else %}background-color: #51cf66;{% endif %}">
+                                    <i class="fas fa-{% if bot_paused %}play{% else %}pause{% endif %}"></i> 
+                                    {% if bot_paused %}Resume{% else %}Pause{% endif %}
+                                </button>
+                            </form>
                             <a href="{{ url_for('disconnect_instagram', connection_id=connection.id) }}" 
                                class="btn-secondary" 
                                onclick="return confirm('Are you sure you want to disconnect this Instagram account? This will stop the bot from responding to messages.')">

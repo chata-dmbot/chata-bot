@@ -832,16 +832,16 @@ def dashboard():
     """, (user_id,))
     connections = cursor.fetchall()
     
-    # Get user's reply counts
+    # Get user's reply counts and bot_paused status
     cursor.execute(f"""
-        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, COALESCE(bot_paused, FALSE) as bot_paused
         FROM users
         WHERE id = {placeholder}
     """, (user_id,))
     reply_data = cursor.fetchone()
     
     if reply_data:
-        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused = reply_data
         total_replies_used = replies_sent_monthly + replies_used_purchased
         total_replies_available = replies_limit_monthly + replies_purchased
         remaining_replies = max(0, total_replies_available - total_replies_used)
@@ -857,6 +857,7 @@ def dashboard():
         total_replies_available = 5
         remaining_replies = 5
         minutes_saved = 0
+        bot_paused = False
     
     # Get subscription data to determine plan - show most recently updated subscription
     # This ensures that if a user just canceled a subscription, they see that one
@@ -914,7 +915,8 @@ def dashboard():
                          remaining_replies=remaining_replies,
                          minutes_saved=minutes_saved,
                          current_plan=current_plan,
-                         subscription_status=subscription_status)
+                         subscription_status=subscription_status,
+                         bot_paused=bot_paused)
 
 # ---- Bot Settings Management ----
 
@@ -1285,6 +1287,43 @@ def account_settings():
         return redirect(url_for('account_settings'))
     
     return render_template("account_settings.html", user=user)
+
+@app.route("/dashboard/toggle-bot-pause", methods=["POST"])
+@login_required
+def toggle_bot_pause():
+    """Toggle bot pause/resume status"""
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # Get current pause status
+        cursor.execute(f"""
+            SELECT COALESCE(bot_paused, FALSE) FROM users WHERE id = {placeholder}
+        """, (user_id,))
+        result = cursor.fetchone()
+        current_status = result[0] if result else False
+        
+        # Toggle the status
+        new_status = not current_status
+        cursor.execute(f"""
+            UPDATE users SET bot_paused = {placeholder} WHERE id = {placeholder}
+        """, (new_status, user_id))
+        conn.commit()
+        
+        status_text = "paused" if new_status else "resumed"
+        flash(f"Bot {status_text} successfully!", "success")
+        print(f"✅ Bot {status_text} for user {user_id}")
+        
+    except Exception as e:
+        print(f"❌ Error toggling bot pause: {e}")
+        flash("Error updating bot status. Please try again.", "error")
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
 
 @app.route("/dashboard/disconnect-instagram/<int:connection_id>")
 @login_required
@@ -3628,6 +3667,28 @@ def webhook():
                 user_id = instagram_connection['user_id']
 
             handler_start = time.time()
+            
+            # Check if bot is paused (only for registered users)
+            if instagram_connection and user_id:
+                conn_check = get_db_connection()
+                if conn_check:
+                    cursor_check = conn_check.cursor()
+                    placeholder_check = get_param_placeholder()
+                    try:
+                        cursor_check.execute(f"""
+                            SELECT COALESCE(bot_paused, FALSE) FROM users WHERE id = {placeholder_check}
+                        """, (user_id,))
+                        pause_result = cursor_check.fetchone()
+                        if pause_result and pause_result[0]:
+                            print(f"⏸️ Bot is paused for user {user_id}. Skipping reply.")
+                            conn_check.close()
+                            total_duration = time.time() - handler_start
+                            print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                            continue
+                    except Exception as e:
+                        print(f"⚠️ Error checking bot pause status: {e}")
+                    finally:
+                        conn_check.close()
             
             for event in events:
                 save_message(sender_id, event["text"], "")
