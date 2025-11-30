@@ -4437,6 +4437,45 @@ def payment_system_verification():
     
     return html
 
+@app.route("/admin/cleanup-for-production", methods=["POST"])
+@login_required
+def cleanup_for_production():
+    """Cleanup route: Delete all subscriptions and reset all replies to zero - FOR PRODUCTION PREP"""
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
+    try:
+        # 1. Delete all subscriptions
+        cursor.execute(f"DELETE FROM subscriptions")
+        subscriptions_deleted = cursor.rowcount
+        
+        # 2. Reset all replies to zero for all users
+        cursor.execute(f"""
+            UPDATE users 
+            SET replies_sent_monthly = 0,
+                replies_limit_monthly = 0,
+                replies_purchased = 0,
+                replies_used_purchased = 0
+        """)
+        users_updated = cursor.rowcount
+        
+        conn.commit()
+        
+        flash(f"✅ Cleanup complete! Deleted {subscriptions_deleted} subscriptions and reset replies for {users_updated} users.", "success")
+        print(f"🧹 Production cleanup: Deleted {subscriptions_deleted} subscriptions, reset {users_updated} users")
+        
+    except Exception as e:
+        print(f"❌ Error during cleanup: {e}")
+        flash(f"Error during cleanup: {str(e)}", "error")
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('dashboard'))
+
 @app.route("/debug/stripe-customers")
 @login_required
 def debug_stripe_customers():
