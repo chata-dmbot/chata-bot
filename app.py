@@ -2060,6 +2060,83 @@ def create_downgrade_checkout():
         flash("❌ An error occurred during downgrade. Please try again.", "error")
         return redirect(url_for('dashboard'))
 
+@app.route("/checkout/test-payment", methods=["POST"])
+@login_required
+def create_test_checkout():
+    """Create Stripe Checkout session for testing live payment system (€0.10 test)"""
+    user_id = session['user_id']
+    
+    # Get test price ID from environment variable (optional)
+    test_price_id = os.getenv("STRIPE_TEST_PAYMENT_PRICE_ID")
+    
+    if not test_price_id:
+        flash("❌ Test payment price ID not configured. Please set STRIPE_TEST_PAYMENT_PRICE_ID environment variable.", "error")
+        return redirect(url_for('dashboard'))
+    
+    if not Config.STRIPE_SECRET_KEY:
+        flash("❌ Payment system is not configured.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
+    
+    try:
+        # Create or retrieve Stripe customer
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Check if user already has a Stripe customer ID
+        cursor.execute(f"""
+            SELECT stripe_customer_id FROM subscriptions 
+            WHERE user_id = {placeholder} 
+            LIMIT 1
+        """, (user_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+        else:
+            # Check if customer exists in Stripe by email
+            existing_customers = stripe.Customer.list(email=user_email, limit=1)
+            if existing_customers.data:
+                customer_id = existing_customers.data[0].id
+                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
+            else:
+                # Create new Stripe customer
+                customer = stripe.Customer.create(
+                    email=user_email,
+                    metadata={'user_id': str(user_id), 'test_payment': 'true'}
+                )
+                customer_id = customer.id
+        
+        conn.close()
+        
+        # Create Checkout Session for one-time payment (not subscription)
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': test_price_id,
+                'quantity': 1,
+            }],
+            mode='payment',  # One-time payment, not subscription
+            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}&test=true',
+            cancel_url=request.host_url + 'dashboard',
+            metadata={'user_id': str(user_id), 'type': 'test_payment'}
+        )
+        
+        print(f"🧪 [TEST PAYMENT] Created test checkout session: {checkout_session.id}")
+        return redirect(checkout_session.url)
+        
+    except stripe.error.StripeError as e:
+        print(f"❌ [TEST PAYMENT] Stripe error: {e}")
+        flash(f"❌ Payment error: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"❌ [TEST PAYMENT] Error: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
 @app.route("/subscription/cancel", methods=["POST"])
 @login_required
 def cancel_subscription():
