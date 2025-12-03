@@ -2063,7 +2063,7 @@ def create_downgrade_checkout():
 @app.route("/checkout/test-payment", methods=["POST"])
 @login_required
 def create_test_checkout():
-    """Create Stripe Checkout session for testing live payment system (€0.10 test)"""
+    """Create Stripe Checkout session for testing live payment system (€0.50 test - Stripe minimum)"""
     user_id = session['user_id']
     
     # Get test price ID from environment variable (optional)
@@ -2072,6 +2072,8 @@ def create_test_checkout():
     if not test_price_id:
         flash("❌ Test payment price ID not configured. Please set STRIPE_TEST_PAYMENT_PRICE_ID environment variable.", "error")
         return redirect(url_for('dashboard'))
+    
+    print(f"🧪 [TEST PAYMENT] Using price ID: {test_price_id}")
     
     if not Config.STRIPE_SECRET_KEY:
         flash("❌ Payment system is not configured.", "error")
@@ -4514,10 +4516,17 @@ def payment_system_verification():
     
     return html
 
+@app.route("/admin/test")
+@login_required
+def admin_test():
+    """Simple test route to verify admin routes work"""
+    return f"✅ Admin routes work! User ID: {session.get('user_id')}"
+
 @app.route("/admin/chata-internal-dashboard-2024-secure")
 @login_required
 def admin_dashboard():
     """Secure admin dashboard - only accessible via specific URL"""
+    print(f"🔐 [ADMIN] Admin dashboard accessed by user {session.get('user_id')}")
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
