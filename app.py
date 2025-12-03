@@ -4456,12 +4456,29 @@ def admin_test():
 def admin_dashboard():
     """Secure admin dashboard - accessible via /admin/dashboard or the secure URL"""
     user_id = session.get('user_id')
+    
+    # Restrict access to user ID 8 only
+    if user_id != 8:
+        flash("❌ Access denied. Admin dashboard is restricted.", "error")
+        return redirect(url_for('dashboard'))
+    
     print(f"🔐 [ADMIN] Admin dashboard accessed by user {user_id}")
     print(f"🔐 [ADMIN] Request path: {request.path}")
+    
+    # Get pagination parameters
+    users_page = request.args.get('users_page', 1, type=int)
+    logs_page = request.args.get('logs_page', 1, type=int)
+    users_per_page = 10
+    logs_per_page = 10
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
+        
+        # Check if using PostgreSQL
+        database_url = os.environ.get('DATABASE_URL')
+        is_postgres = bool(database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')))
         
         # Get total users count
         cursor.execute("SELECT COUNT(*) FROM users")
@@ -4475,20 +4492,42 @@ def admin_dashboard():
         """)
         active_subscribers = cursor.fetchone()[0]
         
-        # Get all users with their details
-        cursor.execute("""
-            SELECT 
-                id, email, 
-                replies_sent_monthly, 
-                replies_limit_monthly, 
-                replies_purchased, 
-                replies_used_purchased,
-                bot_paused,
-                created_at
-            FROM users
-            ORDER BY created_at DESC
-        """)
+        # Get users with pagination (limit to 50 total, show 10 per page)
+        total_users_to_show = min(50, total_users)
+        users_offset = (users_page - 1) * users_per_page
+        
+        if is_postgres:
+            cursor.execute("""
+                SELECT 
+                    id, email, 
+                    replies_sent_monthly, 
+                    replies_limit_monthly, 
+                    replies_purchased, 
+                    replies_used_purchased,
+                    bot_paused,
+                    created_at
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, (min(users_per_page, total_users_to_show - users_offset), users_offset))
+        else:
+            cursor.execute("""
+                SELECT 
+                    id, email, 
+                    replies_sent_monthly, 
+                    replies_limit_monthly, 
+                    replies_purchased, 
+                    replies_used_purchased,
+                    bot_paused,
+                    created_at
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            """, (min(users_per_page, total_users_to_show - users_offset), users_offset))
         users_data = cursor.fetchall()
+        
+        # Calculate users pagination
+        total_users_pages = (total_users_to_show + users_per_page - 1) // users_per_page
         
         # Get all subscriptions
         cursor.execute("""
@@ -4523,15 +4562,32 @@ def admin_dashboard():
         """)
         purchases_data = cursor.fetchall()
         
-        # Get recent activity logs
-        cursor.execute("""
-            SELECT 
-                id, user_id, action, details, ip_address, created_at
-            FROM activity_logs
-            ORDER BY created_at DESC
-            LIMIT 100
-        """)
+        # Get activity logs with pagination (limit to 50 total, show 10 per page)
+        cursor.execute("SELECT COUNT(*) FROM activity_logs")
+        total_logs = cursor.fetchone()[0]
+        total_logs_to_show = min(50, total_logs)
+        logs_offset = (logs_page - 1) * logs_per_page
+        
+        if is_postgres:
+            cursor.execute("""
+                SELECT 
+                    id, user_id, action, details, ip_address, created_at
+                FROM activity_logs
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, (min(logs_per_page, total_logs_to_show - logs_offset), logs_offset))
+        else:
+            cursor.execute("""
+                SELECT 
+                    id, user_id, action, details, ip_address, created_at
+                FROM activity_logs
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            """, (min(logs_per_page, total_logs_to_show - logs_offset), logs_offset))
         activity_logs = cursor.fetchall()
+        
+        # Calculate logs pagination
+        total_logs_pages = (total_logs_to_show + logs_per_page - 1) // logs_per_page
         
         conn.close()
         
@@ -4606,7 +4662,12 @@ def admin_dashboard():
                              subscriptions=subscriptions,
                              connections=connections,
                              purchases=purchases,
-                             activity_logs=logs)
+                             activity_logs=logs,
+                             users_page=users_page,
+                             total_users_pages=total_users_pages,
+                             logs_page=logs_page,
+                             total_logs_pages=total_logs_pages,
+                             total_users_to_show=total_users_to_show)
         
     except Exception as e:
         print(f"❌ Admin dashboard error: {e}")

@@ -124,7 +124,7 @@
     </div>
     
     <!-- Users Table -->
-    <h2><i class="fas fa-users"></i> All Users</h2>
+    <h2><i class="fas fa-users"></i> All Users (Showing up to {{ total_users_to_show }} of {{ total_users }})</h2>
     <div class="data-table">
         <table>
             <thead>
@@ -160,6 +160,26 @@
                 {% endfor %}
             </tbody>
         </table>
+        <!-- Users Pagination -->
+        {% if total_users_pages > 1 %}
+        <div style="margin-top: 1rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+            {% if users_page > 1 %}
+                <a href="?users_page={{ users_page - 1 }}{% if logs_page > 1 %}&logs_page={{ logs_page }}{% endif %}" 
+                   style="color: #3366ff; text-decoration: none; padding: 0.5rem 1rem; border: 1px solid #3366ff; border-radius: 8px;">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </a>
+            {% endif %}
+            <span style="color: rgba(255, 255, 255, 0.7);">
+                Page {{ users_page }} of {{ total_users_pages }}
+            </span>
+            {% if users_page < total_users_pages %}
+                <a href="?users_page={{ users_page + 1 }}{% if logs_page > 1 %}&logs_page={{ logs_page }}{% endif %}" 
+                   style="color: #3366ff; text-decoration: none; padding: 0.5rem 1rem; border: 1px solid #3366ff; border-radius: 8px;">
+                    Next <i class="fas fa-arrow-right"></i>
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
     
     <!-- Subscriptions Table -->
@@ -280,7 +300,7 @@
     </div>
     
     <!-- Activity Logs Table -->
-    <h2><i class="fas fa-history"></i> Recent Activity Logs</h2>
+    <h2><i class="fas fa-history"></i> Recent Activity Logs (Showing up to 50)</h2>
     <div class="data-table">
         <table>
             <thead>
@@ -306,6 +326,26 @@
                 {% endfor %}
             </tbody>
         </table>
+        <!-- Activity Logs Pagination -->
+        {% if total_logs_pages > 1 %}
+        <div style="margin-top: 1rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+            {% if logs_page > 1 %}
+                <a href="?{% if users_page > 1 %}users_page={{ users_page }}&{% endif %}logs_page={{ logs_page - 1 }}" 
+                   style="color: #3366ff; text-decoration: none; padding: 0.5rem 1rem; border: 1px solid #3366ff; border-radius: 8px;">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </a>
+            {% endif %}
+            <span style="color: rgba(255, 255, 255, 0.7);">
+                Page {{ logs_page }} of {{ total_logs_pages }}
+            </span>
+            {% if logs_page < total_logs_pages %}
+                <a href="?{% if users_page > 1 %}users_page={{ users_page }}&{% endif %}logs_page={{ logs_page + 1 }}" 
+                   style="color: #3366ff; text-decoration: none; padding: 0.5rem 1rem; border: 1px solid #3366ff; border-radius: 8px;">
+                    Next <i class="fas fa-arrow-right"></i>
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
     
 </body>
