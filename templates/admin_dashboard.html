@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CHATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            background: #000000;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            padding: 2rem;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #3366ff;
+        }
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .data-table {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #3366ff;
+            font-weight: 600;
+        }
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .badge-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        .badge-canceled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .badge-paused {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        h1 {
+            color: #3366ff;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        h2 {
+            color: #3366ff;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .back-link {
+            color: #3366ff;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('dashboard') }}" class="back-link">← Back to Dashboard</a>
+    
+    <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+    
+    <!-- Statistics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_users }}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ active_subscribers }}</div>
+            <div class="stat-label">Active Subscribers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ subscriptions|length }}</div>
+            <div class="stat-label">Total Subscriptions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ connections|length }}</div>
+            <div class="stat-label">Instagram Connections</div>
+        </div>
+    </div>
+    
+    <!-- Users Table -->
+    <h2><i class="fas fa-users"></i> All Users</h2>
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Replies Sent</th>
+                    <th>Replies Limit</th>
+                    <th>Replies Purchased</th>
+                    <th>Replies Used (Purchased)</th>
+                    <th>Bot Paused</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.replies_sent_monthly }}</td>
+                    <td>{{ user.replies_limit_monthly }}</td>
+                    <td>{{ user.replies_purchased }}</td>
+                    <td>{{ user.replies_used_purchased }}</td>
+                    <td>
+                        {% if user.bot_paused %}
+                            <span class="badge badge-paused">Paused</span>
+                        {% else %}
+                            <span class="badge badge-active">Active</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Subscriptions Table -->
+    <h2><i class="fas fa-credit-card"></i> Subscriptions</h2>
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User ID</th>
+                    <th>Plan Type</th>
+                    <th>Status</th>
+                    <th>Stripe Subscription ID</th>
+                    <th>Stripe Customer ID</th>
+                    <th>Period Start</th>
+                    <th>Period End</th>
+                    <th>Created At</th>
+                    <th>Updated At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in subscriptions %}
+                <tr>
+                    <td>{{ sub.id }}</td>
+                    <td>{{ sub.user_id }}</td>
+                    <td>{{ sub.plan_type }}</td>
+                    <td>
+                        {% if sub.status == 'active' %}
+                            <span class="badge badge-active">{{ sub.status }}</span>
+                        {% else %}
+                            <span class="badge badge-canceled">{{ sub.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.8rem; word-break: break-all;">{{ sub.stripe_subscription_id }}</td>
+                    <td style="font-size: 0.8rem; word-break: break-all;">{{ sub.stripe_customer_id }}</td>
+                    <td>{{ sub.current_period_start.strftime('%Y-%m-%d') if sub.current_period_start else 'N/A' }}</td>
+                    <td>{{ sub.current_period_end.strftime('%Y-%m-%d') if sub.current_period_end else 'N/A' }}</td>
+                    <td>{{ sub.created_at.strftime('%Y-%m-%d %H:%M') if sub.created_at else 'N/A' }}</td>
+                    <td>{{ sub.updated_at.strftime('%Y-%m-%d %H:%M') if sub.updated_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Instagram Connections Table -->
+    <h2><i class="fab fa-instagram"></i> Instagram Connections</h2>
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User ID</th>
+                    <th>Instagram User ID</th>
+                    <th>Instagram Page ID</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conn in connections %}
+                <tr>
+                    <td>{{ conn.id }}</td>
+                    <td>{{ conn.user_id }}</td>
+                    <td>{{ conn.instagram_user_id }}</td>
+                    <td>{{ conn.instagram_page_id }}</td>
+                    <td>
+                        {% if conn.is_active %}
+                            <span class="badge badge-active">Active</span>
+                        {% else %}
+                            <span class="badge badge-canceled">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ conn.created_at.strftime('%Y-%m-%d %H:%M') if conn.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Purchases Table -->
+    <h2><i class="fas fa-shopping-cart"></i> Recent Purchases</h2>
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User ID</th>
+                    <th>Amount Paid</th>
+                    <th>Replies Added</th>
+                    <th>Payment Provider</th>
+                    <th>Payment ID</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchases %}
+                <tr>
+                    <td>{{ purchase.id }}</td>
+                    <td>{{ purchase.user_id }}</td>
+                    <td>€{{ "%.2f"|format(purchase.amount_paid) }}</td>
+                    <td>{{ purchase.replies_added }}</td>
+                    <td>{{ purchase.payment_provider or 'N/A' }}</td>
+                    <td style="font-size: 0.8rem; word-break: break-all;">{{ purchase.payment_id or 'N/A' }}</td>
+                    <td>
+                        {% if purchase.status == 'completed' %}
+                            <span class="badge badge-active">{{ purchase.status }}</span>
+                        {% else %}
+                            <span class="badge badge-canceled">{{ purchase.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ purchase.created_at.strftime('%Y-%m-%d %H:%M') if purchase.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Activity Logs Table -->
+    <h2><i class="fas fa-history"></i> Recent Activity Logs</h2>
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User ID</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in activity_logs %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>{{ log.user_id }}</td>
+                    <td>{{ log.action }}</td>
+                    <td style="max-width: 300px; word-break: break-word;">{{ log.details or 'N/A' }}</td>
+                    <td>{{ log.ip_address or 'N/A' }}</td>
+                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+</body>
+</html>
+

@@ -2060,82 +2060,13 @@ def create_downgrade_checkout():
         flash("❌ An error occurred during downgrade. Please try again.", "error")
         return redirect(url_for('dashboard'))
 
-@app.route("/checkout/test-payment", methods=["POST"])
-@login_required
-def create_test_checkout():
-    """Create Stripe Checkout session for testing live payment system (€0.10 test)"""
-    user_id = session['user_id']
-    
-    # Get test price ID from environment variable (optional)
-    test_price_id = os.getenv("STRIPE_TEST_PAYMENT_PRICE_ID")
-    
-    if not test_price_id:
-        flash("❌ Test payment price ID not configured. Please set STRIPE_TEST_PAYMENT_PRICE_ID environment variable.", "error")
-        return redirect(url_for('dashboard'))
-    
-    if not Config.STRIPE_SECRET_KEY:
-        flash("❌ Payment system is not configured.", "error")
-        return redirect(url_for('dashboard'))
-    
-    user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
-    
-    try:
-        # Create or retrieve Stripe customer
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        
-        # Check if user already has a Stripe customer ID
-        cursor.execute(f"""
-            SELECT stripe_customer_id FROM subscriptions 
-            WHERE user_id = {placeholder} 
-            LIMIT 1
-        """, (user_id,))
-        result = cursor.fetchone()
-        
-        if result and result[0]:
-            customer_id = result[0]
-        else:
-            # Check if customer exists in Stripe by email
-            existing_customers = stripe.Customer.list(email=user_email, limit=1)
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
-            else:
-                # Create new Stripe customer
-                customer = stripe.Customer.create(
-                    email=user_email,
-                    metadata={'user_id': str(user_id), 'test_payment': 'true'}
-                )
-                customer_id = customer.id
-        
-        conn.close()
-        
-        # Create Checkout Session for one-time payment (not subscription)
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{
-                'price': test_price_id,
-                'quantity': 1,
-            }],
-            mode='payment',  # One-time payment, not subscription
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}&test=true',
-            cancel_url=request.host_url + 'dashboard',
-            metadata={'user_id': str(user_id), 'type': 'test_payment'}
-        )
-        
-        print(f"🧪 [TEST PAYMENT] Created test checkout session: {checkout_session.id}")
-        return redirect(checkout_session.url)
-        
-    except stripe.error.StripeError as e:
-        print(f"❌ [TEST PAYMENT] Stripe error: {e}")
-        flash(f"❌ Payment error: {str(e)}", "error")
-        return redirect(url_for('dashboard'))
-    except Exception as e:
-        print(f"❌ [TEST PAYMENT] Error: {e}")
-        flash("❌ An error occurred. Please try again.", "error")
-        return redirect(url_for('dashboard'))
+# Test payment route - disabled for production
+# @app.route("/checkout/test-payment", methods=["POST"])
+# @login_required
+# def create_test_checkout():
+#     """Create Stripe Checkout session for testing live payment system (€0.10 test)"""
+#     # Route disabled - test payment functionality removed
+#     pass
 
 @app.route("/subscription/cancel", methods=["POST"])
 @login_required
@@ -4513,6 +4444,166 @@ def payment_system_verification():
     """
     
     return html
+
+@app.route("/admin/chata-internal-dashboard-2024-secure")
+@login_required
+def admin_dashboard():
+    """Secure admin dashboard - only accessible via specific URL"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get total users count
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        # Get users with active subscriptions
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id) 
+            FROM subscriptions 
+            WHERE status = 'active'
+        """)
+        active_subscribers = cursor.fetchone()[0]
+        
+        # Get all users with their details
+        cursor.execute("""
+            SELECT 
+                id, email, 
+                replies_sent_monthly, 
+                replies_limit_monthly, 
+                replies_purchased, 
+                replies_used_purchased,
+                bot_paused,
+                created_at
+            FROM users
+            ORDER BY created_at DESC
+        """)
+        users_data = cursor.fetchall()
+        
+        # Get all subscriptions
+        cursor.execute("""
+            SELECT 
+                id, user_id, stripe_subscription_id, stripe_customer_id,
+                plan_type, status, 
+                current_period_start, current_period_end,
+                created_at, updated_at
+            FROM subscriptions
+            ORDER BY updated_at DESC
+        """)
+        subscriptions_data = cursor.fetchall()
+        
+        # Get Instagram connections
+        cursor.execute("""
+            SELECT 
+                id, user_id, instagram_user_id, instagram_page_id,
+                is_active, created_at
+            FROM instagram_connections
+            ORDER BY created_at DESC
+        """)
+        connections_data = cursor.fetchall()
+        
+        # Get recent purchases
+        cursor.execute("""
+            SELECT 
+                id, user_id, amount_paid, replies_added,
+                payment_provider, payment_id, status, created_at
+            FROM purchases
+            ORDER BY created_at DESC
+            LIMIT 50
+        """)
+        purchases_data = cursor.fetchall()
+        
+        # Get recent activity logs
+        cursor.execute("""
+            SELECT 
+                id, user_id, action, details, ip_address, created_at
+            FROM activity_logs
+            ORDER BY created_at DESC
+            LIMIT 100
+        """)
+        activity_logs = cursor.fetchall()
+        
+        conn.close()
+        
+        # Format data for template
+        users = []
+        for row in users_data:
+            users.append({
+                'id': row[0],
+                'email': row[1],
+                'replies_sent_monthly': row[2],
+                'replies_limit_monthly': row[3],
+                'replies_purchased': row[4],
+                'replies_used_purchased': row[5],
+                'bot_paused': row[6],
+                'created_at': row[7]
+            })
+        
+        subscriptions = []
+        for row in subscriptions_data:
+            subscriptions.append({
+                'id': row[0],
+                'user_id': row[1],
+                'stripe_subscription_id': row[2],
+                'stripe_customer_id': row[3],
+                'plan_type': row[4],
+                'status': row[5],
+                'current_period_start': row[6],
+                'current_period_end': row[7],
+                'created_at': row[8],
+                'updated_at': row[9]
+            })
+        
+        connections = []
+        for row in connections_data:
+            connections.append({
+                'id': row[0],
+                'user_id': row[1],
+                'instagram_user_id': row[2],
+                'instagram_page_id': row[3],
+                'is_active': row[4],
+                'created_at': row[5]
+            })
+        
+        purchases = []
+        for row in purchases_data:
+            purchases.append({
+                'id': row[0],
+                'user_id': row[1],
+                'amount_paid': row[2],
+                'replies_added': row[3],
+                'payment_provider': row[4],
+                'payment_id': row[5],
+                'status': row[6],
+                'created_at': row[7]
+            })
+        
+        logs = []
+        for row in activity_logs:
+            logs.append({
+                'id': row[0],
+                'user_id': row[1],
+                'action': row[2],
+                'details': row[3],
+                'ip_address': row[4],
+                'created_at': row[5]
+            })
+        
+        return render_template('admin_dashboard.html',
+                             total_users=total_users,
+                             active_subscribers=active_subscribers,
+                             users=users,
+                             subscriptions=subscriptions,
+                             connections=connections,
+                             purchases=purchases,
+                             activity_logs=logs)
+        
+    except Exception as e:
+        print(f"❌ Admin dashboard error: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error loading admin dashboard: {str(e)}", 500
 
 @app.route("/admin/cleanup-for-production", methods=["POST"])
 @login_required
