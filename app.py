@@ -326,9 +326,15 @@ def send_email_via_sendgrid(email, subject, html_content):
         
         if response.status_code == 202:
             print(f"✅ Email sent successfully to {email}: {subject}")
+            print(f"📧 SendGrid response headers: {dict(response.headers)}")
+            if hasattr(response, 'body') and response.body:
+                print(f"📧 SendGrid response body: {response.body}")
             return True
         else:
             print(f"❌ Email failed to send. Status: {response.status_code}")
+            print(f"📧 SendGrid response headers: {dict(response.headers)}")
+            if hasattr(response, 'body') and response.body:
+                print(f"📧 SendGrid response body: {response.body}")
             return False
         
     except Exception as e:
