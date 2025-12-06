@@ -200,6 +200,23 @@ except Exception as e:
 
 # ---- Email helpers ----
 
+def get_email_base_template(title, content_html):
+    """Base email template with black/blue theme - simplified design"""
+    return f"""
+    <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #000000;">
+        <div style="text-align: center; margin-bottom: 40px; padding: 20px 0;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 48px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">CHATA</h1>
+            <p style="color: rgba(255, 255, 255, 0.7); margin: 10px 0 0 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;">INSTAGRAM AI ENGAGEMENT</p>
+        </div>
+        
+        <div style="padding: 0 20px;">
+            <h2 style="color: #ffffff; margin-bottom: 20px; font-size: 24px; font-weight: 600; text-transform: none; letter-spacing: normal;">{title}</h2>
+            
+            {content_html}
+        </div>
+    </div>
+    """
+
 def send_reset_email(email, reset_token):
     """Send password reset email using SendGrid"""
     reset_url = f"https://getchata.com/reset-password?token={reset_token}"
@@ -216,54 +233,43 @@ def send_reset_email(email, reset_token):
     try:
         sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
         
-        # Create email content with black and blue theme
-        html_content = f"""
-        <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #000000;">
-            <div style="background: rgba(51, 102, 255, 0.1); border: 1px solid rgba(51, 102, 255, 0.3); padding: 40px 30px; border-radius: 20px; text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #3366ff; margin: 0; font-size: 36px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">CHATA</h1>
-                <p style="color: rgba(255, 255, 255, 0.7); margin: 10px 0 0 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;">INSTAGRAM AI ENGAGEMENT</p>
+        # Create email content with simplified black/blue theme
+        content_html = f"""
+            <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+                You recently requested a password reset for your Chata account.
+            </p>
+            
+            <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+                Click the button below to reset your password. This link will allow you to create a new password for your account.
+            </p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="{reset_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal; font-size: 16px;">
+                    Reset Password
+                </a>
             </div>
             
-            <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 40px 30px; border-radius: 20px;">
-                <h2 style="color: #ffffff; margin-bottom: 20px; font-size: 24px; font-weight: 600; text-transform: none; letter-spacing: normal;">Password Reset Request</h2>
-                
-                <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-                    You recently requested a password reset for your Chata account.
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 15px 0; text-transform: none; letter-spacing: normal; text-align: center;">
+                If the button doesn't work, copy and paste this link into your browser:
+            </p>
+            
+            <div style="background: rgba(51, 102, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(51, 102, 255, 0.2); margin-bottom: 25px;">
+                <p style="color: #3366ff; font-size: 13px; word-break: break-all; margin: 0; text-transform: none; letter-spacing: normal; line-height: 1.5;">
+                    {reset_url}
                 </p>
-                
-                <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-                    Click the button below to reset your password. This link will allow you to create a new password for your account.
-                </p>
-                
-                <div style="text-align: center; margin: 35px 0;">
-                    <a href="{reset_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal; font-size: 16px;">
-                        Reset Password
-                    </a>
-                </div>
-                
-                <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 15px 0; text-transform: none; letter-spacing: normal; text-align: center;">
-                    If the button doesn't work, copy and paste this link into your browser:
-                </p>
-                
-                <div style="background: rgba(51, 102, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(51, 102, 255, 0.2); margin-bottom: 25px;">
-                    <p style="color: #3366ff; font-size: 13px; word-break: break-all; margin: 0; text-transform: none; letter-spacing: normal; line-height: 1.5;">
-                        {reset_url}
-                    </p>
-                </div>
-                
-                <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 30px 0;">
-                
-                <div style="background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 13px; margin: 0 0 10px 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
-                        <strong style="color: rgba(255, 255, 255, 0.8);">Important:</strong> This password reset link will expire in <strong style="color: #3366ff;">1 hour</strong> for your security.
-                    </p>
-                    <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin: 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
-                        If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
-                    </p>
-                </div>
             </div>
-        </div>
+            
+            <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 30px 0;">
+            
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 13px; margin: 0 0 10px 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
+                <strong style="color: rgba(255, 255, 255, 0.8);">Important:</strong> This password reset link will expire in <strong style="color: #3366ff;">1 hour</strong> for your security.
+            </p>
+            <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin: 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
+                If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
+            </p>
         """
+        
+        html_content = get_email_base_template("Password Reset Request", content_html)
         
         from_email = Config.SENDGRID_FROM_EMAIL
         if not from_email:
@@ -292,6 +298,111 @@ def send_reset_email(email, reset_token):
         print(f"Error type: {type(e).__name__}")
         # Fallback to console output
         print(f"Password reset link for {email}: {reset_url}")
+
+def send_email_via_sendgrid(email, subject, html_content):
+    """Helper function to send emails via SendGrid"""
+    sendgrid_api_key = Config.SENDGRID_API_KEY
+    
+    if not sendgrid_api_key:
+        print(f"⚠️ SENDGRID_API_KEY not found. Email not sent to {email}")
+        print(f"Email subject: {subject}")
+        return False
+    
+    try:
+        sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
+        
+        from_email = Config.SENDGRID_FROM_EMAIL
+        if not from_email:
+            from_email = "chata.dmbot@gmail.com"
+        
+        message = Mail(
+            from_email=from_email,
+            to_emails=email,
+            subject=subject,
+            html_content=html_content
+        )
+        
+        response = sg.send(message)
+        
+        if response.status_code == 202:
+            print(f"✅ Email sent successfully to {email}: {subject}")
+            return True
+        else:
+            print(f"❌ Email failed to send. Status: {response.status_code}")
+            return False
+        
+    except Exception as e:
+        print(f"❌ Error sending email to {email}: {e}")
+        return False
+
+def send_welcome_email(email):
+    """Send welcome email to new users"""
+    dashboard_url = "https://getchata.com/dashboard"
+    
+    content_html = f"""
+        <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            Welcome to Chata! We're excited to have you on board.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            Get started by connecting your Instagram account and setting up your AI bot. Your bot will automatically respond to messages and help you engage with your audience.
+        </p>
+        
+        <div style="text-align: center; margin: 35px 0;">
+            <a href="{dashboard_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal; font-size: 16px;">
+                Go to Dashboard
+            </a>
+        </div>
+        
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">
+            If you have any questions, feel free to reach out to us. We're here to help!
+        </p>
+    """
+    
+    html_content = get_email_base_template("Welcome to Chata!", content_html)
+    return send_email_via_sendgrid(email, "Welcome to Chata - Get Started", html_content)
+
+def send_usage_warning_email(email, remaining_replies):
+    """Send usage warning email when user is running low on replies"""
+    dashboard_url = "https://getchata.com/dashboard"
+    pricing_url = "https://getchata.com/pricing"
+    
+    if remaining_replies >= 100:
+        threshold = 100
+        urgency = "low"
+        message = f"You have {remaining_replies} replies remaining. Make sure you have enough to keep your bot running smoothly."
+    elif remaining_replies >= 50:
+        threshold = 50
+        urgency = "medium"
+        message = f"You have {remaining_replies} replies remaining. Consider purchasing more replies to avoid interruption."
+    else:
+        threshold = remaining_replies
+        urgency = "high"
+        message = f"⚠️ You only have {remaining_replies} replies remaining! Your bot will stop responding when you run out."
+    
+    content_html = f"""
+        <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            {message}
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            You can always purchase additional replies for €5 to keep your bot active. Visit your dashboard to buy more replies or upgrade your plan.
+        </p>
+        
+        <div style="text-align: center; margin: 35px 0;">
+            <a href="{dashboard_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal; font-size: 16px;">
+                View Dashboard
+            </a>
+        </div>
+        
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 0 0; text-transform: none; letter-spacing: normal; text-align: center; line-height: 1.7;">
+            Or <a href="{pricing_url}" style="color: #3366ff; text-decoration: none;">view our pricing plans</a> to upgrade for more monthly replies.
+        </p>
+    """
+    
+    subject = f"Low Reply Count Warning - {remaining_replies} Replies Remaining"
+    html_content = get_email_base_template("Reply Count Warning", content_html)
+    return send_email_via_sendgrid(email, subject, html_content)
 
 def create_reset_token(user_id):
     """Create a password reset token"""
@@ -464,6 +575,13 @@ def signup():
         try:
             user_id = create_user(email, password)
             session['user_id'] = user_id
+            
+            # Send welcome email
+            try:
+                send_welcome_email(email)
+            except Exception as e:
+                print(f"⚠️ Failed to send welcome email: {e}")
+            
             flash("Account created successfully! Welcome to Chata.", "success")
             return redirect(url_for('dashboard'))
         except Exception as e:
@@ -3210,6 +3328,53 @@ def increment_reply_count(user_id):
             return False
         
         conn.commit()
+        
+        # Check if we need to send usage warning emails
+        # Re-fetch to get updated counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, email, last_warning_sent_at, last_warning_threshold
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        
+        result = cursor.fetchone()
+        if result:
+            replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, user_email, last_warning_sent_at, last_warning_threshold = result
+            
+            total_used = replies_sent_monthly + replies_used_purchased
+            total_available = replies_limit_monthly + replies_purchased
+            remaining = max(0, total_available - total_used)
+            
+            # Determine which threshold we're at
+            warning_threshold = None
+            if remaining <= 50 and remaining > 0:
+                warning_threshold = 50
+            elif remaining <= 100 and remaining > 50:
+                warning_threshold = 100
+            
+            # Send warning if we hit a threshold and haven't sent one for this threshold recently
+            if warning_threshold and user_email:
+                # Only send if we haven't sent a warning for this threshold in the last 24 hours
+                should_send = True
+                if last_warning_sent_at and last_warning_threshold == warning_threshold:
+                    time_since_warning = (datetime.now() - datetime.fromisoformat(last_warning_sent_at)).total_seconds()
+                    if time_since_warning < 86400:  # 24 hours
+                        should_send = False
+                
+                if should_send:
+                    try:
+                        send_usage_warning_email(user_email, remaining)
+                        # Update last warning sent
+                        cursor.execute(f"""
+                            UPDATE users
+                            SET last_warning_sent_at = {placeholder}, last_warning_threshold = {placeholder}
+                            WHERE id = {placeholder}
+                        """, (datetime.now().isoformat(), warning_threshold, user_id))
+                        conn.commit()
+                        print(f"📧 Sent usage warning email to user {user_id} ({remaining} replies remaining)")
+                    except Exception as e:
+                        print(f"⚠️ Failed to send usage warning email: {e}")
+        
         conn.close()
         return True
         
