@@ -226,28 +226,41 @@ def send_reset_email(email, reset_token):
             
             <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 40px 30px; border-radius: 20px;">
                 <h2 style="color: #ffffff; margin-bottom: 20px; font-size: 24px; font-weight: 600; text-transform: none; letter-spacing: normal;">Password Reset Request</h2>
-                <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-                    You requested a password reset for your Chata account. Click the button below to reset your password:
+                
+                <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+                    You recently requested a password reset for your Chata account.
+                </p>
+                
+                <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+                    Click the button below to reset your password. This link will allow you to create a new password for your account.
                 </p>
                 
                 <div style="text-align: center; margin: 35px 0;">
-                    <a href="{reset_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal;">
+                    <a href="{reset_url}" style="background: linear-gradient(135deg, #3366ff 0%, #4d7cff 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3); transition: all 0.3s ease; text-transform: none; letter-spacing: normal; font-size: 16px;">
                         Reset Password
                     </a>
                 </div>
                 
-                <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 15px; text-transform: none; letter-spacing: normal;">
+                <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 15px 0; text-transform: none; letter-spacing: normal; text-align: center;">
                     If the button doesn't work, copy and paste this link into your browser:
                 </p>
-                <p style="color: #3366ff; font-size: 13px; word-break: break-all; background: rgba(51, 102, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(51, 102, 255, 0.2); text-transform: none; letter-spacing: normal;">
-                    {reset_url}
-                </p>
+                
+                <div style="background: rgba(51, 102, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(51, 102, 255, 0.2); margin-bottom: 25px;">
+                    <p style="color: #3366ff; font-size: 13px; word-break: break-all; margin: 0; text-transform: none; letter-spacing: normal; line-height: 1.5;">
+                        {reset_url}
+                    </p>
+                </div>
                 
                 <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 30px 0;">
                 
-                <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin: 0; text-align: center; text-transform: none; letter-spacing: normal;">
-                    This link will expire in 1 hour. If you didn't request this password reset, you can safely ignore this email.
-                </p>
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 13px; margin: 0 0 10px 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
+                        <strong style="color: rgba(255, 255, 255, 0.8);">Important:</strong> This password reset link will expire in <strong style="color: #3366ff;">1 hour</strong> for your security.
+                    </p>
+                    <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin: 0; text-align: center; text-transform: none; letter-spacing: normal; line-height: 1.6;">
+                        If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
+                    </p>
+                </div>
             </div>
         </div>
         """
