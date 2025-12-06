@@ -511,14 +511,15 @@ def get_user_by_id(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id, email, created_at FROM users WHERE id = {placeholder}", (user_id,))
+        cursor.execute(f"SELECT id, username, email, created_at FROM users WHERE id = {placeholder}", (user_id,))
         user = cursor.fetchone()
         conn.close()
         if user:
             return {
                 'id': user[0],
-                'email': user[1],
-                'created_at': user[2]
+                'username': user[1],
+                'email': user[2],
+                'created_at': user[3]
             }
         return None
     except Exception as e:
@@ -536,18 +537,19 @@ def get_user_by_email(email):
         placeholder = get_param_placeholder()
         
         print(f"🔍 Using placeholder: {placeholder}")
-        print(f"🔍 SQL query: SELECT id, email, password_hash, created_at FROM users WHERE email = {placeholder}")
+        print(f"🔍 SQL query: SELECT id, username, email, password_hash, created_at FROM users WHERE email = {placeholder}")
         print(f"🔍 Parameters: {email}")
         
-        cursor.execute(f"SELECT id, email, password_hash, created_at FROM users WHERE email = {placeholder}", (email,))
+        cursor.execute(f"SELECT id, username, email, password_hash, created_at FROM users WHERE email = {placeholder}", (email,))
         user = cursor.fetchone()
         conn.close()
         if user:
             return {
                 'id': user[0],
-                'email': user[1],
-                'password_hash': user[2],
-                'created_at': user[3]
+                'username': user[1],
+                'email': user[2],
+                'password_hash': user[3],
+                'created_at': user[4]
             }
         return None
     except Exception as e:
@@ -557,11 +559,57 @@ def get_user_by_email(email):
         traceback.print_exc()
         return None
 
-def create_user(email, password):
+def get_user_by_username_or_email(username_or_email):
+    """Get user by username or email - for login"""
     try:
-        print(f"🔍 create_user called with email: {email}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Try username first, then email
+        cursor.execute(f"SELECT id, username, email, password_hash, created_at FROM users WHERE username = {placeholder} OR email = {placeholder}", (username_or_email, username_or_email))
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {
+                'id': user[0],
+                'username': user[1],
+                'email': user[2],
+                'password_hash': user[3],
+                'created_at': user[4]
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting user by username or email: {e}")
+        return None
+
+def get_user_by_username(username):
+    """Get user by username only"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT id, username, email, password_hash, created_at FROM users WHERE username = {placeholder}", (username,))
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {
+                'id': user[0],
+                'username': user[1],
+                'email': user[2],
+                'password_hash': user[3],
+                'created_at': user[4]
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting user by username: {e}")
+        return None
+
+def create_user(username, email, password):
+    try:
+        print(f"🔍 create_user called with username: {username}, email: {email}")
+        print(f"🔍 username type: {type(username)}")
         print(f"🔍 email type: {type(email)}")
-        print(f"🔍 email length: {len(email) if email else 'None'}")
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -573,16 +621,16 @@ def create_user(email, password):
         # For PostgreSQL, we need to get the ID differently
         database_url = os.environ.get('DATABASE_URL')
         if database_url and (database_url.startswith("postgres://") or database_url.startswith("postgresql://")):
-            sql = f"INSERT INTO users (email, password_hash) VALUES ({placeholder}, {placeholder}) RETURNING id"
-            params = (email, password_hash)
+            sql = f"INSERT INTO users (username, email, password_hash) VALUES ({placeholder}, {placeholder}, {placeholder}) RETURNING id"
+            params = (username, email, password_hash)
             print(f"🔍 PostgreSQL SQL: {sql}")
             print(f"🔍 PostgreSQL params: {params}")
             
             cursor.execute(sql, params)
             user_id = cursor.fetchone()[0]
         else:
-            sql = f"INSERT INTO users (email, password_hash) VALUES ({placeholder}, {placeholder})"
-            params = (email, password_hash)
+            sql = f"INSERT INTO users (username, email, password_hash) VALUES ({placeholder}, {placeholder}, {placeholder})"
+            params = (username, email, password_hash)
             print(f"🔍 SQLite SQL: {sql}")
             print(f"🔍 SQLite params: {params}")
             
@@ -604,28 +652,43 @@ def create_user(email, password):
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
-        email = request.form.get("email")
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
         password = request.form.get("password")
         
         print(f"🔍 Signup form data:")
+        print(f"🔍 Username: {username}")
         print(f"🔍 Email: {email}")
-        print(f"🔍 Email type: {type(email)}")
         
         # Basic validation
-        if not email or not password:
-            flash("Email and password are required.", "error")
+        if not username or not email or not password:
+            flash("Username, email, and password are required.", "error")
             return render_template("signup.html")
         
-        # Check if user already exists
-        existing_user = get_user_by_email(email)
-        if existing_user:
+        # Validate username (alphanumeric and underscore, 3-20 characters)
+        if not username.replace('_', '').replace('-', '').isalnum() or len(username) < 3 or len(username) > 20:
+            flash("Username must be 3-20 characters and contain only letters, numbers, underscores, or hyphens.", "error")
+            return render_template("signup.html")
+        
+        # Check if username already exists
+        existing_username = get_user_by_username(username)
+        if existing_username:
+            flash("This username is already taken. Please choose another one.", "error")
+            return render_template("signup.html")
+        
+        # Check if email already exists
+        existing_email = get_user_by_email(email)
+        if existing_email:
             flash("An account with this email already exists.", "error")
             return render_template("signup.html")
         
         # Create new user
         try:
-            user_id = create_user(email, password)
+            user_id = create_user(username, email, password)
             session['user_id'] = user_id
+            
+            # Get user data for welcome message
+            user = get_user_by_id(user_id)
             
             # Send welcome email
             try:
@@ -633,9 +696,10 @@ def signup():
             except Exception as e:
                 print(f"⚠️ Failed to send welcome email: {e}")
             
-            flash("Account created successfully! Welcome to Chata.", "success")
+            flash(f"Account created successfully! Welcome to Chata, {username}!", "success")
             return redirect(url_for('dashboard'))
         except Exception as e:
+            print(f"❌ Signup error: {e}")
             flash("Error creating account. Please try again.", "error")
             return render_template("signup.html")
     
@@ -644,22 +708,22 @@ def signup():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email")
+        username_or_email = request.form.get("username_or_email", "").strip()
         password = request.form.get("password")
         
-        if not email or not password:
-            flash("Email and password are required.", "error")
+        if not username_or_email or not password:
+            flash("Username/Email and password are required.", "error")
             return render_template("login.html")
         
         try:
-            user = get_user_by_email(email)
+            user = get_user_by_username_or_email(username_or_email)
             if user and check_password_hash(user['password_hash'], password):
                 session['user_id'] = user['id']
                 log_activity(user['id'], 'login', 'User logged in successfully')
-                flash(f"Welcome back, {user['email']}!", "success")
+                flash(f"Welcome back, {user['username']}!", "success")
                 return redirect(url_for('dashboard'))
             else:
-                flash("Invalid email or password.", "error")
+                flash("Invalid username/email or password.", "error")
         except Exception as e:
             print(f"Login error: {e}")
             flash("An error occurred during login. Please try again.", "error")
@@ -4754,6 +4818,70 @@ def admin_test():
     """Simple test route to verify admin routes work"""
     return f"✅ Admin routes work! User ID: {session.get('user_id')}"
 
+@app.route("/admin/clean-all-users", methods=["POST"])
+@login_required
+def clean_all_users():
+    """Delete all users and related data - for testing/reset purposes"""
+    # Only allow user_id 8 (admin) to access this
+    if session.get('user_id') != 8:
+        flash("Unauthorized access.", "error")
+        return redirect(url_for('dashboard'))
+    
+    try:
+        conn = get_db_connection()
+        if not conn:
+            flash("Database connection failed.", "error")
+            return redirect(url_for('admin_dashboard'))
+        
+        cursor = conn.cursor()
+        
+        # Delete in order to respect foreign key constraints
+        # Delete activity logs
+        cursor.execute("DELETE FROM activity_logs")
+        print(f"✅ Deleted all activity logs")
+        
+        # Delete purchases
+        cursor.execute("DELETE FROM purchases")
+        print(f"✅ Deleted all purchases")
+        
+        # Delete subscriptions
+        cursor.execute("DELETE FROM subscriptions")
+        print(f"✅ Deleted all subscriptions")
+        
+        # Delete messages
+        cursor.execute("DELETE FROM messages")
+        print(f"✅ Deleted all messages")
+        
+        # Delete client settings
+        cursor.execute("DELETE FROM client_settings")
+        print(f"✅ Deleted all client settings")
+        
+        # Delete instagram connections
+        cursor.execute("DELETE FROM instagram_connections")
+        print(f"✅ Deleted all Instagram connections")
+        
+        # Delete password reset tokens
+        cursor.execute("DELETE FROM password_reset_tokens")
+        print(f"✅ Deleted all password reset tokens")
+        
+        # Finally, delete all users
+        cursor.execute("DELETE FROM users")
+        deleted_count = cursor.rowcount
+        print(f"✅ Deleted {deleted_count} users")
+        
+        conn.commit()
+        conn.close()
+        
+        flash(f"Successfully cleaned database. Deleted {deleted_count} users and all related data.", "success")
+        return redirect(url_for('admin_dashboard'))
+        
+    except Exception as e:
+        print(f"❌ Error cleaning database: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error cleaning database: {str(e)}", "error")
+        return redirect(url_for('admin_dashboard'))
+
 @app.route("/admin/dashboard")
 @app.route("/admin/chata-internal-dashboard-2024-secure")
 @login_required
@@ -4900,13 +5028,14 @@ def admin_dashboard():
         for row in users_data:
             users.append({
                 'id': row[0],
-                'email': row[1],
-                'replies_sent_monthly': row[2],
-                'replies_limit_monthly': row[3],
-                'replies_purchased': row[4],
-                'replies_used_purchased': row[5],
-                'bot_paused': row[6],
-                'created_at': row[7]
+                'username': row[1],
+                'email': row[2],
+                'replies_sent_monthly': row[3],
+                'replies_limit_monthly': row[4],
+                'replies_purchased': row[5],
+                'replies_used_purchased': row[6],
+                'bot_paused': row[7],
+                'created_at': row[8]
             })
         
         subscriptions = []

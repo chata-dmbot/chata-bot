@@ -530,7 +530,7 @@
     <section class="dashboard-hero">
         <div>
             <h1>Dashboard</h1>
-            <p>Welcome, {{ user.email }}! Manage your Instagram bot connections and settings</p>
+            <p>Welcome, {{ user.username if user.username else user.email }}! Manage your Instagram bot connections and settings</p>
         </div>
     </section>
 
@@ -538,11 +538,11 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="dashboard-content" style="z-index: 20; position: relative;">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
@@ -554,6 +554,7 @@
             <!-- Account Information -->
             <div class="dashboard-section-block dashboard-half">
                 <h2><i class="fas fa-user"></i> Account Information</h2>
+                <p><strong>Username:</strong> {{ user.username if user.username else 'Not set' }}</p>
                 <p><strong>Email:</strong> {{ user.email }}</p>
                 <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
                 {% if subscription_status == 'canceled' %}

@@ -107,6 +107,7 @@ def _create_postgres_tables(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             replies_sent_monthly INTEGER DEFAULT 0,
@@ -121,6 +122,7 @@ def _create_postgres_tables(cursor):
     
     # Add new columns to existing users table if they don't exist
     try:
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255)")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_sent_monthly INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_limit_monthly INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_purchased INTEGER DEFAULT 0")
@@ -290,6 +292,7 @@ def _create_sqlite_tables(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             replies_sent_monthly INTEGER DEFAULT 0,
@@ -303,6 +306,10 @@ def _create_sqlite_tables(cursor):
     """)
     
     # Add new columns to existing users table if they don't exist (SQLite doesn't support IF NOT EXISTS for ALTER TABLE)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
+    except:
+        pass
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN replies_sent_monthly INTEGER DEFAULT 0")
     except:
