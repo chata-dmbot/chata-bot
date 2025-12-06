@@ -171,7 +171,7 @@ def webhook_test():
     """Test endpoint to verify webhook URL is accessible"""
     return jsonify({
         "status": "webhook_url_accessible",
-        "url": "https://chata-bot.onrender.com/webhook",
+        "url": "https://getchata.com/webhook",
         "verify_token_set": bool(Config.VERIFY_TOKEN),
         "timestamp": datetime.utcnow().isoformat()
     })
@@ -201,7 +201,7 @@ except Exception as e:
 
 def send_reset_email(email, reset_token):
     """Send password reset email using SendGrid"""
-    reset_url = f"https://chata-bot.onrender.com/reset-password?token={reset_token}"
+    reset_url = f"https://getchata.com/reset-password?token={reset_token}"
     
     # Get SendGrid API key from environment
     sendgrid_api_key = Config.SENDGRID_API_KEY
@@ -252,7 +252,7 @@ def send_reset_email(email, reset_token):
         """
         
         message = Mail(
-            from_email='chata.dmbot@gmail.com',
+            from_email=Config.SENDGRID_FROM_EMAIL,
             to_emails=email,
             subject='Password Reset Request - Chata',
             html_content=html_content
@@ -4198,7 +4198,7 @@ def payment_system_verification():
     
     # 3. Webhook Configuration
     webhook_checks = []
-    webhook_url = f"https://chata-bot.onrender.com/webhook/stripe"
+    webhook_url = f"https://getchata.com/webhook/stripe"
     webhook_checks.append(('ℹ️', 'Webhook URL', webhook_url))
     webhook_checks.append(('✅' if Config.STRIPE_WEBHOOK_SECRET else '❌', 'Webhook Secret', 'Set' if Config.STRIPE_WEBHOOK_SECRET else 'Missing'))
     checks['webhook_config'] = {'checks': webhook_checks, 'all_ok': True}

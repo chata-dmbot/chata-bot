@@ -28,7 +28,7 @@ class Config:
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-    FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://chata-bot.onrender.com/auth/instagram/callback")
+    FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://getchata.com/auth/instagram/callback")
     
     # Email Configuration
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
