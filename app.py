@@ -1,6 +1,5 @@
 from dotenv import load_dotenv
 import os
-import sys
 from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
 import requests
 import openai
@@ -14,7 +13,6 @@ from sendgrid.helpers.mail import Mail
 import json
 import time
 import stripe
-import logging
 
 # Import our modular components
 from config import Config
@@ -35,19 +33,6 @@ except ValueError as e:
 # Flask app
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
-
-# Configure logging to stdout (for Render)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
-
-# Force stdout to be unbuffered (so logs appear immediately)
-sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 
 # Initialize Stripe
 if Config.STRIPE_SECRET_KEY:
@@ -175,31 +160,6 @@ def health_detailed():
     health_data = health_check()
     health_data["system"] = get_system_info()
     return jsonify(health_data)
-
-@app.route("/test-logs")
-def test_logs():
-    """Test endpoint to generate logs - helps debug log visibility"""
-    logger.info("=" * 80)
-    logger.info("🧪 TEST LOGS ENDPOINT CALLED")
-    logger.info("=" * 80)
-    print("=" * 80)
-    print("🧪 TEST LOGS ENDPOINT CALLED (print statement)")
-    print("=" * 80)
-    
-    # Generate multiple log entries
-    for i in range(5):
-        logger.info(f"Test log entry #{i+1} - This should appear in Render logs")
-        print(f"Test log entry #{i+1} - This should appear in Render logs (print)")
-        time.sleep(0.1)  # Small delay to ensure logs are flushed
-    
-    logger.info("✅ Test logs completed")
-    print("✅ Test logs completed (print)")
-    
-    return jsonify({
-        "status": "success",
-        "message": "Test logs generated. Check Render logs.",
-        "timestamp": datetime.utcnow().isoformat()
-    })
 
 @app.route("/ping")
 def ping():
