@@ -276,12 +276,40 @@ def send_reset_email(email, reset_token):
             print("⚠️ SENDGRID_FROM_EMAIL not set. Using default email.")
             from_email = "chata.dmbot@gmail.com"
         
+        # Create plain text version
+        plain_text = f"""CHATA - INSTAGRAM AI ENGAGEMENT
+
+Password Reset Request
+
+You recently requested a password reset for your Chata account.
+
+Click the button below to reset your password. This link will allow you to create a new password for your account.
+
+Reset Password: {reset_url}
+
+If the button doesn't work, copy and paste this link into your browser:
+{reset_url}
+
+Important: This password reset link will expire in 1 hour for your security.
+
+If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
+"""
+        
         message = Mail(
             from_email=from_email,
             to_emails=email,
             subject='Password Reset Request - Chata',
-            html_content=html_content
+            html_content=html_content,
+            plain_text_content=plain_text
         )
+        
+        # Add reply-to header
+        message.reply_to = from_email
+        
+        # Add custom headers for better deliverability
+        message.custom_args = {
+            'category': 'transactional'
+        }
         
         response = sg.send(message)
         print(f"Password reset email sent to {email}. Status: {response.status_code}")
@@ -299,8 +327,23 @@ def send_reset_email(email, reset_token):
         # Fallback to console output
         print(f"Password reset link for {email}: {reset_url}")
 
+def html_to_plain_text(html_content):
+    """Convert HTML email to plain text version for better deliverability"""
+    import re
+    # Remove HTML tags but keep text
+    text = re.sub(r'<[^>]+>', '', html_content)
+    # Replace common HTML entities
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    # Clean up whitespace
+    text = re.sub(r'\s+', ' ', text)
+    text = text.strip()
+    return text
+
 def send_email_via_sendgrid(email, subject, html_content):
-    """Helper function to send emails via SendGrid"""
+    """Helper function to send emails via SendGrid with improved deliverability"""
     sendgrid_api_key = Config.SENDGRID_API_KEY
     
     if not sendgrid_api_key:
@@ -315,12 +358,24 @@ def send_email_via_sendgrid(email, subject, html_content):
         if not from_email:
             from_email = "chata.dmbot@gmail.com"
         
+        # Create plain text version for better deliverability
+        plain_text_content = html_to_plain_text(html_content)
+        
         message = Mail(
             from_email=from_email,
             to_emails=email,
             subject=subject,
-            html_content=html_content
+            html_content=html_content,
+            plain_text_content=plain_text_content
         )
+        
+        # Add reply-to header
+        message.reply_to = from_email
+        
+        # Add custom headers for better deliverability
+        message.custom_args = {
+            'category': 'transactional'
+        }
         
         response = sg.send(message)
         
