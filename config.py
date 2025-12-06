@@ -32,6 +32,7 @@ class Config:
     
     # Email Configuration
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+    SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "chata.dmbot@gmail.com")
     
     # Stripe Configuration
     STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
