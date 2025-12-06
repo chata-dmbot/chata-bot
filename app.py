@@ -372,11 +372,6 @@ def send_email_via_sendgrid(email, subject, html_content):
         # Add reply-to header
         message.reply_to = from_email
         
-        # Add custom headers for better deliverability
-        message.custom_args = {
-            'category': 'transactional'
-        }
-        
         response = sg.send(message)
         
         if response.status_code == 202:
