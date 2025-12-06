@@ -60,21 +60,25 @@ def init_database():
         # Insert default settings
         _insert_default_settings(cursor, is_postgres)
         
-        # Update existing users' reply limits to 5 for testing (if they don't have the column set)
+        # Set existing users without subscriptions to 0 replies (no plan = no replies)
         try:
             if is_postgres:
                 cursor.execute("""
                     UPDATE users 
-                    SET replies_limit_monthly = 5 
-                    WHERE replies_limit_monthly IS NULL OR replies_limit_monthly = 1000
+                    SET replies_limit_monthly = 0 
+                    WHERE id NOT IN (
+                        SELECT DISTINCT user_id FROM subscriptions WHERE status = 'active'
+                    ) AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
                 """)
             else:
                 cursor.execute("""
                     UPDATE users 
-                    SET replies_limit_monthly = 5 
-                    WHERE replies_limit_monthly IS NULL OR replies_limit_monthly = 1000
+                    SET replies_limit_monthly = 0 
+                    WHERE id NOT IN (
+                        SELECT DISTINCT user_id FROM subscriptions WHERE status = 'active'
+                    ) AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
                 """)
-            print("✅ Updated existing users' reply limits to 5 for testing")
+            print("✅ Updated users without active subscriptions to 0 replies")
         except Exception as e:
             print(f"Note: Could not update existing users' limits: {e}")
         
@@ -106,7 +110,7 @@ def _create_postgres_tables(cursor):
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             replies_sent_monthly INTEGER DEFAULT 0,
-            replies_limit_monthly INTEGER DEFAULT 5,
+            replies_limit_monthly INTEGER DEFAULT 0,
             replies_purchased INTEGER DEFAULT 0,
             replies_used_purchased INTEGER DEFAULT 0,
             last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -118,7 +122,7 @@ def _create_postgres_tables(cursor):
     # Add new columns to existing users table if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_sent_monthly INTEGER DEFAULT 0")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_limit_monthly INTEGER DEFAULT 5")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_limit_monthly INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_purchased INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS replies_used_purchased INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
@@ -289,7 +293,7 @@ def _create_sqlite_tables(cursor):
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             replies_sent_monthly INTEGER DEFAULT 0,
-            replies_limit_monthly INTEGER DEFAULT 5,
+            replies_limit_monthly INTEGER DEFAULT 0,
             replies_purchased INTEGER DEFAULT 0,
             replies_used_purchased INTEGER DEFAULT 0,
             last_monthly_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -304,7 +308,7 @@ def _create_sqlite_tables(cursor):
     except:
         pass
     try:
-        cursor.execute("ALTER TABLE users ADD COLUMN replies_limit_monthly INTEGER DEFAULT 5")
+        cursor.execute("ALTER TABLE users ADD COLUMN replies_limit_monthly INTEGER DEFAULT 0")
     except:
         pass
     try:

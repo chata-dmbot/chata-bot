@@ -687,7 +687,7 @@ def forgot_password():
                     print(f"✅ Reset token created: {reset_token[:10]}...")
                     send_reset_email(email, reset_token)
                     print(f"✅ Email sent successfully to {email}")
-                    flash("If an account with that email exists, we've sent a password reset link.", "success")
+                    flash("If an account with that email exists, we've sent a password reset link. Please check your spam folder if you don't see it.", "success")
                 except Exception as e:
                     print(f"❌ Error in forgot password process: {e}")
                     import traceback
