@@ -958,10 +958,17 @@ def instagram_callback():
                 cursor = conn.cursor()
                 param = get_param_placeholder()
                 
-                # Check if connection already exists
+                # Check if connection already exists for this user
                 cursor.execute(f"SELECT id FROM instagram_connections WHERE user_id = {param} AND instagram_user_id = {param}", 
                               (session['user_id'], instagram_user_id))
                 existing = cursor.fetchone()
+                
+                # Check if this Instagram account has EVER been connected before (for free trial tracking)
+                cursor.execute(f"SELECT id FROM instagram_connections WHERE instagram_user_id = {param}", 
+                              (instagram_user_id,))
+                instagram_account_exists = cursor.fetchone()
+                
+                is_first_time_instagram_account = not instagram_account_exists
                 
                 if existing:
                     # Update existing connection
@@ -976,9 +983,24 @@ def instagram_callback():
                         INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, page_access_token, is_active)
                         VALUES ({param}, {param}, {param}, {param}, TRUE)
                     """, (session['user_id'], instagram_user_id, page_id, page_access_token))
+                    
+                    # If this is the first time this Instagram account is connected, give 100 free replies
+                    if is_first_time_instagram_account:
+                        print(f"🎁 First time connecting Instagram account {instagram_user_id} - granting 100 free trial replies")
+                        cursor.execute(f"""
+                            UPDATE users 
+                            SET replies_limit_monthly = replies_limit_monthly + 100
+                            WHERE id = {param}
+                        """, (session['user_id'],))
+                        flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. You've received 100 free trial replies! 🎉", "success")
+                    else:
+                        flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
                 
                 conn.commit()
-                flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                
+                if not is_first_time_instagram_account and not existing:
+                    # Instagram account was connected before but not to this user - no free trial
+                    print(f"⚠️ Instagram account {instagram_user_id} was already connected before - no free trial granted")
                 
             except Exception as e:
                 print(f"Database error: {e}")
