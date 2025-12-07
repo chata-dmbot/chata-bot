@@ -1801,7 +1801,7 @@ def debug_trigger_monthly_addition():
         
         plan_type = subscription[1]  # 'starter' or 'standard'
         if plan_type == 'standard':
-            monthly_limit = 1000
+            monthly_limit = 1500
         else:
             monthly_limit = 150  # starter or default
         
@@ -1913,12 +1913,12 @@ def usage_analytics():
         minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
     else:
         replies_sent_monthly = 0
-        replies_limit_monthly = 5  # Testing mode: 5 replies
+        replies_limit_monthly = 0  # New users start with 0 replies
         replies_purchased = 0
         replies_used_purchased = 0
         total_replies_used = 0
-        total_replies_available = 5
-        remaining_replies = 5
+        total_replies_available = 0
+        remaining_replies = 0
         minutes_saved = 0
     
     # Get recent activity
@@ -2241,13 +2241,13 @@ def checkout_success():
         if checkout_session.metadata.get('type') == 'subscription':
             plan = checkout_session.metadata.get('plan', 'starter')
             if plan == 'standard':
-                flash("Standard subscription activated successfully! You now have 1000 replies per month.", "success")
+                flash("Standard subscription activated successfully! You now have 1500 replies per month.", "success")
             else:
                 flash("Starter subscription activated successfully! You now have 150 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
             flash("Payment successful! 150 additional replies have been added to your account.", "success")
         elif checkout_session.metadata.get('type') == 'upgrade':
-            flash("Subscription upgraded successfully! You now have 1000 replies per month.", "success")
+            flash("Subscription upgraded successfully! You now have 1500 replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'downgrade':
             flash("Subscription downgraded successfully! You now have 150 replies per month.", "success")
         
@@ -2799,8 +2799,8 @@ def handle_subscription_created(subscription):
         if price_id:
             if standard_price_id and price_id == standard_price_id:
                 plan_type = 'standard'
-                replies_limit = 1000
-                print(f"✅ Detected Standard plan - setting replies_limit to 1000")
+                replies_limit = 1500
+                print(f"✅ Detected Standard plan - setting replies_limit to 1500")
             elif starter_price_id and price_id == starter_price_id:
                 plan_type = 'starter'
                 replies_limit = 150
@@ -3033,14 +3033,14 @@ def handle_subscription_updated(subscription):
             old_limit = current_sub[1] or 0
             
             if old_plan_type == 'starter' and new_plan_type == 'standard':
-                # Upgrade: Starter → Standard - add 1000 replies (preserve existing)
+                # Upgrade: Starter → Standard - add 1500 replies (preserve existing)
                 print(f"🔄 Detected upgrade from Starter to Standard for user {user_id}")
                 cursor.execute(f"""
                     UPDATE users
-                    SET replies_limit_monthly = replies_limit_monthly + 1000
+                    SET replies_limit_monthly = replies_limit_monthly + 1500
                     WHERE id = {placeholder}
                 """, (user_id,))
-                print(f"✅ Added 1000 replies to user {user_id} (upgrade: existing + 1000)")
+                print(f"✅ Added 1500 replies to user {user_id} (upgrade: existing + 1500)")
             elif old_plan_type == 'standard' and new_plan_type == 'starter':
                 # Downgrade: Standard → Starter - add 150 replies (preserve existing)
                 print(f"🔄 Detected downgrade from Standard to Starter for user {user_id}")
@@ -3241,7 +3241,7 @@ def handle_invoice_payment_succeeded(invoice):
             if plan_result:
                 plan_type = plan_result[0]
                 if plan_type == 'standard':
-                    monthly_limit = 1000
+                    monthly_limit = 1500
                 else:
                     monthly_limit = 150  # starter or default
             else:
@@ -3432,7 +3432,7 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
             # Get the plan type to determine monthly limit
             plan_type = subscription[1]  # 'starter' or 'standard'
             if plan_type == 'standard':
-                monthly_limit = 1000
+                monthly_limit = 1500
             else:
                 monthly_limit = 150  # starter or default
             
@@ -4310,155 +4310,6 @@ def webhook():
 
 # ---- Admin Panel Route ----
 
-@app.route("/debug/user-stats")
-@login_required
-def debug_user_stats():
-    """Debug route to check current user stats"""
-    try:
-        user_id = session['user_id']
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        
-        # Get user data
-        cursor.execute(f"""
-            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, 
-                   replies_used_purchased, last_monthly_reset, created_at
-            FROM users
-            WHERE id = {placeholder}
-        """, (user_id,))
-        user_data = cursor.fetchone()
-        
-        # Get subscription data
-        cursor.execute(f"""
-            SELECT stripe_subscription_id, plan_type, status, current_period_start, 
-                   current_period_end, created_at
-            FROM subscriptions
-            WHERE user_id = {placeholder}
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (user_id,))
-        subscription_data = cursor.fetchone()
-        
-        conn.close()
-        
-        # Safe string formatting
-        user_data_str = str(user_data) if user_data else 'None'
-        subscription_data_str = str(subscription_data) if subscription_data else 'None'
-        
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><title>Debug User Stats</title></head>
-        <body>
-        <h2>Debug User Stats (User ID: {user_id})</h2>
-        <h3>User Data:</h3>
-        <pre>{user_data_str}</pre>
-        
-        <h3>Subscription Data:</h3>
-        <pre>{subscription_data_str}</pre>
-        
-        <h3>Calculated Values:</h3>
-        <pre>
-        replies_sent_monthly: {user_data[0] if user_data else 'None'}
-        replies_limit_monthly: {user_data[1] if user_data else 'None'}
-        replies_purchased: {user_data[2] if user_data else 'None'}
-        replies_used_purchased: {user_data[3] if user_data else 'None'}
-        total_available: {(user_data[1] + user_data[2]) if user_data else 'None'}
-        total_used: {(user_data[0] + user_data[3]) if user_data else 'None'}
-        remaining: {max(0, (user_data[1] + user_data[2]) - (user_data[0] + user_data[3])) if user_data else 'None'}
-        </pre>
-        
-        <a href="/dashboard">Back to Dashboard</a>
-        </body>
-        </html>
-        """
-        return html
-        
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-@app.route("/debug/stripe-config")
-@login_required
-def debug_stripe_config():
-    """Debug route to check Stripe configuration"""
-    import os
-    
-    # Check both Config and direct os.getenv to see if there's a difference
-    config_status = {
-        'From Config.STRIPE_SECRET_KEY': 'Set' if Config.STRIPE_SECRET_KEY else 'Missing',
-        'From Config.STRIPE_PUBLISHABLE_KEY': 'Set' if Config.STRIPE_PUBLISHABLE_KEY else 'Missing',
-        'From Config.STRIPE_WEBHOOK_SECRET': 'Set' if Config.STRIPE_WEBHOOK_SECRET else 'Missing',
-        'From Config.STRIPE_STARTER_PLAN_PRICE_ID': Config.STRIPE_STARTER_PLAN_PRICE_ID if Config.STRIPE_STARTER_PLAN_PRICE_ID else 'Missing',
-        'From Config.STRIPE_STANDARD_PLAN_PRICE_ID': Config.STRIPE_STANDARD_PLAN_PRICE_ID if Config.STRIPE_STANDARD_PLAN_PRICE_ID else 'Missing',
-        'From Config.STRIPE_ADDON_PRICE_ID': Config.STRIPE_ADDON_PRICE_ID if Config.STRIPE_ADDON_PRICE_ID else 'Missing',
-    }
-    
-    # Also check direct environment variable access
-    env_status = {
-        'Direct os.getenv("STRIPE_SECRET_KEY")': 'Set' if os.getenv("STRIPE_SECRET_KEY") else 'Missing',
-        'Direct os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")': os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID") if os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID") else 'Missing',
-        'Direct os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")': os.getenv("STRIPE_STARTER_PLAN_PRICE_ID") if os.getenv("STRIPE_STARTER_PLAN_PRICE_ID") else 'Missing',
-    }
-    
-    # Show actual values (first few chars only for security)
-    actual_values = {
-        'STRIPE_STANDARD_PLAN_PRICE_ID (first 10 chars)': os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID", "NOT_SET")[:10] if os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID") else "NOT_SET",
-        'STRIPE_STARTER_PLAN_PRICE_ID (first 10 chars)': os.getenv("STRIPE_STARTER_PLAN_PRICE_ID", "NOT_SET")[:10] if os.getenv("STRIPE_STARTER_PLAN_PRICE_ID") else "NOT_SET",
-    }
-    
-    return f"""
-    <html>
-    <head><title>Stripe Config Debug</title></head>
-    <body style="font-family: monospace; padding: 20px; background: #000; color: #0f0;">
-        <h1>Stripe Configuration Status</h1>
-        <h2>From Config Class:</h2>
-        <pre>{json.dumps(config_status, indent=2)}</pre>
-        <h2>Direct Environment Variable Access:</h2>
-        <pre>{json.dumps(env_status, indent=2)}</pre>
-        <h2>Actual Values (First 10 chars):</h2>
-        <pre>{json.dumps(actual_values, indent=2)}</pre>
-        <p style="color: #ff0;">⚠️ If Config shows Missing but Direct shows Set, the app needs a redeploy.</p>
-        <a href="/dashboard" style="color: #0ff;">Back to Dashboard</a>
-    </body>
-    </html>
-    """
-
-@app.route("/debug/test")
-def debug_test():
-    """Simple test route"""
-    return "Debug routes are working!"
-
-@app.route("/debug/fix-subscription")
-@login_required
-def fix_subscription():
-    """Manually fix subscription for testing"""
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    # Update user to have 150 monthly replies (starter plan)
-    cursor.execute(f"""
-        UPDATE users 
-        SET replies_limit_monthly = 150,
-            replies_sent_monthly = 0
-        WHERE id = {placeholder}
-    """, (user_id,))
-    
-    conn.commit()
-    conn.close()
-    
-    return f"""
-    <h2>Subscription Fixed!</h2>
-    <p>Updated User ID {user_id}:</p>
-    <ul>
-        <li>Monthly limit: 150 replies</li>
-        <li>Monthly sent: Reset to 0</li>
-    </ul>
-    <p><a href="/dashboard">Go to Dashboard</a></p>
-    <p><a href="/debug/user-stats">Check Stats</a></p>
-    """
 
 @app.route("/payment-system-verification")
 @login_required
@@ -5170,121 +5021,6 @@ def cleanup_for_production():
     
     return redirect(url_for('dashboard'))
 
-@app.route("/debug/stripe-customers")
-@login_required
-def debug_stripe_customers():
-    """Check Stripe customers for current user"""
-    try:
-        user_id = session['user_id']
-        user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
-        
-        # Search for customers with this email
-        customers = stripe.Customer.list(email=user_email, limit=10)
-        
-        html = f"""
-        <h2>Stripe Customers for {user_email}</h2>
-        <p>User ID: {user_id}</p>
-        <h3>Found {len(customers.data)} customers:</h3>
-        """
-        
-        for customer in customers.data:
-            html += f"""
-            <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
-                <p><strong>Customer ID:</strong> {customer.id}</p>
-                <p><strong>Email:</strong> {customer.email}</p>
-                <p><strong>Metadata:</strong> {customer.metadata}</p>
-                <p><strong>Created:</strong> {customer.created}</p>
-            </div>
-            """
-        
-        html += '<p><a href="/dashboard">Back to Dashboard</a></p>'
-        return html
-        
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-@app.route("/debug/simulate-reply", methods=["POST"])
-@login_required
-def debug_simulate_reply():
-    """Simulate sending a reply to test reply counting and limit enforcement"""
-    try:
-        user_id = session['user_id']
-        
-        # Increment reply count (same as if a real reply was sent)
-        success = increment_reply_count(user_id)
-        
-        if success:
-            # Get updated stats
-            has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id)
-            
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            placeholder = get_param_placeholder()
-            
-            cursor.execute(f"""
-                SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
-                FROM users
-                WHERE id = {placeholder}
-            """, (user_id,))
-            reply_data = cursor.fetchone()
-            conn.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Reply simulated! Remaining: {remaining}/{total_available}',
-                'stats': {
-                    'replies_sent_monthly': reply_data[0] if reply_data else 0,
-                    'replies_limit_monthly': reply_data[1] if reply_data else 0,
-                    'replies_purchased': reply_data[2] if reply_data else 0,
-                    'replies_used_purchased': reply_data[3] if reply_data else 0,
-                    'remaining': remaining,
-                    'has_limit': has_limit
-                }
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Limit reached! Cannot simulate more replies.'
-            }), 200
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route("/debug/set-reply-count", methods=["POST"])
-@login_required
-def debug_set_reply_count():
-    """Set reply count manually for testing limit enforcement"""
-    try:
-        user_id = session['user_id']
-        data = request.get_json()
-        count = int(data.get('count', 0))
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        
-        cursor.execute(f"""
-            UPDATE users 
-            SET replies_sent_monthly = {placeholder}
-            WHERE id = {placeholder}
-        """, (count, user_id))
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Reply count set to {count}'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 @app.route("/admin/prompt", methods=["GET", "POST"])
 def admin_prompt():
