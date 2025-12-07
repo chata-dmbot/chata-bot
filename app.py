@@ -1171,12 +1171,12 @@ def dashboard():
         minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
     else:
         replies_sent_monthly = 0
-        replies_limit_monthly = 5  # Testing mode: 5 replies
+        replies_limit_monthly = 0  # New users start with 0 replies
         replies_purchased = 0
         replies_used_purchased = 0
         total_replies_used = 0
-        total_replies_available = 5
-        remaining_replies = 5
+        total_replies_available = 0
+        remaining_replies = 0
         minutes_saved = 0
         bot_paused = False
     
