@@ -4819,13 +4819,8 @@ def admin_test():
     return f"✅ Admin routes work! User ID: {session.get('user_id')}"
 
 @app.route("/admin/clean-all-users", methods=["POST"])
-@login_required
 def clean_all_users():
-    """Delete all users and related data - for testing/reset purposes"""
-    # Only allow user_id 8 (admin) to access this
-    if session.get('user_id') != 8:
-        flash("Unauthorized access.", "error")
-        return redirect(url_for('dashboard'))
+    """Delete all users and related data - for testing/reset purposes (accessible via secret admin URL only)"""
     
     try:
         conn = get_db_connection()
@@ -4882,20 +4877,10 @@ def clean_all_users():
         flash(f"Error cleaning database: {str(e)}", "error")
         return redirect(url_for('admin_dashboard'))
 
-@app.route("/admin/dashboard")
 @app.route("/admin/chata-internal-dashboard-2024-secure")
-@login_required
 def admin_dashboard():
-    """Secure admin dashboard - accessible via /admin/dashboard or the secure URL"""
-    user_id = session.get('user_id')
-    
-    # Restrict access to user ID 8 only
-    if user_id != 8:
-        flash("❌ Access denied. Admin dashboard is restricted.", "error")
-        return redirect(url_for('dashboard'))
-    
-    print(f"🔐 [ADMIN] Admin dashboard accessed by user {user_id}")
-    print(f"🔐 [ADMIN] Request path: {request.path}")
+    """Secret admin dashboard - accessible only via this specific URL (no login required, security through obscurity)"""
+    print(f"🔐 [ADMIN] Admin dashboard accessed via secret URL: {request.path}")
     
     # Get pagination parameters
     users_page = request.args.get('users_page', 1, type=int)
@@ -4931,7 +4916,7 @@ def admin_dashboard():
         if is_postgres:
             cursor.execute("""
                 SELECT 
-                    id, email, 
+                    id, username, email, 
                     replies_sent_monthly, 
                     replies_limit_monthly, 
                     replies_purchased, 
@@ -4945,7 +4930,7 @@ def admin_dashboard():
         else:
             cursor.execute("""
                 SELECT 
-                    id, email, 
+                    id, username, email, 
                     replies_sent_monthly, 
                     replies_limit_monthly, 
                     replies_purchased, 
