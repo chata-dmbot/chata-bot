@@ -4831,38 +4831,72 @@ def clean_all_users():
         cursor = conn.cursor()
         
         # Delete in order to respect foreign key constraints
+        # Wrap each deletion in try/except to handle missing tables gracefully
+        
         # Delete activity logs
-        cursor.execute("DELETE FROM activity_logs")
-        print(f"✅ Deleted all activity logs")
+        try:
+            cursor.execute("DELETE FROM activity_logs")
+            print(f"✅ Deleted all activity logs")
+        except Exception as e:
+            print(f"⚠️ Could not delete activity_logs: {e}")
         
         # Delete purchases
-        cursor.execute("DELETE FROM purchases")
-        print(f"✅ Deleted all purchases")
+        try:
+            cursor.execute("DELETE FROM purchases")
+            print(f"✅ Deleted all purchases")
+        except Exception as e:
+            print(f"⚠️ Could not delete purchases: {e}")
         
         # Delete subscriptions
-        cursor.execute("DELETE FROM subscriptions")
-        print(f"✅ Deleted all subscriptions")
+        try:
+            cursor.execute("DELETE FROM subscriptions")
+            print(f"✅ Deleted all subscriptions")
+        except Exception as e:
+            print(f"⚠️ Could not delete subscriptions: {e}")
         
         # Delete messages
-        cursor.execute("DELETE FROM messages")
-        print(f"✅ Deleted all messages")
+        try:
+            cursor.execute("DELETE FROM messages")
+            print(f"✅ Deleted all messages")
+        except Exception as e:
+            print(f"⚠️ Could not delete messages: {e}")
         
         # Delete client settings
-        cursor.execute("DELETE FROM client_settings")
-        print(f"✅ Deleted all client settings")
+        try:
+            cursor.execute("DELETE FROM client_settings")
+            print(f"✅ Deleted all client settings")
+        except Exception as e:
+            print(f"⚠️ Could not delete client_settings: {e}")
         
         # Delete instagram connections
-        cursor.execute("DELETE FROM instagram_connections")
-        print(f"✅ Deleted all Instagram connections")
+        try:
+            cursor.execute("DELETE FROM instagram_connections")
+            print(f"✅ Deleted all Instagram connections")
+        except Exception as e:
+            print(f"⚠️ Could not delete instagram_connections: {e}")
         
-        # Delete password reset tokens
-        cursor.execute("DELETE FROM password_reset_tokens")
-        print(f"✅ Deleted all password reset tokens")
+        # Delete password reset tokens (table name is password_resets, not password_reset_tokens)
+        try:
+            cursor.execute("DELETE FROM password_resets")
+            print(f"✅ Deleted all password reset tokens")
+        except Exception as e:
+            print(f"⚠️ Could not delete password_resets: {e}")
+        
+        # Delete usage logs if they exist
+        try:
+            cursor.execute("DELETE FROM usage_logs")
+            print(f"✅ Deleted all usage logs")
+        except Exception as e:
+            print(f"⚠️ Could not delete usage_logs: {e}")
         
         # Finally, delete all users
-        cursor.execute("DELETE FROM users")
-        deleted_count = cursor.rowcount
-        print(f"✅ Deleted {deleted_count} users")
+        try:
+            cursor.execute("DELETE FROM users")
+            deleted_count = cursor.rowcount
+            print(f"✅ Deleted {deleted_count} users")
+        except Exception as e:
+            print(f"❌ Could not delete users: {e}")
+            raise
         
         conn.commit()
         conn.close()
