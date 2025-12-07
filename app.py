@@ -1902,6 +1902,9 @@ def usage_analytics():
     
     if reply_data:
         replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
+        # Ensure replies_limit_monthly is not None (should be 0 for new users)
+        if replies_limit_monthly is None:
+            replies_limit_monthly = 0
         total_replies_used = replies_sent_monthly + replies_used_purchased
         total_replies_available = replies_limit_monthly + replies_purchased
         remaining_replies = max(0, total_replies_available - total_replies_used)
