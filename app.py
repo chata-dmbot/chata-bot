@@ -619,9 +619,10 @@ def create_user(username, email, password):
         print(f"🔍 Using placeholder: {placeholder}")
         
         # For PostgreSQL, we need to get the ID differently
+        # Explicitly set replies_limit_monthly to 0 to ensure new users start with 0 replies
         database_url = os.environ.get('DATABASE_URL')
         if database_url and (database_url.startswith("postgres://") or database_url.startswith("postgresql://")):
-            sql = f"INSERT INTO users (username, email, password_hash) VALUES ({placeholder}, {placeholder}, {placeholder}) RETURNING id"
+            sql = f"INSERT INTO users (username, email, password_hash, replies_limit_monthly) VALUES ({placeholder}, {placeholder}, {placeholder}, 0) RETURNING id"
             params = (username, email, password_hash)
             print(f"🔍 PostgreSQL SQL: {sql}")
             print(f"🔍 PostgreSQL params: {params}")
@@ -629,7 +630,7 @@ def create_user(username, email, password):
             cursor.execute(sql, params)
             user_id = cursor.fetchone()[0]
         else:
-            sql = f"INSERT INTO users (username, email, password_hash) VALUES ({placeholder}, {placeholder}, {placeholder})"
+            sql = f"INSERT INTO users (username, email, password_hash, replies_limit_monthly) VALUES ({placeholder}, {placeholder}, {placeholder}, 0)"
             params = (username, email, password_hash)
             print(f"🔍 SQLite SQL: {sql}")
             print(f"🔍 SQLite params: {params}")
