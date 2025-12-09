@@ -131,6 +131,7 @@ def _create_postgres_tables(cursor):
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_paused BOOLEAN DEFAULT FALSE")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_warning_sent_at TIMESTAMP")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_warning_threshold INTEGER")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_received_free_trial BOOLEAN DEFAULT FALSE")
     except Exception as e:
         print(f"Note: Some columns may already exist: {e}")
     
@@ -340,6 +341,10 @@ def _create_sqlite_tables(cursor):
         pass
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN last_warning_threshold INTEGER")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN has_received_free_trial BOOLEAN DEFAULT 0")
     except:
         pass
     
