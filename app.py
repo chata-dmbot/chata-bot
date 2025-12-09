@@ -1028,41 +1028,56 @@ def instagram_callback():
                               (session['user_id'], instagram_user_id))
                 existing = cursor.fetchone()
                 
-                # Check if this Instagram account has EVER been connected before by ANY user (for free trial tracking)
-                # This check excludes the current user to handle reconnection cases
-                # We check ALL connections (including inactive ones) to properly track first-time connections
+                # CRITICAL: Check if this Instagram account is already actively connected to a DIFFERENT user
+                # If yes, block the connection - one Instagram account can only be connected to one email at a time
                 cursor.execute(f"""
                     SELECT id, user_id 
                     FROM instagram_connections 
                     WHERE instagram_user_id = {param} 
                     AND user_id != {param}
-                    ORDER BY created_at ASC 
+                    AND is_active = TRUE
                     LIMIT 1
                 """, (instagram_user_id, session['user_id']))
-                previous_connection = cursor.fetchone()
+                active_connection_other_user = cursor.fetchone()
                 
-                # Also check if this specific user has ever connected this account before
+                if active_connection_other_user:
+                    # This Instagram account is already connected to another email account
+                    flash(f"This Instagram account is already connected to another email account. Please disconnect it from the other account first.", "error")
+                    conn.close()
+                    return redirect(url_for('dashboard'))
+                
+                # Check if this user has EVER connected ANY Instagram account before (for free trial tracking)
+                # Each email account only gets the free trial ONCE, on their first Instagram connection
                 cursor.execute(f"""
-                    SELECT id, user_id 
+                    SELECT id 
+                    FROM instagram_connections 
+                    WHERE user_id = {param}
+                    LIMIT 1
+                """, (session['user_id'],))
+                user_has_connected_before = cursor.fetchone()
+                
+                # Check if this specific user has ever connected this specific account before
+                cursor.execute(f"""
+                    SELECT id 
                     FROM instagram_connections 
                     WHERE instagram_user_id = {param} 
                     AND user_id = {param}
-                    ORDER BY created_at ASC 
                     LIMIT 1
                 """, (instagram_user_id, session['user_id']))
                 user_previous_connection = cursor.fetchone()
                 
-                # This is the first time THIS Instagram account has been connected by ANY user
-                is_first_time_instagram_account = not previous_connection and not user_previous_connection
+                # This user gets free trial only if:
+                # 1. They have NEVER connected ANY Instagram account before (first connection ever)
+                is_first_connection_for_user = not user_has_connected_before
                 
                 print(f"🔍 Instagram connection check for account {instagram_user_id}:")
                 print(f"   - Existing connection for this user: {existing is not None}")
-                print(f"   - Previous connection by other user: {previous_connection is not None}")
-                print(f"   - Previous connection by this user: {user_previous_connection is not None}")
-                print(f"   - Is first time Instagram account: {is_first_time_instagram_account}")
+                print(f"   - User has connected any account before: {user_has_connected_before is not None}")
+                print(f"   - User previously connected this account: {user_previous_connection is not None}")
+                print(f"   - Is first connection for this user: {is_first_connection_for_user}")
                 
                 if existing:
-                    # Update existing connection
+                    # Update existing connection (reconnection of same account by same user)
                     cursor.execute(f"""
                         UPDATE instagram_connections 
                         SET page_access_token = {param}, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
@@ -1076,10 +1091,10 @@ def instagram_callback():
                         VALUES ({param}, {param}, {param}, {param}, TRUE)
                     """, (session['user_id'], instagram_user_id, page_id, page_access_token))
                     
-                    # If this is the first time this Instagram account is connected by ANY user, give 100 free replies
-                    # Replies stay with each email account - only the free trial is tied to Instagram account (one-time)
-                    if is_first_time_instagram_account:
-                        print(f"🎁 First time connecting Instagram account {instagram_user_id} - granting 100 free trial replies")
+                    # Grant free trial ONLY if this is the user's FIRST Instagram connection ever
+                    # Each email account gets the free trial only once, regardless of which Instagram account they connect
+                    if is_first_connection_for_user:
+                        print(f"🎁 First Instagram connection for user {session['user_id']} - granting 100 free trial replies")
                         cursor.execute(f"""
                             UPDATE users 
                             SET replies_limit_monthly = replies_limit_monthly + 100
@@ -1087,14 +1102,9 @@ def instagram_callback():
                         """, (session['user_id'],))
                         flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. You've received 100 free trial replies! 🎉", "success")
                     else:
-                        # Instagram account was connected before - no free trial, no reply transfer
-                        # Each email account keeps its own replies
-                        if previous_connection:
-                            print(f"⚠️ Instagram account {instagram_user_id} was previously connected to another email - no free trial granted")
-                            flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. This account was previously connected to another email, so no free trial replies were granted.", "info")
-                        else:
-                            # This user previously connected this account (reconnection case)
-                            flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                        # User has connected Instagram accounts before - no free trial
+                        print(f"ℹ️ User {session['user_id']} has connected Instagram accounts before - no free trial granted")
+                        flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
                 
                 conn.commit()
                 
