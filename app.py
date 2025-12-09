@@ -1077,6 +1077,7 @@ def instagram_callback():
                     """, (session['user_id'], instagram_user_id, page_id, page_access_token))
                     
                     # If this is the first time this Instagram account is connected by ANY user, give 100 free replies
+                    # Replies stay with each email account - only the free trial is tied to Instagram account (one-time)
                     if is_first_time_instagram_account:
                         print(f"🎁 First time connecting Instagram account {instagram_user_id} - granting 100 free trial replies")
                         cursor.execute(f"""
@@ -1086,50 +1087,11 @@ def instagram_callback():
                         """, (session['user_id'],))
                         flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. You've received 100 free trial replies! 🎉", "success")
                     else:
-                        # Instagram account was connected before by another user
+                        # Instagram account was connected before - no free trial, no reply transfer
+                        # Each email account keeps its own replies
                         if previous_connection:
-                            previous_user_id = previous_connection[1]
-                            print(f"🔄 Instagram account {instagram_user_id} was previously connected to user {previous_user_id} - checking for remaining replies to transfer")
-                            
-                            # Get previous user's remaining replies
-                            cursor.execute(f"""
-                                SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
-                                FROM users
-                                WHERE id = {param}
-                            """, (previous_user_id,))
-                            prev_user_data = cursor.fetchone()
-                            
-                            if prev_user_data:
-                                prev_sent, prev_limit, prev_purchased, prev_used_purchased = prev_user_data
-                                prev_total_used = prev_sent + prev_used_purchased
-                                prev_total_available = prev_limit + prev_purchased
-                                prev_remaining = max(0, prev_total_available - prev_total_used)
-                                
-                                if prev_remaining > 0:
-                                    # Transfer remaining replies to new user
-                                    print(f"💰 Transferring {prev_remaining} remaining replies from user {previous_user_id} to user {session['user_id']}")
-                                    cursor.execute(f"""
-                                        UPDATE users 
-                                        SET replies_limit_monthly = replies_limit_monthly + {param}
-                                        WHERE id = {param}
-                                    """, (prev_remaining, session['user_id']))
-                                    
-                                    # Zero out previous user's replies (they've been transferred)
-                                    cursor.execute(f"""
-                                        UPDATE users 
-                                        SET replies_limit_monthly = 0,
-                                            replies_sent_monthly = 0,
-                                            replies_purchased = 0,
-                                            replies_used_purchased = 0
-                                        WHERE id = {param}
-                                    """, (previous_user_id,))
-                                    
-                                    flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. Your {prev_remaining} remaining replies have been transferred! 🎉", "success")
-                                else:
-                                    print(f"⚠️ Previous user {previous_user_id} has no remaining replies to transfer")
-                                    flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. This account was previously connected to another email, so no free trial replies were granted.", "info")
-                            else:
-                                flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. This account was previously connected to another email, so no free trial replies were granted.", "info")
+                            print(f"⚠️ Instagram account {instagram_user_id} was previously connected to another email - no free trial granted")
+                            flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. This account was previously connected to another email, so no free trial replies were granted.", "info")
                         else:
                             # This user previously connected this account (reconnection case)
                             flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
