@@ -2853,50 +2853,48 @@
         });
 
         // Scroll-triggered transitions for CHATA to description
+        // Elements fade in when they come into view, then stay visible and scroll naturally
         window.addEventListener('scroll', function() {
             const scrollY = window.scrollY;
             const heroSection = document.querySelector('.hero-section');
-            const descriptionContent = document.querySelector('.description-content');
             
-            // Gradual fade in/out hero section based on scroll distance
-            const fadeStart = 100; // Start fading out at 100px
-            const fadeEnd = 400;   // Completely faded out at 400px
-            const scrollProgress = Math.max(0, Math.min(1, (scrollY - fadeStart) / (fadeEnd - fadeStart)));
+            // Hero section (CHATA logo) - fade in and stay, move up with scroll
+            const heroFadeStart = 0;
+            const heroFadeEnd = 300; // Fade in over 300px
+            const heroProgress = Math.max(0, Math.min(1, (scrollY - heroFadeStart) / (heroFadeEnd - heroFadeStart)));
             
-            // Calculate opacity and transform based on scroll progress
-            // When scrollY < fadeStart: opacity = 1 (fully visible)
-            // When scrollY > fadeEnd: opacity = 0 (completely hidden)
-            const opacity = 1 - scrollProgress;
-            const translateY = -scrollProgress * 100; // Move up gradually
+            // Fade in, then stay at opacity 1 (never fade out)
+            const heroOpacity = Math.min(1, heroProgress);
+            const heroTranslateY = -scrollY * 0.3; // Move up naturally with scroll
             
-            heroSection.style.opacity = opacity;
-            heroSection.style.transform = `translateY(${translateY}px)`;
+            heroSection.style.opacity = heroOpacity;
+            heroSection.style.transform = `translateY(${heroTranslateY}px)`;
             
             // Smooth transitions for description sections
             const toolDesc = document.getElementById('tool-description');
             const resultQuestion = document.getElementById('result-question');
             const resultStats = document.getElementById('result-stats');
             
-            // First section: Tool description (150px - 800px) - longer duration, smooth fade
+            // First section: Tool description - fade in and stay visible
             if (toolDesc) {
                 const toolStart = 150;
-                const toolEnd = 900;
-                const toolProgress = Math.max(0, Math.min(1, (scrollY - toolStart) / (toolEnd - toolStart)));
+                const toolFadeEnd = 450; // Fade in over 300px
+                const toolScrollProgress = scrollY - toolStart;
                 
-                // Smooth fade in and out without jittering
+                // Fade in when scrolling into view, then stay at opacity 1
                 let toolOpacity;
-                if (toolProgress < 0.3) {
-                    toolOpacity = toolProgress / 0.3; // Fade in
-                } else if (toolProgress < 0.7) {
-                    toolOpacity = 1; // Stay visible
-      } else {
-                    toolOpacity = (1 - toolProgress) / 0.3; // Fade out
+                if (toolScrollProgress < 0) {
+                    toolOpacity = 0; // Not yet in view
+                } else if (toolScrollProgress < (toolFadeEnd - toolStart)) {
+                    toolOpacity = toolScrollProgress / (toolFadeEnd - toolStart); // Fade in
+                } else {
+                    toolOpacity = 1; // Fully visible, stay visible
                 }
                 
                 toolDesc.style.opacity = Math.max(0, Math.min(1, toolOpacity));
-                toolDesc.style.transform = `translateY(${(1 - toolOpacity) * 30}px)`;
+                toolDesc.style.transform = `translateY(0px)`; // No transform, scroll naturally
                 
-                // Animate words smoothly
+                // Animate words smoothly on fade in
                 const toolWords = toolDesc.querySelectorAll('.description-word');
                 toolWords.forEach((word, index) => {
                     const wordDelay = 0.1;
@@ -2909,26 +2907,26 @@
                 });
             }
             
-            // Second section: The result? question (700px - 1200px) - appears in center, longer duration
+            // Second section: The result? question - fade in and stay visible
             if (resultQuestion) {
                 const questionStart = 700;
-                const questionEnd = 1200;
-                const questionProgress = Math.max(0, Math.min(1, (scrollY - questionStart) / (questionEnd - questionStart)));
+                const questionFadeEnd = 1000; // Fade in over 300px
+                const questionScrollProgress = scrollY - questionStart;
                 
-                // Smooth fade in and out
+                // Fade in when scrolling into view, then stay at opacity 1
                 let questionOpacity;
-                if (questionProgress < 0.3) {
-                    questionOpacity = questionProgress / 0.3; // Fade in
-                } else if (questionProgress < 0.7) {
-                    questionOpacity = 1; // Stay visible longer
+                if (questionScrollProgress < 0) {
+                    questionOpacity = 0; // Not yet in view
+                } else if (questionScrollProgress < (questionFadeEnd - questionStart)) {
+                    questionOpacity = questionScrollProgress / (questionFadeEnd - questionStart); // Fade in
                 } else {
-                    questionOpacity = (1 - questionProgress) / 0.3; // Fade out
+                    questionOpacity = 1; // Fully visible, stay visible
                 }
                 
                 resultQuestion.style.opacity = Math.max(0, Math.min(1, questionOpacity));
-                resultQuestion.style.transform = `translateY(${(1 - questionOpacity) * 30}px)`;
+                resultQuestion.style.transform = `translateY(0px)`; // No transform, scroll naturally
                 
-                // Simple word animation like tool description
+                // Simple word animation on fade in
                 const questionWords = resultQuestion.querySelectorAll('.description-word');
                 questionWords.forEach((word, index) => {
                     const wordDelay = 0.1;
@@ -2938,26 +2936,26 @@
                 });
             }
             
-            // Third section: The statistics (1000px - 1500px) - appears in center, longer duration
+            // Third section: The statistics - fade in and stay visible
             if (resultStats) {
                 const statsStart = 1100;
-                const statsEnd = 1550;
-                const statsProgress = Math.max(0, Math.min(1, (scrollY - statsStart) / (statsEnd - statsStart)));
+                const statsFadeEnd = 1400; // Fade in over 300px
+                const statsScrollProgress = scrollY - statsStart;
                 
-                // Smooth fade in and out
+                // Fade in when scrolling into view, then stay at opacity 1
                 let statsOpacity;
-                if (statsProgress < 0.3) {
-                    statsOpacity = statsProgress / 0.3; // Fade in
-                } else if (statsProgress < 0.7) {
-                    statsOpacity = 1; // Stay visible longer
-      } else {
-                    statsOpacity = (1 - statsProgress) / 0.3; // Fade out
+                if (statsScrollProgress < 0) {
+                    statsOpacity = 0; // Not yet in view
+                } else if (statsScrollProgress < (statsFadeEnd - statsStart)) {
+                    statsOpacity = statsScrollProgress / (statsFadeEnd - statsStart); // Fade in
+                } else {
+                    statsOpacity = 1; // Fully visible, stay visible
                 }
                 
                 resultStats.style.opacity = Math.max(0, Math.min(1, statsOpacity));
-                resultStats.style.transform = `translateY(${(1 - statsOpacity) * 30}px)`;
+                resultStats.style.transform = `translateY(0px)`; // No transform, scroll naturally
                 
-                // Animate statistics with smooth stagger
+                // Animate statistics with smooth stagger on fade in
                 const stats = resultStats.querySelectorAll('.stat-item');
                 stats.forEach((stat, index) => {
                     const statDelay = 0.1;
