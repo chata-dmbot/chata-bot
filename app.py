@@ -392,11 +392,11 @@ def send_welcome_email(email):
     
     content_html = f"""
         <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-            Welcome to Chata! We're excited to have you on board.
+            We're excited to have you on board.
         </p>
         
         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-            Get started by connecting your Instagram account and setting up your AI bot. Your bot will automatically respond to messages and help you engage with your audience.
+            Get started by connecting your Instagram account and setting up your AI. Your AI will automatically respond to messages and help you engage with your audience.
         </p>
         
         <div style="text-align: center; margin: 35px 0;">
@@ -421,7 +421,7 @@ def send_usage_warning_email(email, remaining_replies):
     if remaining_replies >= 100:
         threshold = 100
         urgency = "low"
-        message = f"You have {remaining_replies} replies remaining. Make sure you have enough to keep your bot running smoothly."
+        message = f"You have {remaining_replies} replies remaining. Make sure you have enough to keep your AI assistant running smoothly."
     elif remaining_replies >= 50:
         threshold = 50
         urgency = "medium"
@@ -429,7 +429,7 @@ def send_usage_warning_email(email, remaining_replies):
     else:
         threshold = remaining_replies
         urgency = "high"
-        message = f"⚠️ You only have {remaining_replies} replies remaining! Your bot will stop responding when you run out."
+        message = f"⚠️ You only have {remaining_replies} replies remaining! Your AI assistant will stop responding when you run out."
     
     content_html = f"""
         <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
@@ -437,7 +437,7 @@ def send_usage_warning_email(email, remaining_replies):
         </p>
         
         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 30px; font-size: 16px; text-transform: none; letter-spacing: normal;">
-            You can always purchase additional replies for €5 to keep your bot active. Visit your dashboard to buy more replies or upgrade your plan.
+            You can always purchase additional replies for €5 to keep your AI assistant active. Visit your dashboard to buy more replies or upgrade your plan.
         </p>
         
         <div style="text-align: center; margin: 35px 0;">
