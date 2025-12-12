@@ -1071,7 +1071,7 @@
 
     <!-- Toast Notification -->
     <div id="help-toast" class="toast">
-      <button class="toast-close" onclick="closeToast()">
+      <button class="toast-close" id="toast-close-btn">
         <i class="fas fa-times"></i>
       </button>
       <div class="toast-header">
@@ -1079,7 +1079,7 @@
         <h3>Hey from Chata</h3>
       </div>
       <div class="toast-body">
-        To be sure that you don't need to put in all of the information, just put in as much information that you think is relevant for your AI. Though a note: more information equals more accurate AI. So take your time. But do not stress if not everything is filled in.
+        You don't need to fill in every field here. Just provide as much information as you think is relevant for your AI. Remember: the more information you provide, the more accurate your AI will be. Take your time, but don't stress if not everything is filled in.
       </div>
     </div>
 
@@ -1368,6 +1368,9 @@
         }
       }
 
+      // Make closeToast available globally
+      window.closeToast = closeToast;
+
       function fillTemplates() {
         const conversationTemplates = {{ conversation_templates|tojson }};
         conversationTemplates.forEach(example => {
@@ -1410,6 +1413,12 @@
             autoResize(field);
           }
         });
+        
+        // Attach toast close button event listener
+        const closeBtn = document.getElementById('toast-close-btn');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', closeToast);
+        }
         
         // Show toast notification
         showToast();
