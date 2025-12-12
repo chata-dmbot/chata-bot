@@ -406,7 +406,7 @@
             display: flex;
       flex-direction: column;
       gap: 0.4rem;
-      max-width: 85%;
+      max-width: 100%;
     }
 
     .dm-message.follower-message {
@@ -451,12 +451,13 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(255, 255, 255, 0.06);
       color: #fff;
-      padding: 0.75rem 1rem;
+      padding: 0.5rem 1rem;
       font-size: 0.9rem;
       letter-spacing: 0.05em;
       resize: none;
       transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
       font-family: inherit;
+      min-height: 40px;
     }
 
     .dm-message.follower-message .message-input:focus {
@@ -473,12 +474,13 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(51, 102, 255, 0.15);
       color: #fff;
-      padding: 0.75rem 1rem;
+      padding: 0.5rem 1rem;
       font-size: 0.9rem;
       letter-spacing: 0.05em;
       resize: none;
       transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
       font-family: inherit;
+      min-height: 40px;
     }
 
     .dm-message.bot-message .message-input:focus {
@@ -536,7 +538,7 @@
       gap: 1rem;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       align-items: start;
-      padding: 1rem;
+      padding: 1.25rem;
             border-radius: 16px;
       background: rgba(6, 12, 26, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -545,8 +547,8 @@
 
     .remove-row-btn {
             position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
+      top: 0.5rem;
+      right: 0.5rem;
       width: 36px;
       height: 36px;
       border-radius: 50%;
@@ -708,8 +710,8 @@
       }
 
       .remove-row-btn {
-        top: 0.6rem;
-        right: 0.6rem;
+        top: 0.4rem;
+        right: 0.4rem;
             }
 
             .action-buttons {
@@ -825,10 +827,8 @@
                       {% set follower_value = '' %}
                       {% if settings and settings.conversation_samples and follower_key in settings.conversation_samples %}
                         {% set follower_value = settings.conversation_samples[follower_key] %}
-                      {% else %}
-                        {% set follower_value = exchange.follower_message %}
                       {% endif %}
-                      <textarea id="follower_message_{{ follower_key }}" name="follower_message_{{ follower_key }}" class="auto-resize message-input" rows="2" maxlength="300" placeholder="Follower's message" style="background: rgba(255, 255, 255, 0.06); border-bottom-left-radius: 4px;">{{ follower_value }}</textarea>
+                      <textarea id="follower_message_{{ follower_key }}" name="follower_message_{{ follower_key }}" class="auto-resize message-input" rows="1" maxlength="300" placeholder="Follower's message" style="background: rgba(255, 255, 255, 0.06); border-bottom-left-radius: 4px;">{{ follower_value }}</textarea>
                                  </div>
                     <div class="dm-message bot-message">
                       <div class="message-label">You</div>
@@ -837,7 +837,7 @@
                       {% if settings and settings.conversation_samples and reply_key in settings.conversation_samples %}
                         {% set sample_value = settings.conversation_samples[reply_key] %}
                       {% endif %}
-                      <textarea id="sample_reply_{{ reply_key }}" name="sample_reply_{{ reply_key }}" class="auto-resize message-input" rows="2" maxlength="200" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
+                      <textarea id="sample_reply_{{ reply_key }}" name="sample_reply_{{ reply_key }}" class="auto-resize message-input" rows="1" maxlength="200" placeholder="Type the reply you'd actually send.">{{ sample_value }}</textarea>
                       <div class="char-counter" data-for="sample_reply_{{ reply_key }}">{{ sample_value|length }}/200</div>
                              </div>
                   {% endfor %}
