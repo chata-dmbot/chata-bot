@@ -509,6 +509,7 @@
                 <!-- CTA Buttons - Right aligned -->
                 <div class="hidden md:block absolute right-0">
                     <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('support') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SUPPORT</a>
                         <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
                         <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
                     </div>
@@ -530,7 +531,8 @@
     <section class="dashboard-hero">
         <div>
             <h1>Dashboard</h1>
-            <p>Welcome, {{ user.username if user.username else user.email }}! Manage your Instagram bot connections and settings</p>
+            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
+            <p>Here you can manage your assistant settings and your own settings</p>
         </div>
     </section>
 
@@ -677,7 +679,7 @@
         <div class="dashboard-section-block dashboard-full">
             <h2><i class="fas fa-cog"></i> Quick Actions</h2>
             
-            <div class="action-buttons-grid">
+            <div class="action-buttons-grid" style="grid-template-columns: repeat(3, 1fr); max-width: 900px; margin: 1rem auto;">
                 <a href="{{ url_for('bot_settings') }}" class="action-card">
                     <i class="fas fa-robot"></i>
                     <h3>Bot Settings</h3>
@@ -692,11 +694,6 @@
                     <i class="fas fa-user-cog"></i>
                     <h3>Account Settings</h3>
                     <p>Manage your account preferences and security</p>
-                </a>
-                <a href="mailto:chata.dmbot@gmail.com" class="action-card">
-                    <i class="fas fa-life-ring"></i>
-                    <h3>Get Support</h3>
-                    <p>Contact our support team for help</p>
                 </a>
             </div>
         </div>

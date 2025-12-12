@@ -111,7 +111,12 @@
         
         .chata-letter.glow {
             text-shadow: 0 0 20px rgba(51, 102, 255, 0.8), 0 0 40px rgba(51, 102, 255, 0.6), 0 0 60px rgba(51, 102, 255, 0.4);
-            transition: text-shadow 0.5s ease-out;
+            transition: text-shadow 1.5s ease-out;
+        }
+        
+        .chata-letter.glow-fade {
+            text-shadow: 0 0 0px rgba(51, 102, 255, 0), 0 0 0px rgba(51, 102, 255, 0), 0 0 0px rgba(51, 102, 255, 0);
+            transition: text-shadow 1.5s ease-out;
         }
         
         /* CHATA title specific animations - directional entrances */
@@ -3209,10 +3214,16 @@
                 // Final lighting of grid squares behind CHATA letters
                 trackCHATAMovement();
                 
-                // Remove glow after 2 seconds
+                // Fade out glow smoothly after 2 seconds, then never glow again
                 setTimeout(() => {
                     chataLetters.forEach(letter => {
+                        // Add fade class to smoothly transition to no glow
                         letter.classList.remove('glow');
+                        letter.classList.add('glow-fade');
+                        // Remove fade class after transition completes
+                        setTimeout(() => {
+                            letter.classList.remove('glow-fade');
+                        }, 1500); // Match transition duration
                     });
                 }, 2000);
                 
