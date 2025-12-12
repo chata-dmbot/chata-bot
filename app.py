@@ -1594,6 +1594,15 @@ def bot_settings():
             if desc.strip():
                 posts.append({'description': desc.strip()})
 
+        faq_questions = request.form.getlist('faq_questions[]')
+        faq_replies = request.form.getlist('faq_replies[]')
+        faqs = []
+        for i, question in enumerate(faq_questions):
+            question = question.strip()
+            reply = faq_replies[i].strip() if i < len(faq_replies) else ''
+            if question or reply:
+                faqs.append({'question': question, 'reply': reply})
+
         conversation_samples = {}
         for example in conversation_templates:
             for exchange in example.get('exchanges', []):
@@ -1619,6 +1628,7 @@ def bot_settings():
             'bot_occupation': request.form.get('bot_occupation', '').strip(),
             'links': links,
             'posts': posts,
+            'faqs': faqs,
             'conversation_samples': conversation_samples,
             'instagram_url': request.form.get('instagram_url', '').strip(),
             'avoid_topics': request.form.get('avoid_topics', '').strip()

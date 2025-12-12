@@ -688,7 +688,77 @@
       }
     }
 
-    @media (max-width: 640px) {
+        /* Toast Notification */
+        .toast {
+          position: fixed;
+          right: 2rem;
+          top: 100px;
+          background: rgba(51, 102, 255, 0.15);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(51, 102, 255, 0.3);
+          border-radius: 16px;
+          padding: 1.5rem;
+          max-width: 350px;
+          z-index: 1000;
+          opacity: 0;
+          transform: translateX(400px);
+          transition: all 0.4s ease;
+          box-shadow: 0 8px 32px rgba(51, 102, 255, 0.2);
+        }
+
+        .toast.show {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .toast-header {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .toast-header h3 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--chata-blue);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .toast-body {
+          font-size: 0.9rem;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.9);
+          text-transform: none;
+          letter-spacing: normal;
+        }
+
+        .toast-close {
+          position: absolute;
+          top: 0.75rem;
+          right: 0.75rem;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          font-size: 1.2rem;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+        }
+
+        .toast-close:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        @media (max-width: 640px) {
       .bot-settings-hero {
         padding-top: 120px;
       }
@@ -850,7 +920,7 @@
         <section class="section-card">
           <div class="section-header">
             <h2>Promotional Links</h2>
-            <p>Drop anything the bot can plug when people ask (store, booking link, etc.).</p>
+            <p>Drop anything the AI can plug when people ask (store, booking link, etc.).</p>
                              </div>
           <div id="links-list" class="item-collection">
             {% if settings and settings.links and settings.links|length > 0 %}
@@ -891,7 +961,7 @@
         <section class="section-card">
           <div class="section-header">
             <h2>Content Highlights</h2>
-            <p>Give the bot context on what you post so it can reference it naturally.</p>
+            <p>Give the AI context on what you post so it can reference it naturally.</p>
           </div>
                              <div class="form-group">
             <label for="instagram_url">Instagram profile link</label>
@@ -927,8 +997,49 @@
 
         <section class="section-card">
           <div class="section-header">
+            <h2>Frequently Asked Questions</h2>
+            <p>Add questions you frequently receive and your typical replies to help the AI respond accurately.</p>
+          </div>
+          <div id="faqs-list" class="item-collection">
+            {% if settings and settings.faqs and settings.faqs|length > 0 %}
+              {% for faq in settings.faqs %}
+                <div class="faq-item item-row" style="grid-template-columns: 1fr; gap: 1rem;">
+                  <div class="form-group">
+                    <label>Question</label>
+                    <textarea name="faq_questions[]" class="auto-resize" rows="1" maxlength="300" placeholder="Question you frequently receive">{{ faq.question or '' }}</textarea>
+                  </div>
+                  <div class="form-group">
+                    <label>Your Reply</label>
+                    <textarea name="faq_replies[]" class="auto-resize" rows="1" maxlength="300" placeholder="Your typical reply to this question">{{ faq.reply or '' }}</textarea>
+                  </div>
+                  <button type="button" class="remove-row-btn" data-action="remove-faq">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="faq-item item-row" style="grid-template-columns: 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>Question</label>
+                  <textarea name="faq_questions[]" class="auto-resize" rows="1" maxlength="300" placeholder="Question you frequently receive"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Your Reply</label>
+                  <textarea name="faq_replies[]" class="auto-resize" rows="1" maxlength="300" placeholder="Your typical reply to this question"></textarea>
+                </div>
+                <button type="button" class="remove-row-btn" data-action="remove-faq">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            {% endif %}
+          </div>
+          <button type="button" id="add-faq-btn" class="btn-ghost">+ Add FAQ</button>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header">
             <h2>Topics To Avoid</h2>
-            <p>Hard no's, sensitive subjects, anything the bot should steer away from.</p>
+            <p>Hard no's, sensitive subjects, anything the AI should steer away from.</p>
                              </div>
                             <div class="form-group">
             <label for="avoid_topics">Keep away from...</label>
@@ -950,6 +1061,20 @@
         </form>
     {% endif %}
     </main>
+
+    <!-- Toast Notification -->
+    <div id="help-toast" class="toast">
+      <button class="toast-close" onclick="closeToast()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="toast-header">
+        <i class="fas fa-info-circle" style="color: var(--chata-blue);"></i>
+        <h3>Hey from Chata</h3>
+      </div>
+      <div class="toast-body">
+        To be sure that you don't need to put in all of the information, just put in as much information that you think is relevant for your AI. Though a note: more information equals more accurate AI. So take your time. But do not stress if not everything is filled in.
+      </div>
+    </div>
 
     <script>
     (function () {
@@ -1170,6 +1295,72 @@
         });
       }
 
+      function setupFAQControls() {
+        const list = document.getElementById('faqs-list');
+        const addBtn = document.getElementById('add-faq-btn');
+        if (!list || !addBtn) return;
+
+        addBtn.addEventListener('click', () => {
+          const item = document.createElement('div');
+          item.className = 'faq-item item-row';
+          item.style.cssText = 'grid-template-columns: 1fr; gap: 1rem;';
+          item.innerHTML = `
+            <div class="form-group">
+              <label>Question</label>
+              <textarea name="faq_questions[]" class="auto-resize" rows="1" maxlength="300" placeholder="Question you frequently receive"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Your Reply</label>
+              <textarea name="faq_replies[]" class="auto-resize" rows="1" maxlength="300" placeholder="Your typical reply to this question"></textarea>
+            </div>
+            <button type="button" class="remove-row-btn" data-action="remove-faq">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
+          list.appendChild(item);
+          attachAutoResize();
+          attachCounters();
+        });
+
+        list.addEventListener('click', event => {
+          const button = event.target.closest('[data-action="remove-faq"]');
+          if (!button) return;
+          const item = button.closest('.faq-item');
+          if (!item) return;
+          if (list.children.length === 1) {
+            item.querySelectorAll('textarea').forEach(textarea => {
+              textarea.value = '';
+              autoResize(textarea);
+            });
+            attachCounters();
+            return;
+          }
+          item.remove();
+        });
+      }
+
+      function showToast() {
+        const toast = document.getElementById('help-toast');
+        if (!toast) return;
+        
+        // Check if user has already seen the toast
+        if (localStorage.getItem('chata-help-toast-seen') === 'true') {
+          return;
+        }
+        
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 1000);
+      }
+
+      function closeToast() {
+        const toast = document.getElementById('help-toast');
+        if (toast) {
+          toast.classList.remove('show');
+          localStorage.setItem('chata-help-toast-seen', 'true');
+        }
+      }
+
       function fillTemplates() {
         const conversationTemplates = {{ conversation_templates|tojson }};
         conversationTemplates.forEach(example => {
@@ -1202,6 +1393,7 @@
         attachCounters();
         setupLinkControls();
         setupPostControls();
+        setupFAQControls();
         
         // Attach auto-resize to follower message textareas
         document.querySelectorAll('.follower-message .message-input').forEach(field => {
@@ -1211,6 +1403,9 @@
             autoResize(field);
           }
         });
+        
+        // Show toast notification
+        showToast();
       });
 
       window.addEventListener('load', () => {
