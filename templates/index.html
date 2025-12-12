@@ -2905,8 +2905,8 @@
             
             // Second section: The result? question - fade in and stay visible
             if (resultQuestion) {
-                const questionStart = 1000; // Appears later (was 700)
-                const questionFadeEnd = 1300; // Fade in over 300px
+                const questionStart = 500; // Appears earlier
+                const questionFadeEnd = 800; // Fade in over 300px
                 const questionScrollProgress = scrollY - questionStart;
                 
                 // Fade in when scrolling into view, then stay at opacity 1
@@ -2934,8 +2934,8 @@
             
             // Third section: The statistics - fade in and stay visible
             if (resultStats) {
-                const statsStart = 1500; // Appears later (was 1100)
-                const statsFadeEnd = 1800; // Fade in over 300px
+                const statsStart = 800; // Appears earlier
+                const statsFadeEnd = 1100; // Fade in over 300px
                 const statsScrollProgress = scrollY - statsStart;
                 
                 // Fade in when scrolling into view, then stay at opacity 1
