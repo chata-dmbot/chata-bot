@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Settings - CHATA</title>
+    <title>AI Settings - CHATA</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -181,22 +181,24 @@
     }
 
     .bot-settings-hero h1 {
-      font-size: 3.25rem;
-      letter-spacing: 0.4em;
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       text-transform: uppercase;
-      margin-bottom: 1.2rem;
-      background: linear-gradient(135deg, #ffffff 0%, #bbbbbb 70%);
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #fff, #ccc);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .bot-settings-hero p {
       max-width: 560px;
       margin: 0 auto;
-      font-size: 1rem;
+      font-size: 1.2rem;
       font-weight: 300;
-      letter-spacing: 0.12em;
-      color: rgba(255, 255, 255, 0.68);
+      letter-spacing: 0.05em;
+      color: #888;
       text-transform: none;
     }
 
@@ -440,6 +442,28 @@
     .dm-message.follower-message .message-content {
       border-bottom-left-radius: 4px;
       background: rgba(255, 255, 255, 0.06);
+    }
+
+    .dm-message.follower-message .message-input {
+      width: 100%;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      resize: none;
+      transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      font-family: inherit;
+    }
+
+    .dm-message.follower-message .message-input:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
     }
 
     .dm-message.bot-message .message-input {
@@ -713,8 +737,8 @@
 
     <section class="bot-settings-hero">
         <div>
-            <h1>Bot Settings</h1>
-      <p>Give the bot your personality, your go-to lines, and the replies your fans expect.</p>
+            <h1>AI Settings</h1>
+      <p>Give your AI the personality that best describes you.</p>
         </div>
     </section>
 
@@ -769,20 +793,26 @@
         <section class="section-card">
           <div class="section-header">
             <h2>About Me</h2>
-            <p>Write this the way you'd actually describe yourself. 1000 characters max.</p>
+            <p>Write this the way you'd actually describe yourself.</p>
                             </div>
-                             <div class="form-group">
+                             <div class="form-group" style="position: relative;">
             <label for="bot_personality">Bio / vibe</label>
-            <textarea id="bot_personality" name="bot_personality" class="auto-resize" rows="4" maxlength="1000" placeholder="Let the bot know the story, the vibe, the energy it should keep.">{{ settings.bot_personality if settings and settings.bot_personality else '' }}</textarea>
-            <div class="char-counter" data-for="bot_personality">{{ settings.bot_personality|length if settings and settings.bot_personality else 0 }}/1000</div>
+            <textarea id="bot_personality" name="bot_personality" class="auto-resize" rows="4" maxlength="1000" placeholder="Let the AI know the story, the vibe, the energy it should keep.">{{ settings.bot_personality if settings and settings.bot_personality else '' }}</textarea>
+            <div class="char-counter" data-for="bot_personality" style="position: absolute; bottom: 0.5rem; right: 1rem;">{{ settings.bot_personality|length if settings and settings.bot_personality else 0 }}/1000</div>
                              </div>
         </section>
 
         <section class="section-card">
-          <div class="section-header">
-            <h2>Conversation Examples</h2>
-            <p>Answer to these simulated conversations to help train the bot to match your style.</p>
-                                     </div>
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+              <h2>Conversation Examples</h2>
+              <p style="margin-top: 0.5rem;">Fill in these general conversations by yourself to help train the AI to match your style.</p>
+              <p style="margin-top: 0.5rem; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">Feel free to use our templates to help you with the conversation examples.</p>
+            </div>
+            <button type="button" id="fill-templates-btn" class="btn-secondary" style="margin-top: 0; align-self: flex-start;">
+              <i class="fas fa-fill"></i> Fill Templates
+            </button>
+          </div>
           <div class="conversation-examples">
             {% for example in conversation_templates %}
               <div class="conversation-example-card">
@@ -791,7 +821,14 @@
                   {% for exchange in example.exchanges %}
                     <div class="dm-message follower-message">
                       <div class="message-label">Follower</div>
-                      <div class="message-content">{{ exchange.follower_message }}</div>
+                      {% set follower_key = example.key ~ '_' ~ exchange.bot_reply_key ~ '_follower' %}
+                      {% set follower_value = '' %}
+                      {% if settings and settings.conversation_samples and follower_key in settings.conversation_samples %}
+                        {% set follower_value = settings.conversation_samples[follower_key] %}
+                      {% else %}
+                        {% set follower_value = exchange.follower_message %}
+                      {% endif %}
+                      <textarea id="follower_message_{{ follower_key }}" name="follower_message_{{ follower_key }}" class="auto-resize message-input" rows="2" maxlength="300" placeholder="Follower's message" style="background: rgba(255, 255, 255, 0.06); border-bottom-left-radius: 4px;">{{ follower_value }}</textarea>
                                  </div>
                     <div class="dm-message bot-message">
                       <div class="message-label">You</div>
@@ -1133,6 +1170,22 @@
         });
       }
 
+      function fillTemplates() {
+        const conversationTemplates = {{ conversation_templates|tojson }};
+        conversationTemplates.forEach(example => {
+          example.exchanges.forEach((exchange, index) => {
+            const followerKey = `${example.key}_${exchange.bot_reply_key}_follower`;
+            const followerInput = document.getElementById(`follower_message_${followerKey}`);
+            if (followerInput && !followerInput.value.trim()) {
+              followerInput.value = exchange.follower_message;
+              autoResize(followerInput);
+            }
+          });
+        });
+      }
+
+      document.getElementById('fill-templates-btn')?.addEventListener('click', fillTemplates);
+
       window.resetSettings = function resetSettings() {
         const form = document.getElementById('botSettingsForm');
         if (!form) return;
@@ -1149,6 +1202,15 @@
         attachCounters();
         setupLinkControls();
         setupPostControls();
+        
+        // Attach auto-resize to follower message textareas
+        document.querySelectorAll('.follower-message .message-input').forEach(field => {
+          if (!field.dataset.autosizeReady) {
+            field.dataset.autosizeReady = 'true';
+            field.addEventListener('input', () => autoResize(field));
+            autoResize(field);
+          }
+        });
       });
 
       window.addEventListener('load', () => {

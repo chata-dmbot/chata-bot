@@ -1602,6 +1602,13 @@ def bot_settings():
                 reply_value = reply_value.strip()
                 if reply_value:
                     conversation_samples[reply_key] = reply_value
+                
+                # Also save follower messages if they were edited
+                follower_key = f"{example['key']}_{exchange['bot_reply_key']}_follower"
+                follower_value = request.form.get(f"follower_message_{follower_key}", "")
+                follower_value = follower_value.strip()
+                if follower_value:
+                    conversation_samples[follower_key] = follower_value
 
         settings = {
             'bot_personality': request.form.get('bot_personality', '').strip(),
