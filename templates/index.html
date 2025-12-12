@@ -871,7 +871,8 @@
                     <span class="description-word">you</span>
                     <span class="description-word">a</span>
                     <span class="description-word">customizable</span>
-                    <span class="description-word">bot</span>
+                    <span class="description-word">AI</span>
+                    <span class="description-word">assistant</span>
                     <span class="description-word">that</span>
                     <span class="description-word">talks</span>
                     <span class="description-word">in</span>
@@ -2858,16 +2859,11 @@
             const scrollY = window.scrollY;
             const heroSection = document.querySelector('.hero-section');
             
-            // Hero section (CHATA logo) - fade in and stay, move up with scroll
-            const heroFadeStart = 0;
-            const heroFadeEnd = 300; // Fade in over 300px
-            const heroProgress = Math.max(0, Math.min(1, (scrollY - heroFadeStart) / (heroFadeEnd - heroFadeStart)));
-            
-            // Fade in, then stay at opacity 1 (never fade out)
-            const heroOpacity = Math.min(1, heroProgress);
+            // Hero section (CHATA logo) - always visible, just moves up with scroll
+            // No fade in/out, just natural scroll movement
             const heroTranslateY = -scrollY * 0.3; // Move up naturally with scroll
             
-            heroSection.style.opacity = heroOpacity;
+            heroSection.style.opacity = 1; // Always visible
             heroSection.style.transform = `translateY(${heroTranslateY}px)`;
             
             // Smooth transitions for description sections
@@ -2909,8 +2905,8 @@
             
             // Second section: The result? question - fade in and stay visible
             if (resultQuestion) {
-                const questionStart = 700;
-                const questionFadeEnd = 1000; // Fade in over 300px
+                const questionStart = 1000; // Appears later (was 700)
+                const questionFadeEnd = 1300; // Fade in over 300px
                 const questionScrollProgress = scrollY - questionStart;
                 
                 // Fade in when scrolling into view, then stay at opacity 1
@@ -2938,8 +2934,8 @@
             
             // Third section: The statistics - fade in and stay visible
             if (resultStats) {
-                const statsStart = 1100;
-                const statsFadeEnd = 1400; // Fade in over 300px
+                const statsStart = 1500; // Appears later (was 1100)
+                const statsFadeEnd = 1800; // Fade in over 300px
                 const statsScrollProgress = scrollY - statsStart;
                 
                 // Fade in when scrolling into view, then stay at opacity 1
