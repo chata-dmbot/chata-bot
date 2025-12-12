@@ -1625,7 +1625,7 @@ def bot_settings():
         }
 
         save_client_settings(user_id, settings, connection_id)
-        flash("Bot settings updated successfully!", "success")
+        flash("AI settings updated successfully!", "success")
         return redirect(url_for('bot_settings', connection_id=connection_id))
 
     if current_settings.get('conversation_samples') is None:
