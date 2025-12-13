@@ -1765,68 +1765,115 @@ def delete_account():
     user_email = user['email']
     username = user.get('username', 'User')
     
+    conn = get_db_connection()
+    if not conn:
+        flash("Database connection failed.", "error")
+        return redirect(url_for('account_settings'))
+    
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
+        # First, get all Instagram user IDs associated with this user's connections
+        cursor.execute(f"""
+            SELECT instagram_user_id 
+            FROM instagram_connections 
+            WHERE user_id = {placeholder}
+        """, (user_id,))
+        instagram_user_ids = [row[0] for row in cursor.fetchall()]
         
         # Delete in order to respect foreign key constraints
+        # Each deletion is wrapped in its own try/except with rollback to handle PostgreSQL transaction errors
+        
         # Delete activity logs
         try:
             cursor.execute(f"DELETE FROM activity_logs WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete activity_logs: {e}")
+            conn.rollback()
         
         # Delete purchases
         try:
             cursor.execute(f"DELETE FROM purchases WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete purchases: {e}")
+            conn.rollback()
         
         # Delete subscriptions
         try:
             cursor.execute(f"DELETE FROM subscriptions WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete subscriptions: {e}")
+            conn.rollback()
         
-        # Delete messages
-        try:
-            cursor.execute(f"DELETE FROM messages WHERE user_id = {placeholder}", (user_id,))
-        except Exception as e:
-            print(f"⚠️ Could not delete messages: {e}")
+        # Delete messages - messages are linked to instagram_user_id, not user_id
+        # We need to delete messages for all Instagram accounts connected to this user
+        if instagram_user_ids:
+            try:
+                # Create placeholders for IN clause
+                placeholders = ','.join([placeholder] * len(instagram_user_ids))
+                cursor.execute(f"""
+                    DELETE FROM messages 
+                    WHERE instagram_user_id IN ({placeholders})
+                """, tuple(instagram_user_ids))
+                conn.commit()
+                print(f"✅ Deleted messages for {len(instagram_user_ids)} Instagram accounts")
+            except Exception as e:
+                print(f"⚠️ Could not delete messages: {e}")
+                conn.rollback()
         
         # Delete client settings
         try:
             cursor.execute(f"DELETE FROM client_settings WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete client_settings: {e}")
+            conn.rollback()
+        
+        # Delete usage logs
+        try:
+            cursor.execute(f"DELETE FROM usage_logs WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
+        except Exception as e:
+            print(f"⚠️ Could not delete usage_logs: {e}")
+            conn.rollback()
         
         # Delete instagram connections
         try:
             cursor.execute(f"DELETE FROM instagram_connections WHERE user_id = {placeholder}", (user_id,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete instagram_connections: {e}")
+            conn.rollback()
         
         # Delete password reset tokens
         try:
             cursor.execute(f"DELETE FROM password_resets WHERE email = {placeholder}", (user_email,))
+            conn.commit()
         except Exception as e:
             print(f"⚠️ Could not delete password_resets: {e}")
-        
-        # Delete usage logs if they exist
-        try:
-            cursor.execute(f"DELETE FROM usage_logs WHERE user_id = {placeholder}", (user_id,))
-        except Exception as e:
-            print(f"⚠️ Could not delete usage_logs: {e}")
+            conn.rollback()
         
         # Finally, delete the user
-        cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
+        try:
+            cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
+            conn.commit()
+            print(f"✅ Successfully deleted user {user_id}")
+        except Exception as e:
+            print(f"❌ Could not delete user: {e}")
+            conn.rollback()
+            raise
         
-        conn.commit()
         conn.close()
         
         # Send confirmation email
-        send_account_deletion_confirmation_email(user_email, username)
+        try:
+            send_account_deletion_confirmation_email(user_email, username)
+        except Exception as e:
+            print(f"⚠️ Could not send deletion confirmation email: {e}")
         
         # Clear session
         session.clear()
@@ -1838,6 +1885,8 @@ def delete_account():
         print(f"❌ Error deleting account: {e}")
         import traceback
         traceback.print_exc()
+        conn.rollback()
+        conn.close()
         flash(f"Error deleting account: {str(e)}", "error")
         return redirect(url_for('account_settings'))
 
