@@ -2211,15 +2211,16 @@ def disconnect_instagram(connection_id):
 def usage_analytics():
     user_id = session['user_id']
     
-    # Check and reset monthly counter if needed
-    check_user_reply_limit(user_id)
-    
     # Get usage statistics for the current month
+    # Open connection once and reuse it for all operations
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
-    # Get user's reply counts
+    # Check and reset monthly counter if needed - reuse the same connection
+    check_user_reply_limit(user_id, conn)
+    
+    # Get user's reply counts - using the same connection
     cursor.execute(f"""
         SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
         FROM users
