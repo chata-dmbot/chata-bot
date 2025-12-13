@@ -14,6 +14,8 @@ from sendgrid.helpers.mail import Mail
 import json
 import time
 import stripe
+import hmac
+import hashlib
 
 # Import our modular components
 from config import Config
@@ -4422,6 +4424,57 @@ and answering only to the follower's latest message."""
 
 # ---- Webhook Route ----
 
+def verify_meta_webhook_signature(payload, signature_header, app_secret):
+    """
+    Verify that a webhook request is actually from Meta/Facebook.
+    
+    Args:
+        payload: Raw request body (bytes)
+        signature_header: X-Hub-Signature-256 header value (format: "sha256=...")
+        app_secret: Facebook App Secret
+    
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    if not signature_header:
+        print("⚠️ No signature header found")
+        return False
+    
+    if not app_secret:
+        print("⚠️ No App Secret configured - cannot verify signature")
+        return False
+    
+    try:
+        # Extract the signature from header (format: "sha256=abc123...")
+        if not signature_header.startswith('sha256='):
+            print(f"⚠️ Invalid signature format: {signature_header[:20]}...")
+            return False
+        
+        expected_signature = signature_header[7:]  # Remove "sha256=" prefix
+        
+        # Calculate HMAC-SHA256 signature
+        calculated_signature = hmac.new(
+            app_secret.encode('utf-8'),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        
+        # Use constant-time comparison to prevent timing attacks
+        is_valid = hmac.compare_digest(calculated_signature, expected_signature)
+        
+        if is_valid:
+            print("✅ Webhook signature verified - request is from Meta")
+        else:
+            print(f"❌ Webhook signature verification failed")
+            print(f"   Expected: {expected_signature[:20]}...")
+            print(f"   Calculated: {calculated_signature[:20]}...")
+        
+        return is_valid
+        
+    except Exception as e:
+        print(f"❌ Error verifying webhook signature: {e}")
+        return False
+
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
@@ -4441,9 +4494,27 @@ def webhook():
         print("📥 WEBHOOK RECEIVED POST REQUEST")
         print("=" * 80)
         print(f"📋 Request headers: {dict(request.headers)}")
-        print(f"📋 Request data: {request.json}")
         print(f"📋 Request remote address: {request.remote_addr}")
-        data = request.json
+        
+        # Verify webhook signature to ensure request is from Meta
+        signature_header = request.headers.get('X-Hub-Signature-256')
+        payload = request.data  # Get raw bytes for signature verification
+        
+        if not verify_meta_webhook_signature(payload, signature_header, Config.FACEBOOK_APP_SECRET):
+            print("❌ Webhook signature verification failed - rejecting request")
+            return "Forbidden", 403
+        
+        # Parse JSON data after verification
+        try:
+            data = request.json
+            if not data:
+                print("⚠️ No JSON data in request")
+                return "Bad Request", 400
+        except Exception as e:
+            print(f"❌ Error parsing JSON: {e}")
+            return "Bad Request", 400
+        
+        print(f"📋 Request data: {data}")
         
         # Debug: Show all available Instagram connections
         print("🔍 Available Instagram connections in database:")
