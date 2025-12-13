@@ -445,6 +445,90 @@
             z-index: 20;
         }
 
+        /* Disconnect Modal */
+        .disconnect-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .disconnect-modal.show {
+            display: flex;
+        }
+
+        .disconnect-modal-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+
+        .disconnect-modal-content h3 {
+            color: #ef4444;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: none;
+        }
+
+        .disconnect-modal-content p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            text-transform: none;
+        }
+
+        .disconnect-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-danger-modal {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-danger-modal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-cancel-modal {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel-modal:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         /* Animations */
         @keyframes slideDown {
             from {
@@ -658,11 +742,12 @@
                                     {% if bot_paused %}Resume{% else %}Pause{% endif %}
                                 </button>
                             </form>
-                            <a href="{{ url_for('disconnect_instagram', connection_id=connection.id) }}" 
+                            <button type="button" 
                                class="btn-secondary" 
-                               onclick="return confirm('Are you sure you want to disconnect this Instagram account? This will stop the bot from responding to messages.')">
+                               onclick="showDisconnectModal({{ connection.id }})"
+                               style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
                                 <i class="fas fa-unlink"></i> Disconnect
-                            </a>
+                            </button>
                         </div>
                     </div>
                 {% endfor %}
@@ -882,9 +967,38 @@
         
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('cancelModal');
-            if (event.target == modal) {
+            const cancelModal = document.getElementById('cancelModal');
+            if (event.target == cancelModal) {
                 closeCancelModal();
+            }
+            const disconnectModal = document.getElementById('disconnectModal');
+            if (event.target == disconnectModal) {
+                closeDisconnectModal();
+            }
+        }
+
+        // Disconnect Instagram modal
+        let disconnectConnectionId = null;
+        
+        function showDisconnectModal(connectionId) {
+            disconnectConnectionId = connectionId;
+            const modal = document.getElementById('disconnectModal');
+            if (modal) {
+                modal.classList.add('show');
+            }
+        }
+        
+        function closeDisconnectModal() {
+            const modal = document.getElementById('disconnectModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            disconnectConnectionId = null;
+        }
+        
+        function confirmDisconnect() {
+            if (disconnectConnectionId) {
+                window.location.href = "{{ url_for('disconnect_instagram', connection_id=0) }}".replace('0', disconnectConnectionId);
             }
         }
     </script>
@@ -905,6 +1019,21 @@
                 <button type="button" class="btn-secondary" onclick="closeCancelModal()" style="width: 100%;">
                     Keep Subscription
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disconnect Instagram Modal -->
+    <div id="disconnectModal" class="disconnect-modal">
+        <div class="disconnect-modal-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Disconnect Instagram Account</h3>
+            <p><strong>Are you sure you want to disconnect this Instagram account?</strong></p>
+            <p>This will stop your AI assistant from responding to messages on this account. You can reconnect it later if needed.</p>
+            <div class="disconnect-modal-actions">
+                <button class="btn-cancel-modal" onclick="closeDisconnectModal()">Cancel</button>
+                <a href="#" class="btn-danger-modal" onclick="confirmDisconnect(); return false;">
+                    <i class="fas fa-unlink"></i> Disconnect
+                </a>
             </div>
         </div>
     </div>
