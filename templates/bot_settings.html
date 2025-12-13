@@ -1476,7 +1476,7 @@
         }
       };
 
-      function confirmReset() {
+      window.confirmReset = function confirmReset() {
         const form = document.getElementById('botSettingsForm');
         if (!form) return;
         form.reset();
@@ -1484,10 +1484,10 @@
           attachAutoResize();
           attachCounters();
         });
-        closeResetModal();
-      }
+        window.closeResetModal();
+      };
 
-      function closeResetModal() {
+      window.closeResetModal = function closeResetModal() {
         const modal = document.getElementById('resetModal');
         if (modal) {
           modal.classList.remove('show');
