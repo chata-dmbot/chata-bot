@@ -3974,9 +3974,21 @@ def set_setting(key, value):
 
 # ---- Message DB helpers ----
 
-def save_message(instagram_user_id, message_text, bot_response):
-    """Save a message to the database"""
-    conn = get_db_connection()
+def save_message(instagram_user_id, message_text, bot_response, conn=None):
+    """
+    Save a message to the database.
+    
+    Args:
+        instagram_user_id: Instagram user ID
+        message_text: Message text from user
+        bot_response: Bot response text
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -3992,11 +4004,26 @@ def save_message(instagram_user_id, message_text, bot_response):
         conn.rollback()
         raise
     finally:
-        conn.close()
+        if should_close:
+            conn.close()
 
-def get_last_messages(instagram_user_id, n=35):
-    """Get conversation history for a specific Instagram user"""
-    conn = get_db_connection()
+def get_last_messages(instagram_user_id, n=35, conn=None):
+    """
+    Get conversation history for a specific Instagram user.
+    
+    Args:
+        instagram_user_id: Instagram user ID
+        n: Number of messages to retrieve (default: 35)
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    
+    Returns:
+        List of messages in OpenAI format
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -4022,7 +4049,8 @@ def get_last_messages(instagram_user_id, n=35):
         print(f"❌ Error retrieving messages: {e}")
         return []
     finally:
-        conn.close()
+        if should_close:
+            conn.close()
 
 # ---- Instagram Connection Helpers ----
 
@@ -4070,9 +4098,19 @@ def discover_instagram_user_id(page_access_token, page_id):
         print(f"❌ Error discovering Instagram User ID: {e}")
         return None
 
-def get_instagram_connection_by_id(instagram_user_id):
-    """Get Instagram connection by Instagram user ID"""
-    conn = get_db_connection()
+def get_instagram_connection_by_id(instagram_user_id, conn=None):
+    """
+    Get Instagram connection by Instagram user ID.
+    
+    Args:
+        instagram_user_id: Instagram user ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -4098,11 +4136,22 @@ def get_instagram_connection_by_id(instagram_user_id):
         print(f"❌ Error getting Instagram connection: {e}")
         return None
     finally:
-        conn.close()
+        if should_close:
+            conn.close()
 
-def get_instagram_connection_by_page_id(page_id):
-    """Get Instagram connection by Instagram page ID"""
-    conn = get_db_connection()
+def get_instagram_connection_by_page_id(page_id, conn=None):
+    """
+    Get Instagram connection by Instagram page ID.
+    
+    Args:
+        page_id: Instagram page ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -4128,7 +4177,8 @@ def get_instagram_connection_by_page_id(page_id):
         print(f"❌ Error getting Instagram connection by page ID: {e}")
         return None
     finally:
-        conn.close()
+        if should_close:
+            conn.close()
 
 # ---- AI Reply ----
 
@@ -4551,7 +4601,7 @@ def webhook():
                 instagram_connection = None
                 if recipient_id:
                     print(f"🔍 Looking for Instagram connection with user ID: {recipient_id}")
-                    instagram_connection = get_instagram_connection_by_id(recipient_id)
+                    instagram_connection = get_instagram_connection_by_id(recipient_id, webhook_conn)
                     if instagram_connection:
                         print("✅ Found connection by Instagram User ID!")
                     else:
@@ -4559,7 +4609,7 @@ def webhook():
 
                 if not instagram_connection and entry_page_id:
                     print(f"🔍 Trying to find connection by page ID: {entry_page_id}")
-                    instagram_connection = get_instagram_connection_by_page_id(entry_page_id)
+                    instagram_connection = get_instagram_connection_by_page_id(entry_page_id, webhook_conn)
                     if instagram_connection:
                         print("✅ Found connection by Page ID!")
                     else:
@@ -4603,7 +4653,7 @@ def webhook():
                         print(f"⚠️ Error checking bot pause status: {e}")
                 
                 for event in events:
-                    save_message(sender_id, event["text"], "")
+                    save_message(sender_id, event["text"], "", webhook_conn)
                 print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
 
                 # Check reply limit before generating response (only for registered users)
@@ -4617,7 +4667,7 @@ def webhook():
                     else:
                         print(f"✅ User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
 
-                history = get_last_messages(sender_id, n=35)
+                history = get_last_messages(sender_id, 35, webhook_conn)
                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
                 ai_start = time.time()
@@ -4626,7 +4676,7 @@ def webhook():
                 print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                save_message(sender_id, "", reply_text)
+                save_message(sender_id, "", reply_text, webhook_conn)
                 print(f"✅ Saved bot response for {sender_id}")
 
                 page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
