@@ -1278,22 +1278,54 @@ def dashboard():
     """, (user_id,))
     connections = cursor.fetchall()
     
-    # Get user's reply counts and bot_paused status
+    # Get user's reply counts, bot_paused status, and subscription data in a single query
+    # This combines 3 separate queries into 1 for better performance
     cursor.execute(f"""
-        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, COALESCE(bot_paused, FALSE) as bot_paused
-        FROM users
-        WHERE id = {placeholder}
+        SELECT 
+            u.replies_sent_monthly, 
+            u.replies_limit_monthly, 
+            u.replies_purchased, 
+            u.replies_used_purchased, 
+            COALESCE(u.bot_paused, FALSE) as bot_paused,
+            (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan_type,
+            (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_status,
+            (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_subscription_id,
+            (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_plan_type,
+            (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_status,
+            (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_subscription_id
+        FROM users u
+        WHERE u.id = {placeholder}
     """, (user_id,))
-    reply_data = cursor.fetchone()
+    combined_data = cursor.fetchone()
     
-    if reply_data:
-        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused = reply_data
+    if combined_data:
+        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused, \
+        active_plan_type, active_status, active_subscription_id, \
+        canceled_plan_type, canceled_status, canceled_subscription_id = combined_data
+        
         total_replies_used = replies_sent_monthly + replies_used_purchased
         total_replies_available = replies_limit_monthly + replies_purchased
         remaining_replies = max(0, total_replies_available - total_replies_used)
         # Calculate minutes saved (3 minutes per reply)
         MINUTES_PER_REPLY = 3
         minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
+        
+        # Determine current plan based on subscription status
+        current_plan = None
+        subscription_status = None
+        
+        if active_plan_type is not None and active_status == 'active':
+            # User has an active subscription - show the plan
+            current_plan = active_plan_type  # 'starter' or 'standard'
+            subscription_status = 'active'
+            print(f"🔍 Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
+        elif canceled_plan_type is not None and canceled_status == 'canceled':
+            # No active subscription - found a canceled one (for display purposes only)
+            subscription_status = 'canceled'
+            current_plan = None  # Don't show plan name if canceled
+            print(f"🔍 Dashboard: Found CANCELED subscription {canceled_subscription_id} - not showing as current plan")
+        else:
+            print(f"🔍 Dashboard: No subscription found for user {user_id}")
     else:
         replies_sent_monthly = 0
         replies_limit_monthly = 0  # New users start with 0 replies
@@ -1304,46 +1336,8 @@ def dashboard():
         remaining_replies = 0
         minutes_saved = 0
         bot_paused = False
-    
-    # Get subscription data - ONLY show plan if subscription is ACTIVE
-    # First, try to find an active subscription
-    cursor.execute(f"""
-        SELECT plan_type, status, stripe_subscription_id
-        FROM subscriptions
-        WHERE user_id = {placeholder} AND status = 'active'
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (user_id,))
-    active_subscription = cursor.fetchone()
-    
-    # Determine current plan based on subscription status
-    current_plan = None
-    subscription_status = None
-    
-    if active_subscription:
-        # User has an active subscription - show the plan
-        plan_type, status, subscription_id = active_subscription
-        current_plan = plan_type  # 'starter' or 'standard'
-        subscription_status = 'active'
-        print(f"🔍 Dashboard: Found ACTIVE subscription {subscription_id} with plan_type '{plan_type}'")
-    else:
-        # No active subscription - check if there's a canceled one (for display purposes only)
-        cursor.execute(f"""
-            SELECT plan_type, status, stripe_subscription_id
-            FROM subscriptions
-            WHERE user_id = {placeholder} AND status = 'canceled'
-            ORDER BY updated_at DESC
-            LIMIT 1
-        """, (user_id,))
-        canceled_subscription = cursor.fetchone()
-        
-        if canceled_subscription:
-            plan_type, status, subscription_id = canceled_subscription
-            subscription_status = 'canceled'
-            current_plan = None  # Don't show plan name if canceled
-            print(f"🔍 Dashboard: Found CANCELED subscription {subscription_id} - not showing as current plan")
-        else:
-            print(f"🔍 Dashboard: No subscription found for user {user_id}")
+        current_plan = None
+        subscription_status = None
     
     # Don't infer plan from replies_limit_monthly - only from subscription status
     # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
