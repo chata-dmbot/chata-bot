@@ -1377,9 +1377,20 @@ def dashboard():
 
 # ---- Bot Settings Management ----
 
-def get_client_settings(user_id, connection_id=None):
-    """Get bot settings for a specific client/connection"""
-    conn = get_db_connection()
+def get_client_settings(user_id, connection_id=None, conn=None):
+    """
+    Get bot settings for a specific client/connection.
+    
+    Args:
+        user_id: User ID
+        connection_id: Optional connection ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -1407,7 +1418,9 @@ def get_client_settings(user_id, connection_id=None):
         """, (user_id,))
     
     row = cursor.fetchone()
-    conn.close()
+    
+    if should_close:
+        conn.close()
     
     if row:
         import json
@@ -3630,12 +3643,21 @@ def handle_invoice_payment_failed(invoice):
 
 # ---- Reply Tracking Helpers ----
 
-def check_user_reply_limit(user_id):
+def check_user_reply_limit(user_id, conn=None):
     """
     Check if user has remaining replies available.
+    
+    Args:
+        user_id: User ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    
     Returns: (has_limit: bool, remaining: int, total_used: int, total_available: int)
     """
-    conn = get_db_connection()
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     if not conn:
         return (False, 0, 0, 0)
     
@@ -3652,13 +3674,14 @@ def check_user_reply_limit(user_id):
         
         result = cursor.fetchone()
         if not result:
-            conn.close()
+            if should_close:
+                conn.close()
             return (False, 0, 0, 0)
         
         replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, last_monthly_reset = result
         
-        # Reset monthly counter if new month
-        reset_monthly_replies_if_needed(user_id, replies_sent_monthly, last_monthly_reset)
+        # Reset monthly counter if new month - pass connection to avoid opening another one
+        reset_monthly_replies_if_needed(user_id, replies_sent_monthly, last_monthly_reset, conn)
         
         # Re-fetch after potential reset
         cursor.execute(f"""
@@ -3675,18 +3698,31 @@ def check_user_reply_limit(user_id):
         remaining = max(0, total_available - total_used)
         has_limit = remaining > 0
         
-        conn.close()
+        if should_close:
+            conn.close()
         return (has_limit, remaining, total_used, total_available)
         
     except Exception as e:
         print(f"Error checking reply limit: {e}")
-        if conn:
+        if conn and should_close:
             conn.close()
         return (False, 0, 0, 0)
 
-def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None):
-    """Reset monthly reply counter if a new month has started AND user has active subscription"""
-    conn = get_db_connection()
+def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None, conn=None):
+    """
+    Reset monthly reply counter if a new month has started AND user has active subscription.
+    
+    Args:
+        user_id: User ID
+        current_sent: Current sent count (optional)
+        last_reset: Last reset timestamp (optional)
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     if not conn:
         return False
     
@@ -3710,7 +3746,8 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
         # User keeps their remaining replies but won't get new monthly allocation
         if not subscription:
             print(f"📅 User {user_id} has no active subscription - skipping monthly reset (keeping remaining replies)")
-            conn.close()
+            if should_close:
+                conn.close()
             return False
         
         # Get current reset timestamp if not provided
@@ -3718,7 +3755,8 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
             cursor.execute(f"SELECT last_monthly_reset FROM users WHERE id = {placeholder}", (user_id,))
             result = cursor.fetchone()
             if not result:
-                conn.close()
+                if should_close:
+                    conn.close()
                 return False
             last_reset = result[0]
         
@@ -3765,25 +3803,36 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None)
                 WHERE id = {placeholder}
             """, (monthly_limit, datetime.now(), user_id))
             conn.commit()
-            conn.close()
+            if should_close:
+                conn.close()
             return True
         
-        conn.close()
+        if should_close:
+            conn.close()
         return False
         
     except Exception as e:
         print(f"Error resetting monthly replies: {e}")
-        if conn:
+        if conn and should_close:
             conn.close()
         return False
 
-def increment_reply_count(user_id):
+def increment_reply_count(user_id, conn=None):
     """
     Increment the appropriate reply counter for a user.
     Uses monthly replies first, then purchased replies.
+    
+    Args:
+        user_id: User ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    
     Returns: True if successful, False otherwise
     """
-    conn = get_db_connection()
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     if not conn:
         return False
     
@@ -3800,7 +3849,8 @@ def increment_reply_count(user_id):
         
         result = cursor.fetchone()
         if not result:
-            conn.close()
+            if should_close:
+                conn.close()
             return False
         
         replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
@@ -3823,7 +3873,8 @@ def increment_reply_count(user_id):
             print(f"✅ Incremented purchased reply count for user {user_id} ({replies_used_purchased + 1}/{replies_purchased})")
         else:
             print(f"⚠️ Attempted to increment reply count but user {user_id} has no remaining replies")
-            conn.close()
+            if should_close:
+                conn.close()
             return False
         
         conn.commit()
@@ -3892,12 +3943,13 @@ def increment_reply_count(user_id):
                     except Exception as e:
                         print(f"⚠️ Failed to send usage warning email: {e}")
         
-        conn.close()
+        if should_close:
+            conn.close()
         return True
         
     except Exception as e:
         print(f"Error incrementing reply count: {e}")
-        if conn:
+        if conn and should_close:
             conn.close()
         return False
 
@@ -4237,9 +4289,21 @@ def get_ai_reply(history):
         print("OpenAI API error:", e)
         return "Sorry, I'm having trouble replying right now."
 
-def get_ai_reply_with_connection(history, connection_id=None):
-    """Get AI reply using connection-specific settings if available"""
+def get_ai_reply_with_connection(history, connection_id=None, conn=None):
+    """
+    Get AI reply using connection-specific settings if available.
+    
+    Args:
+        history: Conversation history
+        connection_id: Optional connection ID
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
     openai.api_key = Config.OPENAI_API_KEY
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     try:
         client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
 
@@ -4254,17 +4318,16 @@ def get_ai_reply_with_connection(history, connection_id=None):
 
         # Get settings for this specific connection
         if connection_id:
-            # Get user_id from connection
-            conn = get_db_connection()
+            # Get user_id from connection - reuse provided connection
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
             cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
             result = cursor.fetchone()
-            conn.close()
             
             if result:
                 user_id = result[0]
-                settings = get_client_settings(user_id, connection_id)
+                # Pass connection to get_client_settings to avoid opening another one
+                settings = get_client_settings(user_id, connection_id, conn)
                 system_prompt = build_personality_prompt(settings, history=history, latest_message=latest_message)
                 temperature = settings['temperature']
                 max_tokens = normalize_max_tokens(settings.get('max_tokens', 3000))
@@ -4320,22 +4383,32 @@ def get_ai_reply_with_connection(history, connection_id=None):
 
         if not response.choices:
             print("⚠️ OpenAI returned no choices:", response)
+            if should_close and conn:
+                conn.close()
             return "Sorry, I'm having trouble replying right now."
 
         message = response.choices[0].message
         if not message or not getattr(message, "content", None):
             print("⚠️ OpenAI returned empty content:", response)
+            if should_close and conn:
+                conn.close()
             return "Sorry, I'm having trouble replying right now."
 
         ai_reply = message.content.strip()
         if not ai_reply:
             print("⚠️ OpenAI content was blank after strip:", response)
+            if should_close and conn:
+                conn.close()
             return "Sorry, I'm having trouble replying right now."
 
+        if should_close and conn:
+            conn.close()
         return ai_reply
 
     except Exception as e:
         print("OpenAI API error:", e)
+        if should_close and conn:
+            conn.close()
         return "Sorry, I'm having trouble replying right now."
 
 
@@ -4658,7 +4731,7 @@ def webhook():
 
                 # Check reply limit before generating response (only for registered users)
                 if instagram_connection and user_id:
-                    has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id)
+                    has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id, webhook_conn)
                     if not has_limit:
                         print(f"⛔ User {user_id} has reached reply limit ({total_used}/{total_available}). Skipping reply.")
                         total_duration = time.time() - handler_start
@@ -4671,7 +4744,7 @@ def webhook():
                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
                 ai_start = time.time()
-                reply_text = get_ai_reply_with_connection(history, connection_id)
+                reply_text = get_ai_reply_with_connection(history, connection_id, webhook_conn)
                 ai_duration = time.time() - ai_start
                 print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
@@ -4696,7 +4769,7 @@ def webhook():
                     print(f"✅ Reply sent successfully to {sender_id}")
                     # Increment reply count only for registered users and only on successful send
                     if instagram_connection and user_id:
-                        increment_reply_count(user_id)
+                        increment_reply_count(user_id, webhook_conn)
                     
                 total_duration = time.time() - handler_start
                 print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
