@@ -4528,14 +4528,15 @@ def webhook():
             print("⚠️ This should be re-enabled in production!")
             # return "Forbidden", 403  # Uncomment once verification is working
         
-        # Parse JSON data after verification
+        # Parse JSON data from the raw payload (not from request.json, since we already read the body)
         try:
-            data = request.json
+            data = json.loads(payload.decode('utf-8'))
             if not data:
                 print("⚠️ No JSON data in request")
                 return "Bad Request", 400
         except Exception as e:
             print(f"❌ Error parsing JSON: {e}")
+            print(f"❌ Payload content: {payload[:200]}...")
             return "Bad Request", 400
         
         print(f"📋 Request data: {data}")
