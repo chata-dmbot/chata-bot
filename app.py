@@ -1146,7 +1146,28 @@ def instagram_callback():
                         SET page_access_token = {param}, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
                         WHERE id = {param}
                     """, (page_access_token, existing[0]))
-                    flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                    
+                    # If user had free trial but lost replies (e.g., from database reset), restore them
+                    cursor.execute(f"""
+                        SELECT replies_limit_monthly, has_received_free_trial
+                        FROM users
+                        WHERE id = {param}
+                    """, (session['user_id'],))
+                    user_reply_data = cursor.fetchone()
+                    if user_reply_data:
+                        current_replies, has_trial = user_reply_data
+                        # If user received free trial but has 0 replies, restore 100 free trial replies
+                        if has_trial and current_replies == 0:
+                            cursor.execute(f"""
+                                UPDATE users 
+                                SET replies_limit_monthly = 100
+                                WHERE id = {param}
+                            """, (session['user_id'],))
+                            flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}. Your 100 free trial replies have been restored! 🎉", "success")
+                        else:
+                            flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                    else:
+                        flash(f"Successfully reconnected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
                 else:
                     # Create new connection
                     cursor.execute(f"""
@@ -1173,8 +1194,25 @@ def instagram_callback():
                             flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. This account was previously connected to another email, so no free trial replies were granted.", "info")
                         else:
                             # User has already received free trial
-                            print(f"ℹ️ User {session['user_id']} has already received free trial - no free trial granted")
-                            flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
+                            # But check if they lost their replies (e.g., from database reset) and restore them
+                            cursor.execute(f"""
+                                SELECT replies_limit_monthly
+                                FROM users
+                                WHERE id = {param}
+                            """, (session['user_id'],))
+                            current_replies = cursor.fetchone()
+                            if current_replies and current_replies[0] == 0:
+                                # User had free trial but lost replies - restore them
+                                cursor.execute(f"""
+                                    UPDATE users 
+                                    SET replies_limit_monthly = 100
+                                    WHERE id = {param}
+                                """, (session['user_id'],))
+                                print(f"🎁 User {session['user_id']} had free trial but lost replies - restoring 100 free trial replies")
+                                flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}. Your 100 free trial replies have been restored! 🎉", "success")
+                            else:
+                                print(f"ℹ️ User {session['user_id']} has already received free trial - no free trial granted")
+                                flash(f"Successfully connected Instagram account: @{profile_data.get('username', 'Unknown')}", "success")
                 
                 conn.commit()
                 

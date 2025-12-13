@@ -60,7 +60,8 @@ def init_database():
         # Insert default settings
         _insert_default_settings(cursor, is_postgres)
         
-        # Set existing users without subscriptions to 0 replies (no plan = no replies)
+        # Set existing users without subscriptions to 0 replies ONLY if they never received free trial
+        # This preserves free trial replies that users earned
         try:
             if is_postgres:
                 cursor.execute("""
@@ -68,7 +69,9 @@ def init_database():
                     SET replies_limit_monthly = 0 
                     WHERE id NOT IN (
                         SELECT DISTINCT user_id FROM subscriptions WHERE status = 'active'
-                    ) AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
+                    ) 
+                    AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
+                    AND (has_received_free_trial IS NULL OR has_received_free_trial = FALSE)
                 """)
             else:
                 cursor.execute("""
@@ -76,9 +79,11 @@ def init_database():
                     SET replies_limit_monthly = 0 
                     WHERE id NOT IN (
                         SELECT DISTINCT user_id FROM subscriptions WHERE status = 'active'
-                    ) AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
+                    ) 
+                    AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
+                    AND (has_received_free_trial IS NULL OR has_received_free_trial = 0)
                 """)
-            print("✅ Updated users without active subscriptions to 0 replies")
+            print("✅ Updated users without active subscriptions to 0 replies (preserving free trial replies)")
         except Exception as e:
             print(f"Note: Could not update existing users' limits: {e}")
         
