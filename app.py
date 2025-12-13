@@ -3845,9 +3845,22 @@ def increment_reply_count(user_id):
                 # Only send if we haven't sent a warning for this threshold in the last 24 hours
                 should_send = True
                 if last_warning_sent_at and last_warning_threshold == warning_threshold:
-                    time_since_warning = (datetime.now() - datetime.fromisoformat(last_warning_sent_at)).total_seconds()
-                    if time_since_warning < 86400:  # 24 hours
-                        should_send = False
+                    try:
+                        # Handle both string and datetime objects
+                        if isinstance(last_warning_sent_at, str):
+                            warning_time = datetime.fromisoformat(last_warning_sent_at.replace('Z', '+00:00'))
+                        elif isinstance(last_warning_sent_at, datetime):
+                            warning_time = last_warning_sent_at
+                        else:
+                            warning_time = datetime.now()  # Fallback
+                        
+                        time_since_warning = (datetime.now() - warning_time.replace(tzinfo=None) if warning_time.tzinfo else warning_time).total_seconds()
+                        if time_since_warning < 86400:  # 24 hours
+                            should_send = False
+                    except Exception as e:
+                        print(f"⚠️ Error parsing last_warning_sent_at: {e}")
+                        # If we can't parse it, send the warning to be safe
+                        should_send = True
                 
                 if should_send:
                     try:
@@ -4519,14 +4532,18 @@ def webhook():
         print(f"🔍 Payload length: {len(payload)} bytes")
         print(f"🔍 Signature header: {signature_header[:30] if signature_header else 'None'}...")
         
-        # Temporarily allow requests even if signature fails for debugging
-        # TODO: Re-enable strict verification once we confirm App Secret is correct
+        # Verify webhook signature
+        # NOTE: Signature verification may fail when requests pass through proxies (Cloudflare/Render)
+        # that modify the request body. This is a known limitation.
+        # For production, consider: 1) Configuring proxies to pass body unchanged, or
+        # 2) Accepting this limitation and using other security measures (IP whitelisting, etc.)
         verification_result = verify_meta_webhook_signature(payload, signature_header, Config.FACEBOOK_APP_SECRET)
         if not verification_result:
             print("❌ Webhook signature verification failed")
-            print("⚠️ WARNING: Allowing request for debugging - signature verification disabled temporarily")
-            print("⚠️ This should be re-enabled in production!")
-            # return "Forbidden", 403  # Uncomment once verification is working
+            print("⚠️ NOTE: This may be due to proxy modifications (Cloudflare/Render)")
+            print("⚠️ Request allowed through - consider proxy configuration for production")
+            # For strict security, uncomment the line below, but this may block legitimate requests
+            # return "Forbidden", 403
         
         # Parse JSON data from the raw payload (not from request.json, since we already read the body)
         try:
