@@ -477,7 +477,8 @@
     <main class="data-deletion-content">
         <div class="data-deletion-section-block">
             <h2>Your Right to Data Deletion</h2>
-            <p>Under the General Data Protection Regulation (GDPR) and other applicable privacy laws, you have the right to request the deletion of your personal data. This page explains how to exercise this right with Chata.</p>
+            <p>Under applicable data protection laws, including the General Data Protection Regulation (GDPR), California Consumer Privacy Act (CCPA), Lei Geral de Proteção de Dados (LGPD), and Datenschutz-Grundverordnung (DSGVO), you have the right to request the deletion of your personal data.</p>
+            <p>This page explains how to exercise your right to data deletion with Chata. We are committed to respecting your privacy rights and will process all deletion requests in accordance with applicable legal requirements.</p>
         </div>
 
         <div class="data-deletion-section-block">
@@ -486,8 +487,8 @@
             <ul>
                 <li><strong>Account Information:</strong> Email address, password (encrypted), account creation date</li>
                 <li><strong>Instagram Connection Data:</strong> Instagram User ID, Page ID, Page Access Token (encrypted)</li>
-                <li><strong>Bot Settings:</strong> Custom bot personality, response preferences, usage limits</li>
-                <li><strong>Message Data:</strong> Conversation history, bot responses, message analytics</li>
+                <li><strong>AI Settings:</strong> Custom AI personality, response preferences, conversation examples, frequently asked questions, usage limits</li>
+                <li><strong>Message Data:</strong> Conversation history, AI-generated responses, message analytics</li>
                 <li><strong>Usage Analytics:</strong> API usage statistics, performance metrics, activity logs</li>
                 <li><strong>Support Communications:</strong> Any emails or messages you've sent to our support team</li>
             </ul>
@@ -506,19 +507,20 @@
             </ol>
             
             <h3>Method 2: Contact Us Directly</h3>
-            <p>If you cannot access your account or prefer to contact us directly:</p>
+            <p>If you cannot access your account or prefer to contact us directly, you may send an email request. Please note that email requests require manual verification and may take longer to process than the instant deletion available through your dashboard.</p>
             <ol>
                 <li>Send an email to <strong>chata.dmbot@gmail.com</strong></li>
                 <li>Use the subject line: "Data Deletion Request"</li>
                 <li>Include the following information:
                     <ul>
-                        <li>Your full name</li>
+                        <li>Your username (as registered on Chata)</li>
                         <li>Email address associated with your account</li>
-                        <li>Instagram username (if applicable)</li>
-                        <li>Confirmation that you want all data deleted</li>
+                        <li>Instagram account username that is connected (if applicable)</li>
+                        <li>Confirmation that you want all data permanently deleted</li>
                     </ul>
                 </li>
             </ol>
+            <p><strong>Note:</strong> You will receive an automated confirmation email acknowledging receipt of your request. We will process your request within 30 days as required by applicable data protection laws (GDPR, CCPA, etc.).</p>
         </div>
 
         <div class="data-deletion-section-block">
@@ -533,14 +535,16 @@
             </ul>
             
             <h3>Data Deletion Process</h3>
-            <p>Once verified, we will:</p>
+            <p>Once your request is verified (for email requests) or confirmed (for dashboard deletions), we will immediately:</p>
             <ul>
                 <li>Delete your account and all associated data from our databases</li>
-                <li>Remove your Instagram connection and revoke access tokens</li>
-                <li>Delete all conversation history and bot settings</li>
-                <li>Remove your data from our analytics and logging systems</li>
-                <li>Send you a confirmation email once deletion is complete</li>
+                <li>Remove your Instagram connection and revoke all access tokens</li>
+                <li>Delete all conversation history, AI settings, and configurations</li>
+                <li>Remove your data from our analytics, logging, and backup systems</li>
+                <li>Permanently delete all stored messages and usage data</li>
             </ul>
+            <p><strong>Instant Deletion:</strong> If you use the "Delete Account" button in your Account Settings, your data will be deleted immediately upon confirmation. You will receive a confirmation email confirming that your account has been successfully deleted. This is the last email you will receive from us.</p>
+            <p><strong>Email Requests:</strong> For deletion requests sent via email, we will send you a confirmation email once the deletion process is complete, typically within 7-14 days of verification.</p>
         </div>
 
         <div class="data-deletion-section-block">
@@ -568,10 +572,11 @@
             <div class="contact-info">
                 <p><strong>Email:</strong> chata.dmbot@gmail.com</p>
                 <p><strong>Phone:</strong> +33642092079</p>
-                <p><strong>Address:</strong> Schöpplerstr. 6, Augsburg, 86153, Germany</p>
             </div>
             
-            <p>We are committed to protecting your privacy and will handle your deletion request with the utmost care and respect for your rights.</p>
+            <p>We are committed to protecting your privacy and will handle your deletion request with the utmost care and respect for your rights under applicable data protection laws. If you have concerns about how we process your data or need assistance with your deletion request, please do not hesitate to contact us.</p>
+            
+            <p>For more information about how we collect, use, and protect your data, please review our <a href="{{ url_for('privacy') }}" style="color: var(--chata-blue);">Privacy Policy</a> and <a href="{{ url_for('terms') }}" style="color: var(--chata-blue);">Terms of Service</a>.</p>
         </div>
     </main>
 

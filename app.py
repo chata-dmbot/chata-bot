@@ -455,6 +455,55 @@ def send_usage_warning_email(email, remaining_replies):
     html_content = get_email_base_template("Reply Count Warning", content_html)
     return send_email_via_sendgrid(email, subject, html_content)
 
+def send_account_deletion_confirmation_email(email, username):
+    """Send confirmation email when account is deleted"""
+    content_html = f"""
+        <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            Your account has been successfully deleted.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            All of your data, including your account information, AI settings, conversation history, and Instagram connections, have been permanently removed from our systems.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 30px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">
+            This is the last email you will receive from us. We're sorry to see you go, and if you ever decide to return, we'll be here.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 20px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7; text-align: center;">
+            Thank you for using Chata.
+        </p>
+    """
+    
+    subject = "Account Successfully Deleted - Chata"
+    html_content = get_email_base_template("Account Deletion Confirmation", content_html)
+    return send_email_via_sendgrid(email, subject, html_content)
+
+def send_data_deletion_request_acknowledgment_email(email):
+    """Send auto-reply email acknowledging receipt of data deletion request"""
+    content_html = f"""
+        <p style="color: rgba(255, 255, 255, 0.9); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            Thank you for contacting us. We have received your data deletion request.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.7; margin-bottom: 15px; font-size: 16px; text-transform: none; letter-spacing: normal;">
+            We will review your request and process it within the shortest possible timeline, typically within 7-14 days, in accordance with applicable data protection laws (GDPR, CCPA, etc.).
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 20px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">
+            If you have any questions or concerns, please don't hesitate to reach out to us at chata.dmbot@gmail.com.
+        </p>
+        
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 20px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">
+            Best regards,<br>
+            The Chata Team
+        </p>
+    """
+    
+    subject = "Data Deletion Request Received - Chata"
+    html_content = get_email_base_template("Data Deletion Request Acknowledgment", content_html)
+    return send_email_via_sendgrid(email, subject, html_content)
+
 def create_reset_token(user_id):
     """Create a password reset token"""
     token = secrets.token_urlsafe(32)
@@ -1656,11 +1705,141 @@ def account_settings():
     user = get_user_by_id(session['user_id'])
     
     if request.method == "POST":
-        # Update account information - simplified since we removed extra fields
-        flash("Account settings updated successfully!", "success")
+        username = request.form.get('username', '').strip()
+        
+        if not username:
+            flash("Username is required.", "error")
+            return redirect(url_for('account_settings'))
+        
+        if len(username) < 3 or len(username) > 30:
+            flash("Username must be between 3 and 30 characters.", "error")
+            return redirect(url_for('account_settings'))
+        
+        # Check if username contains only allowed characters
+        import re
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            flash("Username can only contain letters, numbers, and underscores.", "error")
+            return redirect(url_for('account_settings'))
+        
+        # Check if username is already taken by another user
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            SELECT id FROM users 
+            WHERE username = {placeholder} AND id != {placeholder}
+        """, (username, user['id']))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            conn.close()
+            flash("This username is already taken. Please choose another.", "error")
+            return redirect(url_for('account_settings'))
+        
+        # Update username
+        cursor.execute(f"""
+            UPDATE users 
+            SET username = {placeholder}
+            WHERE id = {placeholder}
+        """, (username, user['id']))
+        
+        conn.commit()
+        conn.close()
+        
+        flash("Username updated successfully!", "success")
         return redirect(url_for('account_settings'))
     
     return render_template("account_settings.html", user=user)
+
+@app.route("/dashboard/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    """Delete user account and all associated data"""
+    user_id = session['user_id']
+    user = get_user_by_id(user_id)
+    
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for('dashboard'))
+    
+    user_email = user['email']
+    username = user.get('username', 'User')
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Delete in order to respect foreign key constraints
+        # Delete activity logs
+        try:
+            cursor.execute(f"DELETE FROM activity_logs WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete activity_logs: {e}")
+        
+        # Delete purchases
+        try:
+            cursor.execute(f"DELETE FROM purchases WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete purchases: {e}")
+        
+        # Delete subscriptions
+        try:
+            cursor.execute(f"DELETE FROM subscriptions WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete subscriptions: {e}")
+        
+        # Delete messages
+        try:
+            cursor.execute(f"DELETE FROM messages WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete messages: {e}")
+        
+        # Delete client settings
+        try:
+            cursor.execute(f"DELETE FROM client_settings WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete client_settings: {e}")
+        
+        # Delete instagram connections
+        try:
+            cursor.execute(f"DELETE FROM instagram_connections WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete instagram_connections: {e}")
+        
+        # Delete password reset tokens
+        try:
+            cursor.execute(f"DELETE FROM password_resets WHERE email = {placeholder}", (user_email,))
+        except Exception as e:
+            print(f"⚠️ Could not delete password_resets: {e}")
+        
+        # Delete usage logs if they exist
+        try:
+            cursor.execute(f"DELETE FROM usage_logs WHERE user_id = {placeholder}", (user_id,))
+        except Exception as e:
+            print(f"⚠️ Could not delete usage_logs: {e}")
+        
+        # Finally, delete the user
+        cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        # Send confirmation email
+        send_account_deletion_confirmation_email(user_email, username)
+        
+        # Clear session
+        session.clear()
+        
+        flash("Your account has been successfully deleted. We're sorry to see you go.", "success")
+        return redirect(url_for('home'))
+        
+    except Exception as e:
+        print(f"❌ Error deleting account: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error deleting account: {str(e)}", "error")
+        return redirect(url_for('account_settings'))
 
 @app.route("/dashboard/toggle-bot-pause", methods=["POST"])
 @login_required

@@ -393,6 +393,88 @@
             }
         }
 
+        /* Delete Account Confirmation Modal */
+        .delete-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-modal.show {
+            display: flex;
+        }
+
+        .delete-modal-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+
+        .delete-modal-content h3 {
+            color: #ef4444;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: none;
+        }
+
+        .delete-modal-content p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            text-transform: none;
+        }
+
+        .delete-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .dashboard-hero h1 {
@@ -406,6 +488,10 @@
             .dashboard-row {
                 grid-template-columns: 1fr;
                 gap: 1rem;
+            }
+
+            .dashboard-section-block.dashboard-full:last-child {
+                flex-direction: column;
             }
         }
     </style>
@@ -476,7 +562,12 @@
         <!-- Account Information -->
         <div class="dashboard-section-block dashboard-full">
             <h2><i class="fas fa-user"></i> Profile Information</h2>
-            <form method="POST">
+            <form method="POST" action="{{ url_for('account_settings') }}">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="{{ user.username if user.username else '' }}" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+" title="Username can only contain letters, numbers, and underscores">
+                    <small>Username can only contain letters, numbers, and underscores (3-30 characters)</small>
+                </div>
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" id="email" value="{{ user.email }}" disabled>
@@ -503,17 +594,44 @@
             </div>
         </div>
 
-        <!-- Back to Dashboard -->
-        <div class="dashboard-section-block dashboard-full" style="text-align: center;">
+        <!-- Back to Dashboard and Delete Account -->
+        <div class="dashboard-section-block dashboard-full" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
             <a href="{{ url_for('dashboard') }}" class="btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
+            <button type="button" id="delete-account-btn" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <i class="fas fa-trash"></i> Delete Account
+            </button>
         </div>
     </main>
 
+    <!-- Delete Account Confirmation Modal -->
+    <div id="delete-modal" class="delete-modal">
+        <div class="delete-modal-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Confirm Account Deletion</h3>
+            <p><strong>Are you sure? This action cannot be undone.</strong></p>
+            <p>Your entire account and all associated data will be permanently deleted, including:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; text-transform: none;">
+                <li>All AI settings and configurations</li>
+                <li>All conversation history</li>
+                <li>Instagram connections and access tokens</li>
+                <li>Usage analytics and logs</li>
+            </ul>
+            <p>If you want your data to be reviewed by us before deletion, please send us an email regarding data deletion instead.</p>
+            <div class="delete-modal-actions">
+                <button class="btn-cancel" id="cancel-delete">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_account') }}" style="display: inline;">
+                    <button type="submit" class="btn-danger" id="confirm-delete">
+                        <i class="fas fa-trash"></i> Delete Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Interactive Grid Script -->
     <script>
-        // Interactive Grid Background with scroll following
+        // Interactive Grid Background with scroll following and mouse interaction
         function createInteractiveGrid() {
             const grid = document.getElementById('interactiveGrid');
             const gridSize = 50;
@@ -535,6 +653,10 @@
         
         let ticking = false;
         let grid = null;
+        let mouseX = 0;
+        let mouseY = 0;
+        let cellTimeouts = new Map();
+        let animationFrameId = null;
         
         function updateGridOnScroll() {
             if (!ticking) {
@@ -550,13 +672,87 @@
             }
         }
         
+        // Track mouse position
+        document.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Smooth grid lighting with requestAnimationFrame
+        function updateGridLighting() {
+            if (!grid) {
+                grid = document.getElementById('interactiveGrid');
+            }
+            const cells = grid.querySelectorAll('.grid-cell');
+            
+            cells.forEach(cell => {
+                const rect = cell.getBoundingClientRect();
+                
+                const isMouseOver = mouseX >= rect.left && 
+                                  mouseX < rect.right && 
+                                  mouseY >= rect.top && 
+                                  mouseY < rect.bottom;
+                
+                if (isMouseOver) {
+                    if (cellTimeouts.has(cell)) {
+                        clearTimeout(cellTimeouts.get(cell));
+                        cellTimeouts.delete(cell);
+                    }
+                    
+                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
+                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
+                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
+                    cell.style.transform = `scale(1.05)`;
+                    cell.classList.add('active');
+                    
+                    const timeoutId = setTimeout(() => {
+                        cell.style.background = '';
+                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+                        cell.style.boxShadow = '';
+                        cell.style.transform = 'scale(1)';
+                        cell.classList.remove('active');
+                        cellTimeouts.delete(cell);
+                    }, 1500);
+                    
+                    cellTimeouts.set(cell, timeoutId);
+                }
+            });
+            
+            animationFrameId = requestAnimationFrame(updateGridLighting);
+        }
+        
         window.addEventListener('load', function() {
             window.scrollTo(0, 0);
             createInteractiveGrid();
             grid = document.getElementById('interactiveGrid');
+            updateGridLighting();
         });
         window.addEventListener('resize', createInteractiveGrid);
         window.addEventListener('scroll', updateGridOnScroll, { passive: true });
+        
+        // Delete Account Modal
+        const deleteBtn = document.getElementById('delete-account-btn');
+        const deleteModal = document.getElementById('delete-modal');
+        const cancelBtn = document.getElementById('cancel-delete');
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function() {
+                deleteModal.classList.add('show');
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                deleteModal.classList.remove('show');
+            });
+        }
+        
+        // Close modal when clicking outside
+        deleteModal.addEventListener('click', function(e) {
+            if (e.target === deleteModal) {
+                deleteModal.classList.remove('show');
+            }
+        });
     </script>
 </body>
 </html>
