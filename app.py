@@ -1497,9 +1497,21 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         'auto_reply': True
     }
 
-def log_activity(user_id, action_type, description=None):
-    """Log user activity for analytics and security"""
-    conn = get_db_connection()
+def log_activity(user_id, action_type, description=None, conn=None):
+    """
+    Log user activity for analytics and security.
+    
+    Args:
+        user_id: User ID
+        action_type: Type of action
+        description: Optional description
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -1509,16 +1521,29 @@ def log_activity(user_id, action_type, description=None):
     """, (user_id, action_type, description, request.remote_addr))
     
     conn.commit()
-    conn.close()
+    if should_close:
+        conn.close()
 
-def save_client_settings(user_id, settings, connection_id=None):
-    """Save bot settings for a specific client/connection"""
+def save_client_settings(user_id, settings, connection_id=None, conn=None):
+    """
+    Save bot settings for a specific client/connection.
+    
+    Args:
+        user_id: User ID
+        settings: Settings dictionary
+        connection_id: Connection ID (required)
+        conn: Optional database connection to reuse. If None, opens and closes its own connection.
+    """
     import json
 
     if connection_id is None:
         raise ValueError("connection_id must be provided when saving client settings.")
 
-    conn = get_db_connection()
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     
@@ -1627,10 +1652,8 @@ def save_client_settings(user_id, settings, connection_id=None):
                   settings.get('auto_reply', True)))
     
     conn.commit()
-    conn.close()
-    
-    # Log the activity
-    log_activity(user_id, 'settings_updated', f'Bot settings updated for connection {connection_id}')
+    if should_close:
+        conn.close()
 
 @app.route("/dashboard/bot-settings", methods=["GET", "POST"])
 @login_required
@@ -1647,6 +1670,7 @@ def bot_settings():
             except ValueError:
                 connection_id = None
 
+    # Open ONE connection and reuse it for all database operations
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
@@ -1657,7 +1681,6 @@ def bot_settings():
         ORDER BY created_at DESC
     """, (user_id,))
     connections = cursor.fetchall()
-    conn.close()
     
     connections_list = []
     for conn_data in connections:
@@ -1669,6 +1692,7 @@ def bot_settings():
         })
     
     if not connections_list:
+        conn.close()
         if request.method == "POST":
             flash("Please connect an Instagram account before configuring bot settings.", "warning")
         return render_template(
@@ -1683,7 +1707,8 @@ def bot_settings():
     if connection_id is None:
         connection_id = connections_list[0]['id']
     
-    current_settings = get_client_settings(user_id, connection_id)
+    # Reuse connection for get_client_settings
+    current_settings = get_client_settings(user_id, connection_id, conn)
     selected_connection = next((c for c in connections_list if c['id'] == connection_id), None)
 
     if request.method == "POST":
@@ -1741,12 +1766,18 @@ def bot_settings():
             'avoid_topics': request.form.get('avoid_topics', '').strip()
         }
 
-        save_client_settings(user_id, settings, connection_id)
+        # Reuse connection for save_client_settings and log_activity
+        save_client_settings(user_id, settings, connection_id, conn)
+        log_activity(user_id, 'settings_updated', f'Bot settings updated for connection {connection_id}', conn)
+        conn.close()
         flash("AI settings updated successfully!", "success")
         return redirect(url_for('bot_settings', connection_id=connection_id))
 
     if current_settings.get('conversation_samples') is None:
         current_settings['conversation_samples'] = {}
+
+    # Close connection before rendering template
+    conn.close()
 
     return render_template(
         "bot_settings.html",
