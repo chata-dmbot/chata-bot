@@ -14,8 +14,8 @@ from sendgrid.helpers.mail import Mail
 import json
 import time
 import stripe
-import hmac
-import hashlib
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Import our modular components
 from config import Config
@@ -36,6 +36,14 @@ except ValueError as e:
 # Flask app
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"  # Simple in-memory storage (works for single instance)
+)
 
 # Initialize Stripe
 if Config.STRIPE_SECRET_KEY:
@@ -702,6 +710,7 @@ def create_user(username, email, password):
 # ---- Authentication routes ----
 
 @app.route("/signup", methods=["GET", "POST"])
+@limiter.limit("3 per hour")  # Rate limit: 3 signup attempts per hour per IP
 def signup():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -758,6 +767,7 @@ def signup():
     return render_template("signup.html")
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per 15 minutes")  # Rate limit: 5 login attempts per 15 minutes per IP
 def login():
     if request.method == "POST":
         username_or_email = request.form.get("username_or_email", "").strip()
@@ -906,6 +916,7 @@ def instagram_auth():
 
 @app.route("/auth/instagram/callback")
 @login_required
+@limiter.limit("10 per hour")  # Rate limit: 10 OAuth callbacks per hour per IP
 def instagram_callback():
     """Handle Instagram OAuth callback"""
     code = request.args.get('code')
@@ -3854,7 +3865,12 @@ def increment_reply_count(user_id):
                         else:
                             warning_time = datetime.now()  # Fallback
                         
-                        time_since_warning = (datetime.now() - warning_time.replace(tzinfo=None) if warning_time.tzinfo else warning_time).total_seconds()
+                        # Calculate time difference safely
+                        now = datetime.now()
+                        if warning_time.tzinfo:
+                            warning_time = warning_time.replace(tzinfo=None)
+                        time_diff = now - warning_time
+                        time_since_warning = time_diff.total_seconds()
                         if time_since_warning < 86400:  # 24 hours
                             should_send = False
                     except Exception as e:
@@ -4437,68 +4453,8 @@ and answering only to the follower's latest message."""
 
 # ---- Webhook Route ----
 
-def verify_meta_webhook_signature(payload, signature_header, app_secret):
-    """
-    Verify that a webhook request is actually from Meta/Facebook.
-    
-    Args:
-        payload: Raw request body (bytes)
-        signature_header: X-Hub-Signature-256 header value (format: "sha256=...")
-        app_secret: Facebook App Secret
-    
-    Returns:
-        True if signature is valid, False otherwise
-    """
-    if not signature_header:
-        print("⚠️ No signature header found")
-        return False
-    
-    if not app_secret:
-        print("⚠️ No App Secret configured - cannot verify signature")
-        return False
-    
-    # Debug: Log App Secret info (first/last few chars only for security)
-    app_secret_preview = f"{app_secret[:4]}...{app_secret[-4:]}" if len(app_secret) > 8 else "***"
-    print(f"🔍 Using App Secret: {app_secret_preview} (length: {len(app_secret)})")
-    
-    try:
-        # Extract the signature from header (format: "sha256=abc123...")
-        if not signature_header.startswith('sha256='):
-            print(f"⚠️ Invalid signature format: {signature_header[:20]}...")
-            return False
-        
-        expected_signature = signature_header[7:]  # Remove "sha256=" prefix
-        
-        # Calculate HMAC-SHA256 signature
-        # Meta signs the raw request body as received
-        calculated_signature = hmac.new(
-            app_secret.encode('utf-8'),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
-        
-        # Debug logging
-        print(f"🔍 Payload preview: {payload[:50] if len(payload) > 50 else payload}...")
-        print(f"🔍 Payload type: {type(payload)}")
-        print(f"🔍 Payload length: {len(payload)} bytes")
-        
-        # Use constant-time comparison to prevent timing attacks
-        is_valid = hmac.compare_digest(calculated_signature, expected_signature)
-        
-        if is_valid:
-            print("✅ Webhook signature verified - request is from Meta")
-        else:
-            print(f"❌ Webhook signature verification failed")
-            print(f"   Expected: {expected_signature[:20]}...")
-            print(f"   Calculated: {calculated_signature[:20]}...")
-        
-        return is_valid
-        
-    except Exception as e:
-        print(f"❌ Error verifying webhook signature: {e}")
-        return False
-
 @app.route("/webhook", methods=["GET", "POST"])
+@limiter.limit("100 per minute")  # Rate limit: 100 webhook requests per minute per IP
 def webhook():
     if request.method == "GET":
         mode = request.args.get("hub.mode")
@@ -4519,41 +4475,14 @@ def webhook():
         print(f"📋 Request headers: {dict(request.headers)}")
         print(f"📋 Request remote address: {request.remote_addr}")
         
-        # Verify webhook signature to ensure request is from Meta
-        signature_header = request.headers.get('X-Hub-Signature-256')
-        # Get raw request body - use get_data() to ensure we get the raw bytes
-        # cache=False ensures we get the actual raw data even if it was already read
-        payload = request.get_data(cache=False)
-        
-        if not payload:
-            print("⚠️ No payload data received")
-            return "Bad Request", 400
-        
-        print(f"🔍 Payload length: {len(payload)} bytes")
-        print(f"🔍 Signature header: {signature_header[:30] if signature_header else 'None'}...")
-        
-        # Verify webhook signature
-        # NOTE: Signature verification may fail when requests pass through proxies (Cloudflare/Render)
-        # that modify the request body. This is a known limitation.
-        # For production, consider: 1) Configuring proxies to pass body unchanged, or
-        # 2) Accepting this limitation and using other security measures (IP whitelisting, etc.)
-        verification_result = verify_meta_webhook_signature(payload, signature_header, Config.FACEBOOK_APP_SECRET)
-        if not verification_result:
-            print("❌ Webhook signature verification failed")
-            print("⚠️ NOTE: This may be due to proxy modifications (Cloudflare/Render)")
-            print("⚠️ Request allowed through - consider proxy configuration for production")
-            # For strict security, uncomment the line below, but this may block legitimate requests
-            # return "Forbidden", 403
-        
-        # Parse JSON data from the raw payload (not from request.json, since we already read the body)
+        # Parse JSON data
         try:
-            data = json.loads(payload.decode('utf-8'))
+            data = request.json
             if not data:
                 print("⚠️ No JSON data in request")
                 return "Bad Request", 400
         except Exception as e:
             print(f"❌ Error parsing JSON: {e}")
-            print(f"❌ Payload content: {payload[:200]}...")
             return "Bad Request", 400
         
         print(f"📋 Request data: {data}")
