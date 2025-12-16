@@ -982,11 +982,16 @@ def instagram_callback():
         
         # Find the Instagram Business account
         instagram_account = None
+        page_id = None  # Initialize page_id here so it's available later
+        
         for account in accounts_data.get('data', []):
             print(f"🔍 Checking account: {account}")
             if account.get('instagram_business_account'):
                 instagram_account = account['instagram_business_account']
+                # Also extract page_id if we found the account
+                page_id = account.get('id')
                 print(f"✅ Found Instagram account: {instagram_account}")
+                print(f"✅ Found Page ID: {page_id}")
                 break
         
         if not instagram_account:
@@ -1002,16 +1007,26 @@ def instagram_callback():
             debug_data = debug_response.json()
             print(f"🔍 Token debug response: {debug_data}")
             
-            # Extract Page ID from the token
-            page_id = None
+            # Extract Page ID and Instagram account ID from the token
+            instagram_account_id = None
+            
             if 'data' in debug_data and 'granular_scopes' in debug_data['data']:
                 for scope in debug_data['data']['granular_scopes']:
-                    if scope['scope'] == 'pages_read_engagement' and scope['target_ids']:
+                    # Get Page ID from pages_messaging scope
+                    if scope['scope'] == 'pages_messaging' and scope['target_ids']:
                         page_id = scope['target_ids'][0]
-                        print(f"🔍 Found Page ID: {page_id}")
-                        break
+                        print(f"🔍 Found Page ID from pages_messaging: {page_id}")
+                    # Get Instagram account ID from instagram_basic or instagram_manage_messages scope
+                    elif scope['scope'] in ['instagram_basic', 'instagram_manage_messages'] and scope['target_ids']:
+                        instagram_account_id = scope['target_ids'][0]
+                        print(f"🔍 Found Instagram account ID from {scope['scope']}: {instagram_account_id}")
             
-            if page_id:
+            # If we have the Instagram account ID directly, use it
+            if instagram_account_id:
+                instagram_account = {'id': instagram_account_id}
+                print(f"✅ Using Instagram account ID from token: {instagram_account_id}")
+            # Otherwise, try to get it from the Page
+            elif page_id:
                 # Try to get Instagram account directly from the Page
                 page_url = f"https://graph.facebook.com/v18.0/{page_id}"
                 page_params = {
@@ -1035,6 +1050,28 @@ def instagram_callback():
             return redirect(url_for('dashboard'))
         
         instagram_user_id = instagram_account['id']
+        
+        # If we don't have page_id yet, try to get it from /me/accounts without fields filter
+        if not page_id:
+            print(f"ℹ️ Page ID not found in token, trying to get from /me/accounts...")
+            accounts_url_full = "https://graph.facebook.com/v18.0/me/accounts"
+            accounts_params_full = {
+                'access_token': access_token
+            }
+            accounts_response_full = requests.get(accounts_url_full, params=accounts_params_full)
+            if accounts_response_full.status_code == 200:
+                accounts_data_full = accounts_response_full.json()
+                for account in accounts_data_full.get('data', []):
+                    if account.get('instagram_business_account', {}).get('id') == instagram_user_id:
+                        page_id = account['id']
+                        print(f"✅ Found Page ID from /me/accounts: {page_id}")
+                        break
+        
+        # If we still don't have page_id, we can't proceed
+        if not page_id:
+            print(f"❌ Could not find Page ID. Token debug: {debug_data}")
+            flash("Could not find the Facebook Page associated with your Instagram account. Please ensure your Instagram Business account is properly linked to a Facebook Page.", "error")
+            return redirect(url_for('dashboard'))
         
         # We need to get a Page Access Token to query Instagram account details
         # First, let's get the Page Access Token
