@@ -767,7 +767,7 @@ def signup():
     return render_template("signup.html")
 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per 15 minutes")  # Rate limit: 5 login attempts per 15 minutes per IP
+@limiter.limit("5 per minute")  # Rate limit: 5 login attempts per minute per IP
 def login():
     if request.method == "POST":
         username_or_email = request.form.get("username_or_email", "").strip()
