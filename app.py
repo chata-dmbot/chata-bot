@@ -1432,7 +1432,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
                    main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
                    culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
                    use_active_hours, active_start, active_end, links, posts, conversation_samples, instagram_url, avoid_topics, 
-                   temperature, max_tokens, is_active
+                   blocked_users, temperature, max_tokens, is_active
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
         """, (user_id, connection_id))
@@ -1442,8 +1442,8 @@ def get_client_settings(user_id, connection_id=None, conn=None):
                    personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
                    main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
                    culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, instagram_url, avoid_topics, 
-                   temperature, max_tokens, is_active
+                   use_active_hours, active_start, active_end, links, posts, conversation_samples, instagram_url, avoid_topics, 
+                   blocked_users, temperature, max_tokens, is_active
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
         """, (user_id,))
@@ -1489,9 +1489,10 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             'conversation_samples': json.loads(row[30]) if row[30] else {},
             'instagram_url': row[31] or '',
             'avoid_topics': row[32] or '',
-            'temperature': row[33] or 0.7,
-            'max_tokens': normalize_max_tokens(row[34]),
-            'auto_reply': bool(row[35]) if row[35] is not None else True
+            'blocked_users': json.loads(row[33]) if row[33] else [],
+            'temperature': row[34] or 0.7,
+            'max_tokens': normalize_max_tokens(row[35]),
+            'auto_reply': bool(row[36]) if row[36] is not None else True
         }
     
     # Return default settings if none exist
@@ -1529,6 +1530,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         'conversation_samples': {},
         'instagram_url': '',
         'avoid_topics': '',
+        'blocked_users': [],
         'temperature': 0.7,
         'max_tokens': 3000,
         'auto_reply': True
@@ -1588,6 +1590,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
     links_json = json.dumps(settings.get('links', []))
     posts_json = json.dumps(settings.get('posts', []))
     samples_json = json.dumps(settings.get('conversation_samples', {}))
+    blocked_users_json = json.dumps(settings.get('blocked_users', []))
     max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
     
     # Use different syntax for PostgreSQL vs SQLite
@@ -1599,13 +1602,13 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
              confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
              backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
              conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
-             instagram_url, avoid_topics, temperature, max_tokens, is_active)
+             instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
             VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
             bot_personality = EXCLUDED.bot_personality,
             bot_name = EXCLUDED.bot_name,
@@ -1640,6 +1643,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
             conversation_samples = EXCLUDED.conversation_samples,
             instagram_url = EXCLUDED.instagram_url,
             avoid_topics = EXCLUDED.avoid_topics,
+            blocked_users = EXCLUDED.blocked_users,
             temperature = EXCLUDED.temperature,
             max_tokens = EXCLUDED.max_tokens,
             is_active = EXCLUDED.is_active,
@@ -1656,7 +1660,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, max_tokens_value,
+              blocked_users_json, 0.7, max_tokens_value,
               settings.get('auto_reply', True)))
     else:
         cursor.execute(f"""
@@ -1666,7 +1670,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                  confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
                  backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
                  conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
-                 instagram_url, avoid_topics, temperature, max_tokens, is_active)
+                 instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
@@ -1685,7 +1689,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
               links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              0.7, max_tokens_value,
+              blocked_users_json, 0.7, max_tokens_value,
                   settings.get('auto_reply', True)))
     
     conn.commit()
@@ -1800,7 +1804,8 @@ def bot_settings():
             'faqs': faqs,
             'conversation_samples': conversation_samples,
             'instagram_url': request.form.get('instagram_url', '').strip(),
-            'avoid_topics': request.form.get('avoid_topics', '').strip()
+            'avoid_topics': request.form.get('avoid_topics', '').strip(),
+            'blocked_users': [username.strip().lstrip('@').lower() for username in request.form.get('blocked_users', '').strip().split('\n') if username.strip()] if request.form.get('blocked_users') else []
         }
 
         # Reuse connection for save_client_settings and log_activity
@@ -4802,6 +4807,36 @@ def webhook():
                         continue
                     else:
                         print(f"✅ User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
+
+                # Check if sender is blocked (only for registered users)
+                if instagram_connection and user_id and connection_id:
+                    try:
+                        # Get blocked users from settings
+                        client_settings = get_client_settings(user_id, connection_id, webhook_conn)
+                        blocked_users = client_settings.get('blocked_users', [])
+                        
+                        if blocked_users:
+                            # Get sender's username from Instagram API
+                            try:
+                                url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
+                                response = requests.get(url, timeout=5)
+                                if response.status_code == 200:
+                                    sender_data = response.json()
+                                    sender_username = sender_data.get('username', '').lower() if sender_data.get('username') else None
+                                    
+                                    if sender_username and sender_username in blocked_users:
+                                        print(f"🚫 Sender {sender_username} is in blocked users list. Skipping reply.")
+                                        total_duration = time.time() - handler_start
+                                        print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                                        continue
+                                    else:
+                                        print(f"✅ Sender {sender_username} is not blocked. Proceeding with reply.")
+                                else:
+                                    print(f"⚠️ Could not fetch sender username (status {response.status_code}), proceeding anyway")
+                            except Exception as e:
+                                print(f"⚠️ Error checking if sender is blocked: {e}. Proceeding with reply.")
+                    except Exception as e:
+                        print(f"⚠️ Error getting client settings for blocked users check: {e}. Proceeding with reply.")
 
                 history = get_last_messages(sender_id, 35, webhook_conn)
                 print(f"📚 History for {sender_id}: {len(history)} messages")

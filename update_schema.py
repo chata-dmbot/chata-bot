@@ -53,6 +53,7 @@ def migrate_client_settings():
             ('conversation_samples', 'TEXT'),
             ('instagram_url', 'TEXT'),
             ('avoid_topics', 'TEXT'),
+            ('blocked_users', 'TEXT'),
             ('is_active', 'BOOLEAN DEFAULT TRUE'),
         ]
         

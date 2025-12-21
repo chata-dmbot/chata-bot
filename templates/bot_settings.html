@@ -1254,6 +1254,21 @@
                             </div>
         </section>
 
+        <section class="section-card">
+          <div class="section-header">
+            <h2>Users To Avoid</h2>
+            <p>Block specific Instagram users from receiving automatic replies. Enter one username per line (with or without @ symbol).</p>
+          </div>
+          <div class="form-group">
+            <label for="blocked_users">Blocked Instagram Usernames</label>
+            <textarea id="blocked_users" name="blocked_users" class="auto-resize" rows="5" placeholder="e.g.&#10;@username1&#10;username2&#10;@spammer123">{{ '\n'.join(settings.get('blocked_users', [])) if settings and settings.get('blocked_users') else '' }}</textarea>
+            <div class="form-hint">
+              <i class="fas fa-info-circle"></i>
+              The bot will not respond to messages from these users. Enter usernames one per line. The @ symbol is optional.
+            </div>
+          </div>
+        </section>
+
             <div class="action-buttons">
                 <button type="submit" class="btn-primary">
             <i class="fas fa-save"></i>
@@ -1549,11 +1564,7 @@
         const toast = document.getElementById('help-toast');
         if (!toast) return;
         
-        // Check if user has already seen the toast
-        if (localStorage.getItem('chata-help-toast-seen') === 'true') {
-          return;
-        }
-        
+        // Always show the toast when the page loads
         setTimeout(() => {
           toast.classList.add('show');
         }, 1000);
@@ -1563,7 +1574,6 @@
         const toast = document.getElementById('help-toast');
         if (toast) {
           toast.classList.remove('show');
-          localStorage.setItem('chata-help-toast-seen', 'true');
         }
       }
 
