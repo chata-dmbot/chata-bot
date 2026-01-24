@@ -45,6 +45,19 @@ limiter = Limiter(
     storage_uri="memory://"  # Simple in-memory storage (works for single instance)
 )
 
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """Show a friendly message when rate limit exceeded instead of default 429 page."""
+    flash("Too many attempts. Please wait a few minutes before trying again.", "error")
+    path = request.path or ""
+    if "/signup" in path:
+        return redirect(url_for("signup"))
+    if "/login" in path:
+        return redirect(url_for("login"))
+    return redirect(url_for("home"))
+
+
 # Initialize Stripe
 if Config.STRIPE_SECRET_KEY:
     stripe.api_key = Config.STRIPE_SECRET_KEY
@@ -643,15 +656,19 @@ def get_user_by_username_or_email(username_or_email):
         return None
 
 def get_user_by_username(username):
-    """Get user by username only"""
+    """Get user by username only. Uses case-insensitive match so CHATADEMO and chatademo are treated as the same."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
-        cursor.execute(f"SELECT id, username, email, password_hash, created_at FROM users WHERE username = {placeholder}", (username,))
+        cursor.execute(
+            f"SELECT id, username, email, password_hash, created_at FROM users WHERE LOWER(username) = LOWER({placeholder})",
+            (username,)
+        )
         user = cursor.fetchone()
         conn.close()
         if user:
+            print(f"🔍 get_user_by_username: found user id={user[0]} username={user[1]!r} email={user[2]!r}")
             return {
                 'id': user[0],
                 'username': user[1],
@@ -676,6 +693,12 @@ def create_user(username, email, password):
         placeholder = get_param_placeholder()
         
         print(f"🔍 Using placeholder: {placeholder}")
+        
+        # Re-check username uniqueness (case-insensitive) right before INSERT to avoid race with concurrent signups
+        cursor.execute(f"SELECT id FROM users WHERE LOWER(username) = LOWER({placeholder})", (username,))
+        if cursor.fetchone():
+            conn.close()
+            raise ValueError("username_taken")
         
         # For PostgreSQL, we need to get the ID differently
         # Explicitly set replies_limit_monthly to 0 to ensure new users start with 0 replies
@@ -710,7 +733,7 @@ def create_user(username, email, password):
 # ---- Authentication routes ----
 
 @app.route("/signup", methods=["GET", "POST"])
-@limiter.limit("3 per hour")  # Rate limit: 3 signup attempts per hour per IP
+@limiter.limit("10 per 5 minutes")  # Rate limit: 10 signup attempts per 5 minutes per IP
 def signup():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -724,24 +747,25 @@ def signup():
         # Basic validation
         if not username or not email or not password:
             flash("Username, email, and password are required.", "error")
-            return render_template("signup.html")
+            return render_template("signup.html", form_username=username, form_email=email)
         
         # Validate username (alphanumeric and underscore, 3-20 characters)
         if not username.replace('_', '').replace('-', '').isalnum() or len(username) < 3 or len(username) > 20:
             flash("Username must be 3-20 characters and contain only letters, numbers, underscores, or hyphens.", "error")
-            return render_template("signup.html")
+            return render_template("signup.html", form_username=username, form_email=email)
         
-        # Check if username already exists
+        # Check if username already exists (case-insensitive)
         existing_username = get_user_by_username(username)
         if existing_username:
+            print(f"🔍 Signup rejected: username {username!r} already taken by user id={existing_username['id']} email={existing_username['email']!r}")
             flash("This username is already taken. Please choose another one.", "error")
-            return render_template("signup.html")
+            return render_template("signup.html", form_username=username, form_email=email)
         
         # Check if email already exists
         existing_email = get_user_by_email(email)
         if existing_email:
             flash("An account with this email already exists.", "error")
-            return render_template("signup.html")
+            return render_template("signup.html", form_username=username, form_email=email)
         
         # Create new user
         try:
@@ -759,10 +783,15 @@ def signup():
             
             flash(f"Account created successfully! Welcome to Chata, {username}!", "success")
             return redirect(url_for('dashboard'))
+        except ValueError as e:
+            if str(e) == "username_taken":
+                flash("This username is already taken. Please choose another one.", "error")
+                return render_template("signup.html", form_username=username, form_email=email)
+            raise
         except Exception as e:
             print(f"❌ Signup error: {e}")
             flash("Error creating account. Please try again.", "error")
-            return render_template("signup.html")
+            return render_template("signup.html", form_username=username, form_email=email)
     
     return render_template("signup.html")
 
@@ -1852,13 +1881,13 @@ def account_settings():
             flash("Username can only contain letters, numbers, and underscores.", "error")
             return redirect(url_for('account_settings'))
         
-        # Check if username is already taken by another user
+        # Check if username is already taken by another user (case-insensitive)
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         cursor.execute(f"""
             SELECT id FROM users 
-            WHERE username = {placeholder} AND id != {placeholder}
+            WHERE LOWER(username) = LOWER({placeholder}) AND id != {placeholder}
         """, (username, user['id']))
         existing_user = cursor.fetchone()
         

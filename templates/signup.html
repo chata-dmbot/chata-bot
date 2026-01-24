@@ -410,15 +410,15 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" class="auth-form">
+            <form method="POST" class="auth-form" id="signup-form">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required placeholder="Choose a username" pattern="[a-zA-Z0-9_-]+" minlength="3" maxlength="20" title="3-20 characters, letters, numbers, underscores, or hyphens">
+                    <input type="text" id="username" name="username" required placeholder="Choose a username" pattern="[a-zA-Z0-9_-]+" minlength="3" maxlength="20" title="3-20 characters, letters, numbers, underscores, or hyphens" value="{{ form_username|default('') }}">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                    <input type="email" id="email" name="email" required placeholder="Enter your email" value="{{ form_email|default('') }}">
                 </div>
 
                 <div class="form-group">
@@ -426,7 +426,7 @@
                     <input type="password" id="password" name="password" required placeholder="Create a password">
                 </div>
 
-                <button type="submit" class="btn-signup">Create Account</button>
+                <button type="submit" class="btn-signup" id="signup-submit">Create Account</button>
             </form>
 
             <div class="signup-footer">
@@ -489,6 +489,18 @@
             }
         }
         
+        // Double-submit prevention: disable Create Account button after first click
+        (function() {
+            var form = document.getElementById('signup-form');
+            var btn = document.getElementById('signup-submit');
+            if (form && btn) {
+                form.addEventListener('submit', function() {
+                    btn.disabled = true;
+                    btn.textContent = 'Creating...';
+                });
+            }
+        })();
+
         // Initialize grid on load
         window.addEventListener('load', function() {
             // Ensure page starts at top
