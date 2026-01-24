@@ -41,7 +41,7 @@ app.secret_key = Config.SECRET_KEY
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["400 per day", "100 per hour"],
     storage_uri="memory://"  # Simple in-memory storage (works for single instance)
 )
 
@@ -796,7 +796,7 @@ def signup():
     return render_template("signup.html")
 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")  # Rate limit: 5 login attempts per minute per IP
+@limiter.limit("10 per minute")  # Rate limit: 10 login attempts per minute per IP
 def login():
     if request.method == "POST":
         username_or_email = request.form.get("username_or_email", "").strip()
@@ -945,7 +945,7 @@ def instagram_auth():
 
 @app.route("/auth/instagram/callback")
 @login_required
-@limiter.limit("10 per hour")  # Rate limit: 10 OAuth callbacks per hour per IP
+@limiter.limit("20 per hour")  # Rate limit: 20 OAuth callbacks per hour per IP
 def instagram_callback():
     """Handle Instagram OAuth callback"""
     code = request.args.get('code')
@@ -4674,7 +4674,7 @@ and answering only to the follower's latest message."""
 # ---- Webhook Route ----
 
 @app.route("/webhook", methods=["GET", "POST"])
-@limiter.limit("100 per minute")  # Rate limit: 100 webhook requests per minute per IP
+@limiter.limit("150 per minute")  # Rate limit: 150 webhook requests per minute per IP
 def webhook():
     if request.method == "GET":
         mode = request.args.get("hub.mode")
