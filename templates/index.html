@@ -261,8 +261,13 @@
                 transform: translateX(0);
             }
             100% {
-                transform: translateX(-33.33%); /* Move by 1/3 since we have 3 sets */
+                transform: translateX(-25%); /* Move by 1/4 since we now have 4 sets for seamless loop */
             }
+        }
+        
+        /* Ensure smooth infinite loop by using a longer duration and seamless reset */
+        .logo-slider {
+            animation: slideLogos 180s linear infinite !important; /* Long duration for smooth continuous scrolling */
         }
         
         @keyframes slideConversations {
@@ -953,7 +958,7 @@
                 <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: #fff; opacity: 0.5; z-index: 1;"></div>
                 <!-- Bottom white line -->
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: #fff; opacity: 0.5; z-index: 1;"></div>
-                <div class="logo-slider" style="display: flex; align-items: center; animation: slideLogos 30s linear infinite; gap: 4rem;">
+                <div class="logo-slider" style="display: flex; align-items: center; gap: 4rem;">
                     <!-- First set of logos -->
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
                         <img src="{{ url_for('static', filename='images/instagram.png') }}" alt="Instagram" style="height: 60px; width: auto; filter: none;">
@@ -1001,6 +1006,29 @@
         </div>
         
                     <!-- Third set for ultra-smooth loop -->
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/instagram.png') }}" alt="Instagram" style="height: 60px; width: auto; filter: none;">
+          </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/facebook.png') }}" alt="Facebook" style="height: 60px; width: auto; filter: none;">
+            </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/meta.png') }}" alt="Meta" style="height: 60px; width: auto; filter: none;">
+            </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/render.png') }}" alt="Render" style="height: 60px; width: auto; filter: none;">
+          </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/openai.png') }}" alt="OpenAI" style="height: 60px; width: auto; filter: none;">
+        </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/stripe.png') }}" alt="Stripe" style="height: 60px; width: auto; filter: none;">
+              </div>
+                    <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
+                        <img src="{{ url_for('static', filename='images/linktree.png') }}" alt="Linktree" style="height: 60px; width: auto; filter: none;">
+        </div>
+        
+                    <!-- Fourth set for seamless infinite loop -->
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
                         <img src="{{ url_for('static', filename='images/instagram.png') }}" alt="Instagram" style="height: 60px; width: auto; filter: none;">
           </div>
@@ -1453,14 +1481,14 @@
                     <div style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
                         <div style="flex: 0 0 65%; padding-right: 1rem;">
                             <h3 style="font-size: 1.4rem; font-weight: 600; color: #fff; margin-bottom: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">
-                                Pre-Made Personalities and Templates
+                                Quick, Easy, Effective Setup
                             </h3>
                             <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); line-height: 1.4; letter-spacing: 0.02em; text-transform: none; font-weight: 300; text-align: justify;">
-                                Launch faster with ready-to-use tones and conversation flows. Fine-tune them to make the experience feel uniquely yours.
+                                Connect your account, choose your settings and go live within minutes. No complex tool, no code, just smooth automation.
                             </p>
               </div>
                         <div style="flex: 0 0 35%; padding-left: 1.5rem; display: flex; justify-content: center;">
-                            <img src="{{ url_for('static', filename='images/feature2.png') }}" alt="Pre-Made Personalities" style="width: 200px; height: auto; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+                            <img src="{{ url_for('static', filename='images/feature5.png') }}" alt="Quick Setup" style="width: 200px; height: auto; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             </div>
                   </div>
                 </div>
@@ -1501,23 +1529,6 @@
                 </div>
             </div>
 
-            <!-- Section 3: Feature 5 (Centered) -->
-            <div class="feature-section" style="margin-bottom: 6rem; margin-top: -5rem; opacity: 0; transform: translateY(30px); transition: all 0.8s ease; max-width: 700px; margin-left: auto; margin-right: auto; display: flex; flex-direction: column; align-items: center; text-align: center;">
-                <!-- Image centered at top -->
-                <div style="margin-bottom: 1.5rem;">
-                    <img src="{{ url_for('static', filename='images/feature5.png') }}" alt="Quick Setup" style="width: 280px; height: auto; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-                </div>
-                <!-- Text centered below -->
-                <div style="max-width: 550px;">
-                    <h3 style="font-size: 1.6rem; font-weight: 600; color: #fff; margin-bottom: 1rem; letter-spacing: 0.05em; text-transform: uppercase;">
-                        Quick, Easy, Effective Setup
-                    </h3>
-                    <p style="font-size: 0.95rem; color: rgba(255, 255, 255, 0.8); line-height: 1.5; letter-spacing: 0.02em; text-transform: none; font-weight: 300;">
-                        Connect your account, choose your settings, and go live within minutes. No complex tools, no code, just smooth automation.
-                    </p>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- Ready to Get Started Section -->
