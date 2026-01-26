@@ -279,6 +279,15 @@
             }
         }
         
+        @keyframes swipeHint {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(15px);
+            }
+        }
+        
         .logo-item:hover {
             opacity: 1 !important;
         }
@@ -1069,6 +1078,14 @@
         <div class="carousel-wrapper" style="width: 100vw; margin-left: calc(-50vw + 50%); padding: 0;">
             <!-- Simple Sliding Images Container -->
             <div class="carousel-container" style="position: relative; height: 800px; overflow: hidden; z-index: 100;">
+                <!-- Swipe Indicator Overlay -->
+                <div id="swipeIndicator" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.8s ease-in-out;">
+                    <div style="display: flex; align-items: center; gap: 15px; background: rgba(0, 0, 0, 0.6); padding: 15px 25px; border-radius: 50px; backdrop-filter: blur(10px);">
+                        <i class="fas fa-chevron-left" style="color: #fff; font-size: 1.2rem;"></i>
+                        <i class="fas fa-hand-pointer" style="color: #3366ff; font-size: 2rem; animation: swipeHint 1.5s ease-in-out infinite;"></i>
+                        <i class="fas fa-chevron-right" style="color: #fff; font-size: 1.2rem;"></i>
+                    </div>
+                </div>
                 <div class="conversation-slider" id="conversationSlider" style="display: flex; align-items: center; cursor: grab; user-select: none;">
                     <!-- Image 1 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
@@ -2467,6 +2484,8 @@
                     // Resume auto-scroll after momentum stops
                     setTimeout(() => {
                         isUserInteracting = false;
+                        // Reset swipe indicator timer when auto-scroll resumes
+                        resetSwipeIndicatorTimer();
                     }, 2000); // 2 second delay before auto-scroll resumes
                 }
             }
@@ -2505,6 +2524,45 @@
         
         // Start auto-scroll
         animateAutoScroll();
+
+        // Swipe Indicator Logic
+        const swipeIndicator = document.getElementById('swipeIndicator');
+        let swipeIndicatorTimeout = null;
+        let swipeIndicatorShowTimeout = null;
+        let hasUserInteracted = false;
+
+        function showSwipeIndicator() {
+            if (!hasUserInteracted) {
+                swipeIndicator.style.opacity = '1';
+            }
+        }
+
+        function hideSwipeIndicator() {
+            swipeIndicator.style.opacity = '0';
+        }
+
+        function resetSwipeIndicatorTimer() {
+            // Clear any existing timers
+            if (swipeIndicatorTimeout) clearTimeout(swipeIndicatorTimeout);
+            if (swipeIndicatorShowTimeout) clearTimeout(swipeIndicatorShowTimeout);
+            
+            // Hide immediately
+            hideSwipeIndicator();
+            
+            // Show again after 10 seconds of inactivity
+            swipeIndicatorShowTimeout = setTimeout(() => {
+                if (!isUserInteracting && !isDown) {
+                    showSwipeIndicator();
+                }
+            }, 10000);
+        }
+
+        // Show indicator after 5 seconds on page load
+        swipeIndicatorTimeout = setTimeout(() => {
+            if (!hasUserInteracted) {
+                showSwipeIndicator();
+            }
+        }, 5000);
 
         // Function to update image scaling and opacity based on distance from center
         function updateImageEffects() {
@@ -2583,6 +2641,12 @@
             startX = e.pageX;
             scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
             
+            // Hide swipe indicator on first interaction
+            if (!hasUserInteracted) {
+                hasUserInteracted = true;
+                hideSwipeIndicator();
+            }
+            
             // Reset momentum variables
             velocity = 0;
             lastX = e.pageX;
@@ -2593,6 +2657,9 @@
                 cancelAnimationFrame(momentumAnimationId);
                 momentumAnimationId = null;
             }
+            
+            // Reset timer for reappearing
+            resetSwipeIndicatorTimer();
         });
 
         // Use document-level listeners to track mouse outside slider
@@ -2608,6 +2675,8 @@
                     // Resume auto-scroll after a short delay if no momentum
                     setTimeout(() => {
                         isUserInteracting = false;
+                        // Reset swipe indicator timer when auto-scroll resumes
+                        resetSwipeIndicatorTimer();
                     }, 2000); // 2 second delay before auto-scroll resumes
                 }
             }
@@ -2648,6 +2717,15 @@
             e.preventDefault();
             startX = e.touches[0].pageX;
             scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
+            
+            // Hide swipe indicator on first interaction
+            if (!hasUserInteracted) {
+                hasUserInteracted = true;
+                hideSwipeIndicator();
+            }
+            
+            // Reset timer for reappearing
+            resetSwipeIndicatorTimer();
         }, { passive: false });
 
         slider.addEventListener('touchmove', (e) => {
