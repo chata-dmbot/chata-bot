@@ -2638,11 +2638,11 @@
             startX = e.pageX;
             scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
             
-            // Hide swipe indicator on first interaction
-            if (!hasUserInteracted) {
-                hasUserInteracted = true;
-                hideSwipeIndicator();
-            }
+            // Hide swipe indicator on interaction
+            hideSwipeIndicator();
+            
+            // Reset timer for reappearing
+            resetSwipeIndicatorTimer();
             
             // Reset momentum variables
             velocity = 0;
