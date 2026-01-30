@@ -13,9 +13,9 @@ import sendgrid
 from sendgrid.helpers.mail import Mail
 import json
 import time
-import stripe
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+import stripe  # type: ignore[reportMissingImports]
+from flask_limiter import Limiter  # type: ignore[reportMissingImports]
+from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
 
 # Import our modular components
 from config import Config
@@ -1381,10 +1381,48 @@ def dashboard():
         subscription_status = None
         
         if active_plan_type is not None and active_status == 'active':
-            # User has an active subscription - show the plan
-            current_plan = active_plan_type  # 'starter' or 'standard'
-            subscription_status = 'active'
-            print(f"🔍 Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
+            # User has an active subscription in DB - reconcile with Stripe (source of truth)
+            stripe_status = None
+            if active_subscription_id and Config.STRIPE_SECRET_KEY:
+                try:
+                    sub = stripe.Subscription.retrieve(active_subscription_id)
+                    stripe_status = sub.get('status') if isinstance(sub, dict) else getattr(sub, 'status', None)
+                    if stripe_status in ('canceled', 'unpaid', 'incomplete_expired'):
+                        # Stripe says canceled; sync DB so we don't show stale active plan
+                        sync_conn = get_db_connection()
+                        if sync_conn:
+                            try:
+                                sync_cursor = sync_conn.cursor()
+                                sync_ph = get_param_placeholder()
+                                sync_cursor.execute(f"""
+                                    UPDATE subscriptions SET status = {sync_ph}, updated_at = CURRENT_TIMESTAMP
+                                    WHERE stripe_subscription_id = {sync_ph}
+                                """, ('canceled', active_subscription_id))
+                                sync_conn.commit()
+                                print(f"🔍 Dashboard: Reconciled subscription {active_subscription_id} with Stripe (status={stripe_status}), marked canceled in DB")
+                            except Exception as sync_e:
+                                print(f"⚠️ Dashboard reconciliation update failed: {sync_e}")
+                            finally:
+                                try:
+                                    sync_conn.close()
+                                except Exception:
+                                    pass
+                        subscription_status = 'canceled'
+                        current_plan = None
+                    else:
+                        current_plan = active_plan_type
+                        subscription_status = 'active'
+                        print(f"🔍 Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}' (Stripe status={stripe_status})")
+                except Exception as stripe_e:
+                    # Stripe API error - don't break dashboard; trust DB
+                    print(f"⚠️ Dashboard: Could not reconcile with Stripe: {stripe_e}")
+                    current_plan = active_plan_type
+                    subscription_status = 'active'
+                    print(f"🔍 Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
+            else:
+                current_plan = active_plan_type
+                subscription_status = 'active'
+                print(f"🔍 Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
         elif canceled_plan_type is not None and canceled_status == 'canceled':
             # No active subscription - found a canceled one (for display purposes only)
             subscription_status = 'canceled'
@@ -2921,6 +2959,27 @@ def stripe_webhook():
         print("⚠️ Invalid signature")
         return jsonify({'status': 'invalid_signature'}), 400
     
+    event_id = event.get('id')
+    if event_id:
+        # Idempotency: skip if we already processed this event (handles retries and out-of-order delivery)
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                placeholder = get_param_placeholder()
+                cursor.execute(f"SELECT 1 FROM stripe_webhook_events WHERE event_id = {placeholder}", (event_id,))
+                if cursor.fetchone():
+                    conn.close()
+                    print(f"⏭️ Webhook event {event_id} already processed, skipping (idempotent)")
+                    return jsonify({'status': 'success', 'idempotent': True}), 200
+            except Exception as e:
+                print(f"⚠️ Idempotency check failed: {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    
     # Handle the event
     print(f"📥 Received Stripe webhook: {event['type']}")
     print(f"🔍 Event ID: {event.get('id', 'unknown')}")
@@ -2958,9 +3017,86 @@ def stripe_webhook():
     else:
         print(f"⚠️ Unhandled webhook event type: {event['type']}")
     
+    # Mark event as processed for idempotency (so retries are skipped)
+    if event_id:
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                placeholder = get_param_placeholder()
+                is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                if is_postgres:
+                    cursor.execute(f"INSERT INTO stripe_webhook_events (event_id) VALUES ({placeholder}) ON CONFLICT (event_id) DO NOTHING", (event_id,))
+                else:
+                    cursor.execute(f"INSERT OR IGNORE INTO stripe_webhook_events (event_id) VALUES ({placeholder})", (event_id,))
+                conn.commit()
+            except Exception as e:
+                print(f"⚠️ Failed to store webhook event id: {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    
     print(f"✅ Webhook processing completed for {event['type']}")
     
     return jsonify({'status': 'success'}), 200
+
+
+# ---- Stripe subscription helpers (work for both dict from webhook and StripeObject from retrieve) ----
+def _stripe_obj_id(obj):
+    """Get id from a Stripe object (dict from webhook or StripeObject)."""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj.get('id')
+    return getattr(obj, 'id', None)
+
+
+def _stripe_subscription_items_data(sub):
+    """
+    Get list of subscription items from a Subscription (dict or StripeObject).
+    Use bracket/dict access to avoid .items conflicting with Python's dict.items().
+    """
+    if sub is None:
+        return []
+    try:
+        if isinstance(sub, dict):
+            items_container = sub.get('items')
+        else:
+            items_container = sub.get('items') if hasattr(sub, 'get') else sub['items']
+        if items_container is None:
+            return []
+        if isinstance(items_container, dict):
+            return items_container.get('data', [])
+        if hasattr(items_container, 'data'):
+            data = items_container.data
+            return list(data) if data else []
+        return []
+    except (KeyError, TypeError, AttributeError):
+        return []
+
+
+def _stripe_price_id_from_items(items_list):
+    """Extract price id from first item in list (item can be dict or object)."""
+    if not items_list:
+        return None
+    item = items_list[0]
+    try:
+        if isinstance(item, dict):
+            price = item.get('price')
+            if isinstance(price, dict):
+                return price.get('id')
+            return price if isinstance(price, str) else None
+        price = getattr(item, 'price', None)
+        if price is None:
+            return None
+        if isinstance(price, str):
+            return price
+        return getattr(price, 'id', None)
+    except (TypeError, AttributeError):
+        return None
+
 
 def handle_checkout_session_completed(session_obj):
     """Handle completed checkout session"""
@@ -3017,6 +3153,31 @@ def handle_checkout_session_completed(session_obj):
             except Exception as e:
                 print(f"⚠️ Could not get price ID from checkout session: {e}")
         
+        elif session_type == 'downgrade':
+            # Handle downgrade - cancel old Standard subscription so only the new Starter is active
+            old_subscription_id = session_obj.metadata.get('old_subscription_id')
+            if old_subscription_id:
+                try:
+                    # Cancel the old subscription in Stripe
+                    stripe.Subscription.modify(old_subscription_id, cancel_at_period_end=False)
+                    stripe.Subscription.delete(old_subscription_id)
+                    print(f"✅ Cancelled old subscription {old_subscription_id} for user {user_id} (downgrade)")
+                    
+                    # Mark old subscription as canceled in database
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    placeholder = get_param_placeholder()
+                    cursor.execute(f"""
+                        UPDATE subscriptions 
+                        SET status = {placeholder}
+                        WHERE stripe_subscription_id = {placeholder}
+                    """, ('canceled', old_subscription_id))
+                    conn.commit()
+                    conn.close()
+                    print(f"✅ Marked old subscription as canceled in database (downgrade)")
+                except Exception as e:
+                    print(f"⚠️ Error canceling old subscription on downgrade: {e}")
+        
         if session_type == 'addon':
             # Handle one-time add-on purchase
             amount = session_obj.amount_total / 100  # Convert cents to euros
@@ -3036,11 +3197,14 @@ def handle_checkout_session_completed(session_obj):
         traceback.print_exc()
 
 def handle_subscription_created(subscription):
-    """Handle new subscription creation"""
+    """Handle new subscription creation (subscription can be dict from webhook or StripeObject)."""
     try:
-        print(f"🔄 Processing subscription created: {subscription.id}")
-        
-        customer_id = subscription.customer
+        subscription_id = _stripe_obj_id(subscription)
+        customer_id = subscription.get('customer') if isinstance(subscription, dict) else getattr(subscription, 'customer', None)
+        if not subscription_id or not customer_id:
+            print(f"❌ Missing subscription id or customer id in subscription object")
+            return
+        print(f"🔄 Processing subscription created: {subscription_id}")
         print(f"📋 Customer ID: {customer_id}")
         
         customer = stripe.Customer.retrieve(customer_id)
@@ -3066,67 +3230,17 @@ def handle_subscription_created(subscription):
         
         try:
             # Retrieve the subscription with expanded items to ensure we can access all fields
-            print(f"🔄 Retrieving subscription {subscription.id} with expanded items...")
-            expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
+            print(f"🔄 Retrieving subscription {subscription_id} with expanded items...")
+            expanded_sub = stripe.Subscription.retrieve(subscription_id, expand=['items.data.price'])
             
-            # Get subscription status
-            subscription_status = expanded_sub.status
+            # Get subscription status (support both dict and object)
+            subscription_status = expanded_sub.get('status') if isinstance(expanded_sub, dict) else getattr(expanded_sub, 'status', None)
             
-            # Access the price ID from expanded subscription
-            # subscription.items is a ListObject, access via subscription.items.data
-            try:
-                # Method 1: Try accessing items.data directly
-                if hasattr(expanded_sub, 'items'):
-                    items_obj = expanded_sub.items
-                    print(f"🔍 Items object type: {type(items_obj)}")
-                    
-                    # Try to get data attribute
-                    if hasattr(items_obj, 'data'):
-                        items_list = items_obj.data
-                        print(f"🔍 Items list length: {len(items_list) if items_list else 0}")
-                    else:
-                        # Try to iterate or convert to list
-                        try:
-                            items_list = list(items_obj) if items_obj else []
-                            print(f"🔍 Converted items to list, length: {len(items_list)}")
-                        except:
-                            items_list = []
-                            print(f"⚠️ Could not convert items to list")
-                    
-                    if items_list and len(items_list) > 0:
-                        item = items_list[0]
-                        print(f"🔍 Item type: {type(item)}")
-                        print(f"🔍 Item: {item}")
-                        
-                        # Price can be an object (if expanded) or a string ID
-                        if hasattr(item, 'price'):
-                            price_obj = item.price
-                            print(f"🔍 Price object type: {type(price_obj)}")
-                            print(f"🔍 Price object: {price_obj}")
-                            
-                            if isinstance(price_obj, str):
-                                price_id = price_obj
-                                print(f"✅ Found price ID (string): {price_id}")
-                            elif hasattr(price_obj, 'id'):
-                                price_id = price_obj.id
-                                print(f"✅ Found price ID (object): {price_id}")
-                            else:
-                                print(f"⚠️ Price is neither string nor object with id")
-                        else:
-                            print(f"⚠️ Item has no price attribute")
-                            # Try dictionary access
-                            if isinstance(item, dict):
-                                price_id = item.get('price', {}).get('id') if isinstance(item.get('price'), dict) else item.get('price')
-                                if price_id:
-                                    print(f"✅ Found price ID via dict access: {price_id}")
-                    else:
-                        print(f"⚠️ No items found in subscription")
-                else:
-                    print(f"⚠️ Subscription has no items attribute")
-            except Exception as e:
-                print(f"⚠️ Error accessing subscription items: {e}")
-                import traceback
-                traceback.print_exc()
+            # Access price ID via helper (bracket/dict access to avoid .items conflicting with dict.items())
+            items_list = _stripe_subscription_items_data(expanded_sub)
+            price_id = _stripe_price_id_from_items(items_list)
+            if price_id:
+                print(f"✅ Found price ID from expanded subscription: {price_id}")
             
             # Get current period dates - safely access from expanded subscription
             if hasattr(expanded_sub, 'current_period_start') and expanded_sub.current_period_start:
@@ -3149,8 +3263,6 @@ def handle_subscription_created(subscription):
             # Don't use fallback - if we can't get price ID, log error but don't default to Starter
             if not price_id:
                 print(f"❌ Could not determine price ID from subscription")
-                print(f"🔍 Subscription object keys: {dir(expanded_sub)}")
-                print(f"🔍 Subscription items: {expanded_sub.items if hasattr(expanded_sub, 'items') else 'No items attr'}")
                     
         except Exception as e:
             print(f"⚠️ Error retrieving subscription details: {e}")
@@ -3169,48 +3281,22 @@ def handle_subscription_created(subscription):
         if not price_id:
             try:
                 print(f"🔄 Trying alternative method to get price ID...")
-                # Method 1: Try listing subscription items
+                # Method 1: Try listing subscription items via API
                 try:
-                    items_list = stripe.SubscriptionItem.list(subscription=subscription.id, limit=1)
-                    if items_list and len(items_list.data) > 0:
-                        item = items_list.data[0]
-                        if hasattr(item, 'price'):
-                            if isinstance(item.price, str):
-                                price_id = item.price
-                            elif hasattr(item.price, 'id'):
-                                price_id = item.price.id
+                    items_list_api = stripe.SubscriptionItem.list(subscription=subscription_id, limit=1)
+                    if items_list_api and len(items_list_api.data) > 0:
+                        price_id = _stripe_price_id_from_items(list(items_list_api.data))
                         if price_id:
                             print(f"✅ Retrieved price ID via SubscriptionItem.list: {price_id}")
                 except Exception as e1:
                     print(f"⚠️ SubscriptionItem.list failed: {e1}")
                 
-                # Method 2: Try accessing original subscription object
+                # Method 2: Try original subscription object (e.g. from webhook dict)
                 if not price_id:
-                    try:
-                        if isinstance(subscription, dict):
-                            items = subscription.get('items', {}).get('data', [])
-                        else:
-                            # Try to get items as a list
-                            try:
-                                items = list(subscription.items) if hasattr(subscription, 'items') else []
-                            except:
-                                items = []
-                        
-                        if items and len(items) > 0:
-                            item = items[0]
-                            if isinstance(item, dict):
-                                price_id = item.get('price', {}).get('id') if isinstance(item.get('price'), dict) else item.get('price')
-                            elif hasattr(item, 'price'):
-                                price_obj = item.price
-                                if isinstance(price_obj, str):
-                                    price_id = price_obj
-                                elif hasattr(price_obj, 'id'):
-                                    price_id = price_obj.id
-                            
-                            if price_id:
-                                print(f"✅ Retrieved price ID via original subscription: {price_id}")
-                    except Exception as e2:
-                        print(f"⚠️ Original subscription access failed: {e2}")
+                    items_orig = _stripe_subscription_items_data(subscription)
+                    price_id = _stripe_price_id_from_items(items_orig)
+                    if price_id:
+                        print(f"✅ Retrieved price ID via original subscription: {price_id}")
             except Exception as e:
                 print(f"⚠️ All alternative methods failed: {e}")
                 import traceback
@@ -3267,7 +3353,7 @@ def handle_subscription_created(subscription):
                 updated_at = CURRENT_TIMESTAMP
             """, (
                 user_id,
-                subscription.id,
+                subscription_id,
                 customer_id,
                 price_id,
                 plan_type,
@@ -3285,7 +3371,7 @@ def handle_subscription_created(subscription):
                         {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (
                 user_id,
-                subscription.id,
+                subscription_id,
                 customer_id,
                 price_id,
                 plan_type,
@@ -3337,9 +3423,13 @@ def handle_subscription_created(subscription):
         traceback.print_exc()
 
 def handle_subscription_updated(subscription):
-    """Handle subscription updates (including upgrades/downgrades)"""
+    """Handle subscription updates (including upgrades/downgrades). Subscription can be dict from webhook or StripeObject."""
     try:
-        customer_id = subscription.customer
+        subscription_id = _stripe_obj_id(subscription)
+        customer_id = subscription.get('customer') if isinstance(subscription, dict) else getattr(subscription, 'customer', None)
+        if not subscription_id or not customer_id:
+            print(f"❌ Missing subscription id or customer id in subscription object")
+            return
         customer = stripe.Customer.retrieve(customer_id)
         user_id_str = customer.metadata.get('user_id')
         
@@ -3354,7 +3444,7 @@ def handle_subscription_updated(subscription):
         placeholder = get_param_placeholder()
         
         is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-        cancel_at_period_end = subscription.cancel_at_period_end if hasattr(subscription, 'cancel_at_period_end') else False
+        cancel_at_period_end = subscription.get('cancel_at_period_end', False) if isinstance(subscription, dict) else getattr(subscription, 'cancel_at_period_end', False)
         
         if is_postgres:
             cancel_value = cancel_at_period_end
@@ -3365,7 +3455,7 @@ def handle_subscription_updated(subscription):
         # IMPORTANT: Check if subscription is canceled BEFORE processing upgrades/downgrades
         cursor.execute(f"""
             SELECT status, plan_type, stripe_price_id FROM subscriptions WHERE stripe_subscription_id = {placeholder}
-        """, (subscription.id,))
+        """, (subscription_id,))
         existing_sub_data = cursor.fetchone()
         existing_status = existing_sub_data[0] if existing_sub_data else None
         existing_plan_type = existing_sub_data[1] if existing_sub_data else None
@@ -3373,18 +3463,18 @@ def handle_subscription_updated(subscription):
         
         # If subscription is canceled OR cancel_at_period_end is True, preserve plan_type and set status to 'canceled'
         if existing_status == 'canceled' or cancel_at_period_end:
-            print(f"⚠️ Subscription {subscription.id} is canceled - preserving existing plan_type '{existing_plan_type}', skipping upgrade/downgrade logic")
+            print(f"⚠️ Subscription {subscription_id} is canceled - preserving existing plan_type '{existing_plan_type}', skipping upgrade/downgrade logic")
             
             # Get price_id from subscription for stripe_price_id field, but don't change plan_type
-            expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
-            price_id = None
-            if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
-                if len(expanded_sub.items.data) > 0:
-                    item = expanded_sub.items.data[0]
-                    if hasattr(item, 'price') and hasattr(item.price, 'id'):
-                        price_id = item.price.id
-            
+            expanded_sub = stripe.Subscription.retrieve(subscription_id, expand=['items.data.price'])
+            items_list = _stripe_subscription_items_data(expanded_sub)
+            price_id = _stripe_price_id_from_items(items_list)
             final_price_id = price_id if price_id else existing_price_id
+            
+            _cps = subscription.get('current_period_start') if isinstance(subscription, dict) else getattr(subscription, 'current_period_start', None)
+            _cpe = subscription.get('current_period_end') if isinstance(subscription, dict) else getattr(subscription, 'current_period_end', None)
+            period_start = datetime.fromtimestamp(_cps) if _cps else datetime.now()
+            period_end = datetime.fromtimestamp(_cpe) if _cpe else datetime.now() + timedelta(days=30)
             
             # Update subscription but preserve plan_type and set status to 'canceled'
             if final_price_id:
@@ -3400,10 +3490,10 @@ def handle_subscription_updated(subscription):
                 """, (
                     'canceled',  # Always set to 'canceled', not subscription.status
                     final_price_id,
-                    datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
-                    datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                    period_start,
+                    period_end,
                     cancel_value,
-                    subscription.id
+                    subscription_id
                 ))
             else:
                 # Skip stripe_price_id update if we don't have a value
@@ -3418,35 +3508,30 @@ def handle_subscription_updated(subscription):
                     WHERE stripe_subscription_id = {placeholder}
                 """, (
                     'canceled',  # Always set to 'canceled'
-                    datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
-                    datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+                    period_start,
+                    period_end,
                     cancel_value,
-                    subscription.id
+                    subscription_id
                 ))
             
             conn.commit()
             conn.close()
-            print(f"✅ Subscription updated (canceled): {subscription.id} (plan_type preserved: {existing_plan_type})")
+            print(f"✅ Subscription updated (canceled): {subscription_id} (plan_type preserved: {existing_plan_type})")
             return  # Exit early - no upgrade/downgrade processing for canceled subscriptions
         
         # Active subscription - process upgrades/downgrades
-        # Get the new plan type from subscription
-        expanded_sub = stripe.Subscription.retrieve(subscription.id, expand=['items.data.price'])
-        price_id = None
-        # Use runtime fallback for env vars
+        # Get the new plan type from subscription (use helper for items access)
+        expanded_sub = stripe.Subscription.retrieve(subscription_id, expand=['items.data.price'])
+        items_list = _stripe_subscription_items_data(expanded_sub)
+        price_id = _stripe_price_id_from_items(items_list)
         standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
         starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
-        
         new_plan_type = 'starter'
-        if hasattr(expanded_sub, 'items') and hasattr(expanded_sub.items, 'data'):
-            if len(expanded_sub.items.data) > 0:
-                item = expanded_sub.items.data[0]
-                if hasattr(item, 'price') and hasattr(item.price, 'id'):
-                    price_id = item.price.id
-                    if standard_price_id and price_id == standard_price_id:
-                        new_plan_type = 'standard'
-                    elif starter_price_id and price_id == starter_price_id:
-                        new_plan_type = 'starter'
+        if price_id:
+            if standard_price_id and price_id == standard_price_id:
+                new_plan_type = 'standard'
+            elif starter_price_id and price_id == starter_price_id:
+                new_plan_type = 'starter'
         
         # Get current subscription from database to check if this is an upgrade
         cursor.execute(f"""
@@ -3454,7 +3539,7 @@ def handle_subscription_updated(subscription):
             FROM subscriptions s
             JOIN users u ON s.user_id = u.id
             WHERE s.stripe_subscription_id = {placeholder} AND s.user_id = {placeholder}
-        """, (subscription.id, user_id))
+        """, (subscription_id, user_id))
         current_sub = cursor.fetchone()
         
         # Check if this is an upgrade or downgrade
@@ -3495,19 +3580,19 @@ def handle_subscription_updated(subscription):
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
         """, (
-            subscription.status if hasattr(subscription, 'status') else 'active',
+            subscription.get('status', 'active') if isinstance(subscription, dict) else getattr(subscription, 'status', 'active'),
             new_plan_type,
             price_id,
-            datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now(),
-            datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30),
+            datetime.fromtimestamp(subscription.get('current_period_start')) if isinstance(subscription, dict) and subscription.get('current_period_start') else (datetime.fromtimestamp(subscription.current_period_start) if hasattr(subscription, 'current_period_start') and subscription.current_period_start else datetime.now()),
+            datetime.fromtimestamp(subscription.get('current_period_end')) if isinstance(subscription, dict) and subscription.get('current_period_end') else (datetime.fromtimestamp(subscription.current_period_end) if hasattr(subscription, 'current_period_end') and subscription.current_period_end else datetime.now() + timedelta(days=30)),
             cancel_value,
-            subscription.id
+            subscription_id
         ))
         
         conn.commit()
         conn.close()
         
-        print(f"✅ Subscription updated: {subscription.id} (plan: {new_plan_type})")
+        print(f"✅ Subscription updated: {subscription_id} (plan: {new_plan_type})")
         
     except Exception as e:
         print(f"Error handling subscription updated: {e}")
@@ -3515,9 +3600,13 @@ def handle_subscription_updated(subscription):
         traceback.print_exc()
 
 def handle_subscription_deleted(subscription):
-    """Handle subscription cancellation - keep remaining replies but mark as canceled"""
+    """Handle subscription cancellation - keep remaining replies but mark as canceled. Subscription can be dict from webhook or StripeObject."""
     try:
-        customer_id = subscription.customer
+        subscription_id = _stripe_obj_id(subscription)
+        customer_id = subscription.get('customer') if isinstance(subscription, dict) else getattr(subscription, 'customer', None)
+        if not subscription_id or not customer_id:
+            print(f"❌ Missing subscription id or customer id in subscription object")
+            return
         customer = stripe.Customer.retrieve(customer_id)
         user_id_str = customer.metadata.get('user_id')
         
@@ -3539,26 +3628,26 @@ def handle_subscription_deleted(subscription):
             SELECT plan_type, status
             FROM subscriptions
             WHERE stripe_subscription_id = {placeholder}
-        """, (subscription.id,))
+        """, (subscription_id,))
         current_sub = cursor.fetchone()
         
         if current_sub:
             current_plan_type, current_status = current_sub
-            print(f"🔄 Updating subscription {subscription.id} from status '{current_status}' to 'canceled', preserving plan_type '{current_plan_type}'")
+            print(f"🔄 Updating subscription {subscription_id} from status '{current_status}' to 'canceled', preserving plan_type '{current_plan_type}'")
         
         cursor.execute(f"""
             UPDATE subscriptions 
             SET status = {placeholder},
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
-        """, ('canceled', subscription.id))
+        """, ('canceled', subscription_id))
         
         # Verify plan_type wasn't changed
         cursor.execute(f"""
             SELECT plan_type, status
             FROM subscriptions
             WHERE stripe_subscription_id = {placeholder}
-        """, (subscription.id,))
+        """, (subscription_id,))
         verify = cursor.fetchone()
         if verify:
             updated_plan_type, updated_status = verify
@@ -3569,7 +3658,7 @@ def handle_subscription_deleted(subscription):
                     UPDATE subscriptions 
                     SET plan_type = {placeholder}
                     WHERE stripe_subscription_id = {placeholder}
-                """, (current_plan_type, subscription.id))
+                """, (current_plan_type, subscription_id))
                 print(f"✅ Restored plan_type to {current_plan_type}")
         
         # DO NOT reset replies_limit_monthly - let them keep remaining replies

@@ -292,6 +292,14 @@ def _create_postgres_tables(cursor):
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Create stripe_webhook_events table for webhook idempotency (avoid processing same event twice)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+            event_id VARCHAR(255) PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
 def _create_sqlite_tables(cursor):
     """Create SQLite tables"""
@@ -509,6 +517,17 @@ def _create_sqlite_tables(cursor):
         """)
     except Exception as e:
         print(f"Note: subscriptions table may already exist: {e}")
+    
+    # Create stripe_webhook_events table for webhook idempotency
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+                event_id TEXT PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    except Exception as e:
+        print(f"Note: stripe_webhook_events table may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""
