@@ -1530,7 +1530,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
                    personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
                    main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
                    culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, conversation_samples, instagram_url, avoid_topics, 
+                   use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
                    blocked_users, temperature, max_tokens, is_active
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
@@ -1541,7 +1541,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
                    personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
                    main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
                    culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, conversation_samples, instagram_url, avoid_topics, 
+                   use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
                    blocked_users, temperature, max_tokens, is_active
             FROM client_settings 
             WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
@@ -1586,12 +1586,13 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             'links': json.loads(row[28]) if row[28] else [],
             'posts': json.loads(row[29]) if row[29] else [],
             'conversation_samples': json.loads(row[30]) if row[30] else {},
-            'instagram_url': row[31] or '',
-            'avoid_topics': row[32] or '',
-            'blocked_users': json.loads(row[33]) if row[33] else [],
-            'temperature': row[34] or 0.7,
-            'max_tokens': normalize_max_tokens(row[35]),
-            'auto_reply': bool(row[36]) if row[36] is not None else True
+            'faqs': json.loads(row[31]) if row[31] else [],
+            'instagram_url': row[32] or '',
+            'avoid_topics': row[33] or '',
+            'blocked_users': json.loads(row[34]) if row[34] else [],
+            'temperature': row[35] or 0.7,
+            'max_tokens': normalize_max_tokens(row[36]),
+            'auto_reply': bool(row[37]) if row[37] is not None else True
         }
     
     # Return default settings if none exist
@@ -1627,6 +1628,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         'links': [],
         'posts': [],
         'conversation_samples': {},
+        'faqs': [],
         'instagram_url': '',
         'avoid_topics': '',
         'blocked_users': [],
@@ -1689,6 +1691,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
     links_json = json.dumps(settings.get('links', []))
     posts_json = json.dumps(settings.get('posts', []))
     samples_json = json.dumps(settings.get('conversation_samples', {}))
+    faqs_json = json.dumps(settings.get('faqs', []))
     blocked_users_json = json.dumps(settings.get('blocked_users', []))
     max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
     
@@ -1700,14 +1703,14 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
              bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
              confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
              backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
+             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
              instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
             VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
             bot_personality = EXCLUDED.bot_personality,
             bot_name = EXCLUDED.bot_name,
@@ -1740,6 +1743,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
             links = EXCLUDED.links,
             posts = EXCLUDED.posts,
             conversation_samples = EXCLUDED.conversation_samples,
+            faqs = EXCLUDED.faqs,
             instagram_url = EXCLUDED.instagram_url,
             avoid_topics = EXCLUDED.avoid_topics,
             blocked_users = EXCLUDED.blocked_users,
@@ -1758,7 +1762,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
               settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
               settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
               settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
+              links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               blocked_users_json, 0.7, max_tokens_value,
               settings.get('auto_reply', True)))
     else:
@@ -1768,14 +1772,14 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                  bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
                  confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
                  backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples,
+                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
                  instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (user_id, connection_id, 
                   settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
                   settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
@@ -1787,7 +1791,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                   settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, samples_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
+              links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
               blocked_users_json, 0.7, max_tokens_value,
                   settings.get('auto_reply', True)))
     

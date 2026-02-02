@@ -51,6 +51,7 @@ def migrate_client_settings():
             ('links', 'TEXT'),
             ('posts', 'TEXT'),
             ('conversation_samples', 'TEXT'),
+            ('faqs', 'TEXT'),
             ('instagram_url', 'TEXT'),
             ('avoid_topics', 'TEXT'),
             ('blocked_users', 'TEXT'),

@@ -191,6 +191,7 @@ def _create_postgres_tables(cursor):
             links TEXT,
             posts TEXT,
             conversation_samples TEXT,
+            faqs TEXT,
             instagram_url TEXT,
             avoid_topics TEXT,
             blocked_users TEXT,
@@ -297,6 +298,18 @@ def _create_postgres_tables(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS stripe_webhook_events (
             event_id VARCHAR(255) PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Indexes on instagram_connections for fast webhook lookups by recipient
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections(instagram_user_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_page_id ON instagram_connections(instagram_page_id)")
+    
+    # Instagram webhook idempotency: avoid processing same message (mid) twice on retries
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+            mid VARCHAR(512) PRIMARY KEY,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -413,6 +426,7 @@ def _create_sqlite_tables(cursor):
             links TEXT,
             posts TEXT,
             conversation_samples TEXT,
+            faqs TEXT,
             instagram_url TEXT,
             avoid_topics TEXT,
             blocked_users TEXT,
@@ -528,6 +542,24 @@ def _create_sqlite_tables(cursor):
         """)
     except Exception as e:
         print(f"Note: stripe_webhook_events table may already exist: {e}")
+    
+    # Indexes on instagram_connections for fast webhook lookups
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections(instagram_user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_page_id ON instagram_connections(instagram_page_id)")
+    except Exception as e:
+        print(f"Note: instagram_connections indexes may already exist: {e}")
+    
+    # Instagram webhook idempotency (processed message ids)
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+                mid TEXT PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    except Exception as e:
+        print(f"Note: instagram_webhook_processed_mids table may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""
