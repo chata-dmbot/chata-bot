@@ -13,6 +13,9 @@ import sendgrid
 from sendgrid.helpers.mail import Mail
 import json
 import time
+import hmac
+import hashlib
+import base64
 import stripe  # type: ignore[reportMissingImports]
 from flask_limiter import Limiter  # type: ignore[reportMissingImports]
 from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
@@ -4762,6 +4765,22 @@ and answering only to the follower's latest message."""
 
 # ---- Webhook Route ----
 
+def _verify_instagram_webhook_signature(raw_body, signature_header):
+    """Verify X-Hub-Signature-256 (HMAC SHA256 of raw body with app secret). Returns True if valid or header missing/empty."""
+    if not signature_header or not raw_body:
+        return False
+    secret = (Config.FACEBOOK_APP_SECRET or "").encode("utf-8")
+    if not secret:
+        return False
+    prefix = "sha256="
+    if not signature_header.startswith(prefix):
+        return False
+    received = signature_header[len(prefix):].strip()
+    expected = base64.b64encode(
+        hmac.new(secret, raw_body, digestmod=hashlib.sha256).digest()
+    ).decode("utf-8")
+    return hmac.compare_digest(expected, received)
+
 @app.route("/webhook", methods=["GET", "POST"])
 @limiter.limit("150 per minute")  # Rate limit: 150 webhook requests per minute per IP
 def webhook():
@@ -4778,15 +4797,35 @@ def webhook():
             return "Forbidden", 403
 
     elif request.method == "POST":
+        raw_body = request.get_data()
+        sig_header = request.headers.get("X-Hub-Signature-256", "")
+        # #region agent log
+        _sig_ok = bool(Config.FACEBOOK_APP_SECRET and _verify_instagram_webhook_signature(raw_body, sig_header))
+        if not Config.FACEBOOK_APP_SECRET:
+            _sig_ok = None
+        try:
+            _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
+            with open(_dp, 'a', encoding='utf-8') as _f:
+                _f.write(json.dumps({"hypothesisId": "H2", "message": "webhook_signature", "data": {"signature_verified": _sig_ok, "has_header": bool(sig_header)}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
+        except Exception:
+            pass
+        # #endregion
+        if Config.FACEBOOK_APP_SECRET:
+            if not _sig_ok:
+                print("❌ Webhook signature verification failed")
+                return "Forbidden", 403
+        else:
+            print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
+        
         print("=" * 80)
         print("📥 WEBHOOK RECEIVED POST REQUEST")
         print("=" * 80)
         print(f"📋 Request headers: {dict(request.headers)}")
         print(f"📋 Request remote address: {request.remote_addr}")
         
-        # Parse JSON data
+        # Parse JSON data (body already read; get_json uses cached body)
         try:
-            data = request.json
+            data = request.get_json(silent=True) or (json.loads(raw_body) if raw_body else None)
             if not data:
                 print("⚠️ No JSON data in request")
                 return "Bad Request", 400
@@ -4887,7 +4926,16 @@ def webhook():
                         print(f"❌ Unknown Instagram account {recipient_id} - skipping message batch")
                         continue
                 else:
-                    print(f"✅ Found Instagram connection: {instagram_connection}")
+                    # #region agent log
+                    _safe = {k: instagram_connection[k] for k in ('id', 'user_id', 'instagram_user_id', 'instagram_page_id', 'is_active') if k in instagram_connection}
+                    print(f"✅ Found Instagram connection: {_safe}")
+                    try:
+                        _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
+                        with open(_dp, 'a', encoding='utf-8') as _f:
+                            _f.write(json.dumps({"hypothesisId": "H1", "message": "connection_logged_safe", "data": {"connection_id": instagram_connection.get('id'), "instagram_user_id": instagram_connection.get('instagram_user_id'), "token_in_log": False}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
                     access_token = instagram_connection['page_access_token']
                     instagram_user_id = instagram_connection['instagram_user_id']
                     connection_id = instagram_connection['id']
