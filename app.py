@@ -4799,6 +4799,10 @@ def webhook():
     elif request.method == "POST":
         raw_body = request.get_data()
         sig_header = request.headers.get("X-Hub-Signature-256", "")
+        # Safe diagnostic: no secrets logged (helps debug 403s in production)
+        print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} sig_prefix={sig_header[:7] if sig_header else 'none'}")
+        if not raw_body:
+            print("⚠️ Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
         # #region agent log
         _sig_ok = bool(Config.FACEBOOK_APP_SECRET and _verify_instagram_webhook_signature(raw_body, sig_header))
         if not Config.FACEBOOK_APP_SECRET:
@@ -4812,7 +4816,7 @@ def webhook():
         # #endregion
         if Config.FACEBOOK_APP_SECRET:
             if not _sig_ok:
-                print("❌ Webhook signature verification failed")
+                print("❌ Webhook signature verification failed (check FACEBOOK_APP_SECRET matches Meta App Secret)")
                 return "Forbidden", 403
         else:
             print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
