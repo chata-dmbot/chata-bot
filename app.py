@@ -4769,7 +4769,8 @@ def _verify_instagram_webhook_signature(raw_body, signature_header):
     """Verify X-Hub-Signature-256 (HMAC SHA256 of raw body with app secret). Returns True if valid or header missing/empty."""
     if not signature_header or not raw_body:
         return False
-    secret = (Config.FACEBOOK_APP_SECRET or "").encode("utf-8")
+    # Strip secret: env vars often have trailing newline/space when pasted (e.g. in Render)
+    secret = (Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
     if not secret:
         return False
     prefix = "sha256="
@@ -4816,7 +4817,8 @@ def webhook():
         # #endregion
         if Config.FACEBOOK_APP_SECRET:
             if not _sig_ok:
-                print("❌ Webhook signature verification failed (check FACEBOOK_APP_SECRET matches Meta App Secret)")
+                secret_len = len((Config.FACEBOOK_APP_SECRET or "").strip())
+                print(f"❌ Webhook signature verification failed (secret_len={secret_len}, expected 32)")
                 return "Forbidden", 403
         else:
             print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
