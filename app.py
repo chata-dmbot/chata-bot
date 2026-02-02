@@ -4818,7 +4818,12 @@ def webhook():
         if Config.FACEBOOK_APP_SECRET:
             if not _sig_ok:
                 secret_len = len((Config.FACEBOOK_APP_SECRET or "").strip())
+                # Safe diagnostic: first 12 chars of our computed sig vs Facebook's (no secret leaked)
+                _secret = (Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
+                _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
+                _expected = base64.b64encode(hmac.new(_secret, raw_body, digestmod=hashlib.sha256).digest()).decode("utf-8")
                 print(f"❌ Webhook signature verification failed (secret_len={secret_len}, expected 32)")
+                print(f"   expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
                 return "Forbidden", 403
         else:
             print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
