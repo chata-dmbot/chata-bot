@@ -4912,6 +4912,39 @@ def webhook():
                             continue
                     except Exception as e:
                         print(f"⚠️ Mid idempotency check failed: {e}")
+                        # PostgreSQL aborts the transaction on error; rollback so later queries work
+                        try:
+                            webhook_conn.rollback()
+                        except Exception:
+                            pass
+                        # If table is missing, create it so future requests have idempotency
+                        err_str = str(e).lower()
+                        if "does not exist" in err_str or "relation" in err_str:
+                            try:
+                                is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                                if is_pg:
+                                    cursor.execute("""
+                                        CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+                                            mid VARCHAR(512) PRIMARY KEY,
+                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                        )
+                                    """)
+                                else:
+                                    cursor.execute("""
+                                        CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+                                            mid TEXT PRIMARY KEY,
+                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                        )
+                                    """)
+                                webhook_conn.commit()
+                                print("✅ Created instagram_webhook_processed_mids table (was missing)")
+                            except Exception as e2:
+                                print(f"⚠️ Could not create instagram_webhook_processed_mids table: {e2}")
+                                try:
+                                    webhook_conn.rollback()
+                                except Exception:
+                                    pass
+                        # Proceed without mid idempotency for this request
 
                 print(f"🎯 Message batch targeted Instagram account: {recipient_id}")
                 print(f"📄 Page ID from entry: {entry_page_id}")
@@ -5069,6 +5102,10 @@ def webhook():
                             webhook_conn.commit()
                         except Exception as e:
                             print(f"⚠️ Failed to store processed mid: {e}")
+                            try:
+                                webhook_conn.rollback()
+                            except Exception:
+                                pass
                     # Increment reply count only for registered users and only on successful send
                     if instagram_connection and user_id:
                         increment_reply_count(user_id, webhook_conn)
