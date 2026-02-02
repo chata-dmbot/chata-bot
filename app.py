@@ -4833,8 +4833,9 @@ def webhook():
             raw_body = request.get_data()
         sig_header = request.headers.get("X-Hub-Signature-256", "")
         body_source = "middleware" if request.environ.get("chata.webhook_raw_body") is not None else "get_data"
-        # Safe diagnostic: no secrets logged (helps debug 403s in production)
-        print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source}")
+        content_encoding = request.headers.get("Content-Encoding", "") or "(none)"
+        # Safe diagnostic: no secrets logged; Content-Encoding helps spot proxy decompression (Facebook may send gzip, we must verify same bytes they signed)
+        print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source} Content-Encoding={content_encoding!r}")
         if not raw_body:
             print("⚠️ Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
         # Optional skip: set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=true to bypass (INSECURE - debugging only)
