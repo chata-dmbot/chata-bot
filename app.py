@@ -16,6 +16,7 @@ import time
 import hmac
 import hashlib
 import base64
+import io
 import stripe  # type: ignore[reportMissingImports]
 from flask_limiter import Limiter  # type: ignore[reportMissingImports]
 from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
@@ -47,6 +48,34 @@ limiter = Limiter(
     default_limits=["400 per day", "100 per hour"],
     storage_uri="memory://"  # Simple in-memory storage (works for single instance)
 )
+
+
+class WebhookRawBodyMiddleware:
+    """
+    Capture raw request body for POST /webhook before any other code reads it.
+    Used for Instagram webhook signature verification: if a proxy or server
+    modifies the body before Flask sees it, our HMAC won't match. This middleware
+    reads wsgi.input as early as possible and stores the bytes for verification.
+    """
+    def __init__(self, app_wsgi):
+        self.app_wsgi = app_wsgi
+
+    def __call__(self, environ, start_response):
+        if environ.get("REQUEST_METHOD") == "POST" and environ.get("PATH_INFO", "").rstrip("/") == "/webhook":
+            content_length = environ.get("CONTENT_LENGTH")
+            if content_length:
+                try:
+                    content_length = int(content_length)
+                    if 0 < content_length <= 1024 * 1024:  # cap at 1MB for webhook
+                        body = environ["wsgi.input"].read(content_length)
+                        environ["chata.webhook_raw_body"] = body
+                        environ["wsgi.input"] = io.BytesIO(body)
+                except (ValueError, OSError, TypeError):
+                    pass
+        return self.app_wsgi(environ, start_response)
+
+
+app.wsgi_app = WebhookRawBodyMiddleware(app.wsgi_app)
 
 
 @app.errorhandler(429)
@@ -4798,10 +4827,14 @@ def webhook():
             return "Forbidden", 403
 
     elif request.method == "POST":
-        raw_body = request.get_data()
+        # Use middleware-captured body for verification if present (earliest read, before proxy/server changes)
+        raw_body = request.environ.get("chata.webhook_raw_body")
+        if raw_body is None:
+            raw_body = request.get_data()
         sig_header = request.headers.get("X-Hub-Signature-256", "")
+        body_source = "middleware" if request.environ.get("chata.webhook_raw_body") is not None else "get_data"
         # Safe diagnostic: no secrets logged (helps debug 403s in production)
-        print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} sig_prefix={sig_header[:7] if sig_header else 'none'}")
+        print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source}")
         if not raw_body:
             print("⚠️ Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
         # Optional skip: set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=true to bypass (INSECURE - debugging only)
