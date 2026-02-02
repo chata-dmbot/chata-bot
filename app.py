@@ -4856,12 +4856,20 @@ def webhook():
             # #endregion
             if Config.FACEBOOK_APP_SECRET:
                 if not _sig_ok:
-                    secret_len = len((Config.FACEBOOK_APP_SECRET or "").strip())
-                    # Safe diagnostic: first 12 chars of our computed sig vs Facebook's (no secret leaked)
-                    _secret = (Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
+                    _secret_str = (Config.FACEBOOK_APP_SECRET or "").strip()
+                    secret_len = len(_secret_str)
+                    _secret = _secret_str.encode("utf-8")
                     _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
                     _expected = base64.b64encode(hmac.new(_secret, raw_body, digestmod=hashlib.sha256).digest()).decode("utf-8")
-                    print(f"❌ Webhook signature verification failed (secret_len={secret_len}, expected 32)")
+                    # Body fingerprint: SHA256 of raw body (what we're hashing)
+                    body_sha = hashlib.sha256(raw_body).hexdigest() if raw_body else ""
+                    # Safe secret hints: compare with Meta App secret (first 2 + last 4 chars only)
+                    secret_prefix = _secret_str[:2] if len(_secret_str) >= 2 else ""
+                    secret_suffix = _secret_str[-4:] if len(_secret_str) >= 4 else ""
+                    print("❌ Webhook signature verification failed")
+                    print("   Formula: HMAC-SHA256(raw_body, FACEBOOK_APP_SECRET) == X-Hub-Signature-256 (raw body = bytes as received)")
+                    print(f"   secret_len={secret_len} (expected 32) | secret_prefix={secret_prefix!r} secret_suffix={secret_suffix!r} (compare with Meta Chata app secret)")
+                    print(f"   body_sha256_preview={body_sha[:16]}... (fingerprint of body we hashed)")
                     print(f"   expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
                     return "Forbidden", 403
             else:
