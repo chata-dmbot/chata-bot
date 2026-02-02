@@ -4835,54 +4835,43 @@ def webhook():
         
         print(f"📋 Request data: {data}")
         
-        # Open ONE database connection for the entire webhook processing
-        # This will be reused for all database operations to reduce overhead
+        # Build list of processable messages (non-echo, with text) before opening DB.
+        # Echo-only or empty payloads return 200 without opening DB (Issue 2).
+        incoming_by_sender = {}
+        if 'entry' in data:
+            for entry in data['entry']:
+                if 'messaging' not in entry:
+                    continue
+                entry_page_id = entry.get('id')
+                for event in entry['messaging']:
+                    if event.get('message', {}).get('is_echo'):
+                        continue
+                    message_payload = event.get('message', {})
+                    message_text = message_payload.get('text')
+                    if not message_text:
+                        continue
+                    sender_id = event['sender']['id']
+                    recipient_id = event.get('recipient', {}).get('id')
+                    print(f"📨 Received a message from {sender_id}: {message_text}")
+                    incoming_by_sender.setdefault(sender_id, []).append({
+                        "text": message_text,
+                        "timestamp": event.get('timestamp', 0),
+                        "recipient_id": recipient_id,
+                        "page_id": entry_page_id,
+                        "mid": message_payload.get('mid'),
+                    })
+        if not incoming_by_sender:
+            print("📭 No processable messages (echo-only or no text). Skipping DB.")
+            return "EVENT_RECEIVED", 200
+        
+        # Open ONE database connection for the entire webhook processing (Issue 1: no full table scan or connection log)
         webhook_conn = get_db_connection()
         if not webhook_conn:
             print("❌ Could not connect to database")
             return "Internal Server Error", 500
         
         try:
-            # Debug: Show all available Instagram connections
-            print("🔍 Available Instagram connections in database:")
             cursor = webhook_conn.cursor()
-            try:
-                cursor.execute("SELECT id, instagram_user_id, instagram_page_id, is_active FROM instagram_connections")
-                connections = cursor.fetchall()
-                print(f"📊 Found {len(connections)} Instagram connections:")
-                for conn_data in connections:
-                    print(f"  - DB ID: {conn_data[0]}")
-                    print(f"    Instagram User ID: {conn_data[1]}")
-                    print(f"    Instagram Page ID: {conn_data[2]}")
-                    print(f"    Active: {conn_data[3]}")
-                    print(f"    ---")
-            except Exception as e:
-                print(f"❌ Error fetching connections: {e}")
-                import traceback
-                traceback.print_exc()
-
-            incoming_by_sender = {}
-            if 'entry' in data:
-                for entry in data['entry']:
-                    if 'messaging' not in entry:
-                        continue
-                    entry_page_id = entry.get('id')
-                    for event in entry['messaging']:
-                        if event.get('message', {}).get('is_echo'):
-                            continue
-                        message_payload = event.get('message', {})
-                        message_text = message_payload.get('text')
-                        if not message_text:
-                            continue
-                        sender_id = event['sender']['id']
-                        recipient_id = event.get('recipient', {}).get('id')
-                        print(f"📨 Received a message from {sender_id}: {message_text}")
-                        incoming_by_sender.setdefault(sender_id, []).append({
-                            "text": message_text,
-                            "timestamp": event.get('timestamp', 0),
-                            "recipient_id": recipient_id,
-                            "page_id": entry_page_id,
-                        })
 
             for sender_id, events in incoming_by_sender.items():
                 events.sort(key=lambda item: item.get("timestamp", 0))
@@ -4892,6 +4881,21 @@ def webhook():
                 latest_event = events[-1]
                 recipient_id = latest_event.get("recipient_id")
                 entry_page_id = latest_event.get("page_id")
+                message_mid = latest_event.get("mid")
+
+                # Idempotency: skip if we already processed this message (Issue 4 - prevent double reply on retry)
+                if message_mid:
+                    placeholder = get_param_placeholder()
+                    try:
+                        cursor.execute(
+                            f"SELECT 1 FROM instagram_webhook_processed_mids WHERE mid = {placeholder}",
+                            (message_mid,)
+                        )
+                        if cursor.fetchone():
+                            print(f"⏭️ Message mid={message_mid[:20]}... already processed, skipping (idempotent)")
+                            continue
+                    except Exception as e:
+                        print(f"⚠️ Mid idempotency check failed: {e}")
 
                 print(f"🎯 Message batch targeted Instagram account: {recipient_id}")
                 print(f"📄 Page ID from entry: {entry_page_id}")
@@ -5031,6 +5035,24 @@ def webhook():
                     print(f"❌ Error sending reply: {r.text}")
                 else:
                     print(f"✅ Reply sent successfully to {sender_id}")
+                    # Mark message as processed for idempotency (Issue 4 - avoid double reply on retry)
+                    if message_mid:
+                        try:
+                            ph = get_param_placeholder()
+                            is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                            if is_pg:
+                                cursor.execute(
+                                    f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({ph}) ON CONFLICT (mid) DO NOTHING",
+                                    (message_mid,)
+                                )
+                            else:
+                                cursor.execute(
+                                    f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({ph})",
+                                    (message_mid,)
+                                )
+                            webhook_conn.commit()
+                        except Exception as e:
+                            print(f"⚠️ Failed to store processed mid: {e}")
                     # Increment reply count only for registered users and only on successful send
                     if instagram_connection and user_id:
                         increment_reply_count(user_id, webhook_conn)
