@@ -4804,29 +4804,34 @@ def webhook():
         print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} sig_prefix={sig_header[:7] if sig_header else 'none'}")
         if not raw_body:
             print("⚠️ Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
-        # #region agent log
-        _sig_ok = bool(Config.FACEBOOK_APP_SECRET and _verify_instagram_webhook_signature(raw_body, sig_header))
-        if not Config.FACEBOOK_APP_SECRET:
-            _sig_ok = None
-        try:
-            _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
-            with open(_dp, 'a', encoding='utf-8') as _f:
-                _f.write(json.dumps({"hypothesisId": "H2", "message": "webhook_signature", "data": {"signature_verified": _sig_ok, "has_header": bool(sig_header)}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
-        except Exception:
-            pass
-        # #endregion
-        if Config.FACEBOOK_APP_SECRET:
-            if not _sig_ok:
-                secret_len = len((Config.FACEBOOK_APP_SECRET or "").strip())
-                # Safe diagnostic: first 12 chars of our computed sig vs Facebook's (no secret leaked)
-                _secret = (Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
-                _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
-                _expected = base64.b64encode(hmac.new(_secret, raw_body, digestmod=hashlib.sha256).digest()).decode("utf-8")
-                print(f"❌ Webhook signature verification failed (secret_len={secret_len}, expected 32)")
-                print(f"   expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
-                return "Forbidden", 403
+        # Optional skip: set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=true to bypass (INSECURE - debugging only)
+        if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
+            print("⚠️ SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION is set - skipping signature check (INSECURE)")
+            _sig_ok = True
         else:
-            print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
+            # #region agent log
+            _sig_ok = bool(Config.FACEBOOK_APP_SECRET and _verify_instagram_webhook_signature(raw_body, sig_header))
+            if not Config.FACEBOOK_APP_SECRET:
+                _sig_ok = None
+            try:
+                _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
+                with open(_dp, 'a', encoding='utf-8') as _f:
+                    _f.write(json.dumps({"hypothesisId": "H2", "message": "webhook_signature", "data": {"signature_verified": _sig_ok, "has_header": bool(sig_header)}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
+            except Exception:
+                pass
+            # #endregion
+            if Config.FACEBOOK_APP_SECRET:
+                if not _sig_ok:
+                    secret_len = len((Config.FACEBOOK_APP_SECRET or "").strip())
+                    # Safe diagnostic: first 12 chars of our computed sig vs Facebook's (no secret leaked)
+                    _secret = (Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
+                    _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
+                    _expected = base64.b64encode(hmac.new(_secret, raw_body, digestmod=hashlib.sha256).digest()).decode("utf-8")
+                    print(f"❌ Webhook signature verification failed (secret_len={secret_len}, expected 32)")
+                    print(f"   expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
+                    return "Forbidden", 403
+            else:
+                print("⚠️ FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
         
         print("=" * 80)
         print("📥 WEBHOOK RECEIVED POST REQUEST")
