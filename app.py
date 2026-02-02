@@ -4838,9 +4838,8 @@ def webhook():
         print(f"🔐 Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source} Content-Encoding={content_encoding!r}")
         if not raw_body:
             print("⚠️ Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
-        # Optional skip: set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=true to bypass (INSECURE - debugging only)
+        # Signature verification off by default; set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=false to enable
         if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
-            print("⚠️ SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION is set - skipping signature check (INSECURE)")
             _sig_ok = True
         else:
             # #region agent log

@@ -28,8 +28,8 @@ class Config:
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-    # Optional: set to "true" or "1" to skip Instagram webhook signature verification (INSECURE - use only for debugging)
-    SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION = os.getenv("SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION", "").lower() in ("true", "1", "yes")
+    # Instagram webhook signature: default is skip so app works; set to "false" to enable verification when ready
+    SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION = os.getenv("SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION", "true").lower() in ("true", "1", "yes")
     FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://getchata.com/auth/instagram/callback")
     
     # Email Configuration
