@@ -103,9 +103,53 @@ def migrate_client_settings():
     finally:
         conn.close()
 
+def migrate_instagram_connections():
+    """Add instagram_page_name and instagram_username to instagram_connections"""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    
+    cursor = conn.cursor()
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+        
+        for column_name, column_type in [('instagram_page_name', 'VARCHAR(255)' if is_postgres else 'TEXT'),
+                                         ('instagram_username', 'VARCHAR(255)' if is_postgres else 'TEXT')]:
+            try:
+                if is_postgres:
+                    cursor.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='instagram_connections' AND column_name=%s
+                    """, (column_name,))
+                    if not cursor.fetchone():
+                        cursor.execute(f"ALTER TABLE instagram_connections ADD COLUMN {column_name} {column_type}")
+                        print(f"✅ Added column instagram_connections.{column_name}")
+                else:
+                    cursor.execute(f"ALTER TABLE instagram_connections ADD COLUMN {column_name} {column_type}")
+                    print(f"✅ Added column instagram_connections.{column_name}")
+            except Exception as e:
+                if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
+                    print(f"⏭️  Column instagram_connections.{column_name} already exists")
+                else:
+                    raise
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ instagram_connections migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     print("🔧 Running database migration to add missing columns...")
-    if migrate_client_settings():
+    ok1 = migrate_client_settings()
+    ok2 = migrate_instagram_connections()
+    if ok1 and ok2:
         print("✅ Your database is now updated and ready!")
     else:
         print("❌ Migration failed. Please check the errors above.")

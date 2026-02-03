@@ -147,6 +147,8 @@ def _create_postgres_tables(cursor):
             user_id INTEGER REFERENCES users(id),
             instagram_user_id VARCHAR(255) NOT NULL,
             instagram_page_id VARCHAR(255) NOT NULL,
+            instagram_page_name VARCHAR(255),
+            instagram_username VARCHAR(255),
             page_access_token TEXT NOT NULL,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -305,6 +307,8 @@ def _create_postgres_tables(cursor):
     # Indexes on instagram_connections for fast webhook lookups by recipient
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections(instagram_user_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_page_id ON instagram_connections(instagram_page_id)")
+    cursor.execute("ALTER TABLE instagram_connections ADD COLUMN IF NOT EXISTS instagram_page_name TEXT")
+    cursor.execute("ALTER TABLE instagram_connections ADD COLUMN IF NOT EXISTS instagram_username TEXT")
     
     # Instagram webhook idempotency: avoid processing same message (mid) twice on retries
     cursor.execute("""
@@ -382,6 +386,8 @@ def _create_sqlite_tables(cursor):
             user_id INTEGER REFERENCES users(id),
             instagram_user_id TEXT NOT NULL,
             instagram_page_id TEXT NOT NULL,
+            instagram_page_name TEXT,
+            instagram_username TEXT,
             page_access_token TEXT NOT NULL,
             is_active BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

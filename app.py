@@ -1023,7 +1023,7 @@ def instagram_callback():
         accounts_url = "https://graph.facebook.com/v18.0/me/accounts"
         accounts_params = {
             'access_token': access_token,
-            'fields': 'instagram_business_account'
+            'fields': 'id,name,instagram_business_account'
         }
         
         print(f"🔍 Fetching accounts from: {accounts_url}")
@@ -1044,15 +1044,17 @@ def instagram_callback():
         # Find the Instagram Business account
         instagram_account = None
         page_id = None  # Initialize page_id here so it's available later
+        page_name = None
         
         for account in accounts_data.get('data', []):
             print(f"🔍 Checking account: {account}")
             if account.get('instagram_business_account'):
                 instagram_account = account['instagram_business_account']
-                # Also extract page_id if we found the account
+                # Also extract page_id and page_name if we found the account
                 page_id = account.get('id')
+                page_name = account.get('name')
                 print(f"✅ Found Instagram account: {instagram_account}")
-                print(f"✅ Found Page ID: {page_id}")
+                print(f"✅ Found Page ID: {page_id}, Page Name: {page_name}")
                 break
         
         if not instagram_account:
@@ -1138,7 +1140,7 @@ def instagram_callback():
         # First, let's get the Page Access Token
         page_access_token_url = f"https://graph.facebook.com/v18.0/{page_id}"
         page_token_params = {
-            'fields': 'access_token',
+            'fields': 'access_token,name',
             'access_token': access_token
         }
         
@@ -1153,7 +1155,9 @@ def instagram_callback():
         
         page_token_data = page_token_response.json()
         page_access_token = page_token_data.get('access_token')
-        print(f"✅ Got Page Access Token: {page_access_token[:20]}...")
+        if page_name is None:
+            page_name = page_token_data.get('name')
+        print(f"✅ Got Page Access Token: {page_access_token[:20]}... (page_name={page_name})")
         
         # Now get Instagram account details using the Page Access Token
         profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
@@ -1254,9 +1258,13 @@ def instagram_callback():
                     # Update existing connection (reconnection of same account by same user)
                     cursor.execute(f"""
                         UPDATE instagram_connections 
-                        SET page_access_token = {param}, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+                        SET page_access_token = {param},
+                            instagram_username = {param},
+                            instagram_page_name = {param},
+                            is_active = TRUE,
+                            updated_at = CURRENT_TIMESTAMP
                         WHERE id = {param}
-                    """, (page_access_token, existing[0]))
+                    """, (page_access_token, profile_data.get('username'), page_name, existing[0]))
                     
                     # If user had free trial but lost replies (e.g., from database reset), restore them
                     cursor.execute(f"""
@@ -1282,9 +1290,9 @@ def instagram_callback():
                 else:
                     # Create new connection
                     cursor.execute(f"""
-                        INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, page_access_token, is_active)
-                        VALUES ({param}, {param}, {param}, {param}, TRUE)
-                    """, (session['user_id'], instagram_user_id, page_id, page_access_token))
+                        INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, page_access_token, is_active)
+                        VALUES ({param}, {param}, {param}, {param}, {param}, {param}, TRUE)
+                    """, (session['user_id'], instagram_user_id, page_id, profile_data.get('username'), page_name, page_access_token))
                     
                     # Grant free trial ONLY if:
                     # 1. User has NOT received free trial before
@@ -1369,7 +1377,7 @@ def dashboard():
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     cursor.execute(f"""
-        SELECT id, instagram_user_id, instagram_page_id, is_active, created_at 
+        SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active, created_at 
         FROM instagram_connections 
         WHERE user_id = {placeholder} 
         ORDER BY created_at DESC
@@ -1486,8 +1494,10 @@ def dashboard():
             'id': conn_data[0],
             'instagram_user_id': conn_data[1],
             'instagram_page_id': conn_data[2],
-            'is_active': conn_data[3],
-            'created_at': conn_data[4]
+            'instagram_username': conn_data[3],
+            'instagram_page_name': conn_data[4],
+            'is_active': conn_data[5],
+            'created_at': conn_data[6]
         })
     
     return render_template("dashboard.html", 
@@ -1819,7 +1829,7 @@ def bot_settings():
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
     cursor.execute(f"""
-        SELECT id, instagram_user_id, instagram_page_id, is_active 
+        SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active 
         FROM instagram_connections 
         WHERE user_id = {placeholder} 
         ORDER BY created_at DESC
@@ -1832,7 +1842,9 @@ def bot_settings():
             'id': conn_data[0],
             'instagram_user_id': conn_data[1],
             'instagram_page_id': conn_data[2],
-            'is_active': conn_data[3]
+            'instagram_username': conn_data[3],
+            'instagram_page_name': conn_data[4],
+            'is_active': conn_data[5]
         })
     
     if not connections_list:
@@ -4390,7 +4402,7 @@ def get_instagram_connection_by_id(instagram_user_id, conn=None):
     
     try:
         cursor.execute(f"""
-            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            SELECT id, user_id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, page_access_token, is_active
             FROM instagram_connections 
             WHERE instagram_user_id = {placeholder} AND is_active = TRUE
         """, (instagram_user_id,))
@@ -4402,8 +4414,10 @@ def get_instagram_connection_by_id(instagram_user_id, conn=None):
                 'user_id': row[1],
                 'instagram_user_id': row[2],
                 'instagram_page_id': row[3],
-                'page_access_token': row[4],
-                'is_active': row[5]
+                'instagram_username': row[4],
+                'instagram_page_name': row[5],
+                'page_access_token': row[6],
+                'is_active': row[7]
             }
         return None
     except Exception as e:
@@ -4431,7 +4445,7 @@ def get_instagram_connection_by_page_id(page_id, conn=None):
     
     try:
         cursor.execute(f"""
-            SELECT id, user_id, instagram_user_id, instagram_page_id, page_access_token, is_active
+            SELECT id, user_id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, page_access_token, is_active
             FROM instagram_connections 
             WHERE instagram_page_id = {placeholder} AND is_active = TRUE
         """, (page_id,))
@@ -4443,8 +4457,10 @@ def get_instagram_connection_by_page_id(page_id, conn=None):
                 'user_id': row[1],
                 'instagram_user_id': row[2],
                 'instagram_page_id': row[3],
-                'page_access_token': row[4],
-                'is_active': row[5]
+                'instagram_username': row[4],
+                'instagram_page_name': row[5],
+                'page_access_token': row[6],
+                'is_active': row[7]
             }
         return None
     except Exception as e:

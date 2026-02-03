@@ -842,9 +842,11 @@
                 {% for connection in connections %}
                     <div class="connection-item">
                         <div class="connection-info">
-                            <h3>{{ connection.instagram_page_id or 'Instagram Account' }}</h3>
-                            <p>ID: {{ connection.instagram_user_id }}</p>
-                            <p>Connected: {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
+                            <h3>{{ connection.instagram_page_name or 'Instagram Page' }}</h3>
+                            <p><strong>Page ID:</strong> {{ connection.instagram_page_id }}</p>
+                            <p><strong>Instagram Username:</strong> {{ connection.instagram_username or 'Unknown' }}</p>
+                            <p><strong>Instagram ID:</strong> {{ connection.instagram_user_id }}</p>
+                            <p><strong>Connected:</strong> {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
                         </div>
                         <div class="connection-actions">
                             <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
