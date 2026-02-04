@@ -4350,9 +4350,19 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
         conn.commit()
         print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
     except Exception as e:
-        print(f"❌ Error saving message: {e}")
-        conn.rollback()
-        raise
+        err_str = str(e).lower()
+        if "instagram_connection_id" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str):
+            conn.rollback()
+            cursor.execute(
+                f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (instagram_user_id, message_text, bot_response)
+            )
+            conn.commit()
+            print(f"✅ Message saved (legacy schema) for Instagram user: {instagram_user_id}")
+        else:
+            print(f"❌ Error saving message: {e}")
+            conn.rollback()
+            raise
     finally:
         if should_close:
             conn.close()
@@ -4380,10 +4390,19 @@ def get_last_messages(instagram_user_id, n=35, conn=None, instagram_connection_i
     
     try:
         if instagram_connection_id is not None:
-            cursor.execute(
-                f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} AND instagram_connection_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
-                (instagram_user_id, instagram_connection_id, n)
-            )
+            try:
+                cursor.execute(
+                    f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} AND instagram_connection_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
+                    (instagram_user_id, instagram_connection_id, n)
+                )
+            except Exception as col_err:
+                if "instagram_connection_id" in str(col_err).lower() and ("does not exist" in str(col_err).lower() or "undefinedcolumn" in str(col_err).lower()):
+                    cursor.execute(
+                        f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
+                        (instagram_user_id, n)
+                    )
+                else:
+                    raise
         else:
             cursor.execute(
                 f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
