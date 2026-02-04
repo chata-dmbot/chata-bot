@@ -336,27 +336,30 @@
         mouseX = e.clientX;
         mouseY = e.clientY;
       });
-      var cellTimeouts = {};
+      var cellTimeouts = new Map();
       function updateGridLighting() {
         var cells = grid.querySelectorAll('.grid-cell');
         cells.forEach(function(cell) {
           var rect = cell.getBoundingClientRect();
           var isMouseOver = mouseX >= rect.left && mouseX < rect.right && mouseY >= rect.top && mouseY < rect.bottom;
           if (isMouseOver) {
-            if (cellTimeouts[cell]) clearTimeout(cellTimeouts[cell]);
+            if (cellTimeouts.has(cell)) {
+              clearTimeout(cellTimeouts.get(cell));
+              cellTimeouts.delete(cell);
+            }
             cell.style.background = 'rgba(51, 102, 255, 0.15)';
             cell.style.borderColor = 'rgba(51, 102, 255, 0.6)';
             cell.style.boxShadow = '0 0 20px rgba(51, 102, 255, 0.4)';
             cell.style.transform = 'scale(1.02)';
             cell.classList.add('active');
-            cellTimeouts[cell] = setTimeout(function() {
+            cellTimeouts.set(cell, setTimeout(function() {
               cell.style.background = '';
               cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
               cell.style.boxShadow = '';
               cell.style.transform = 'scale(1)';
               cell.classList.remove('active');
-              delete cellTimeouts[cell];
-            }, 1500);
+              cellTimeouts.delete(cell);
+            }, 1500));
           }
         });
         requestAnimationFrame(updateGridLighting);

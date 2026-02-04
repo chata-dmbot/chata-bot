@@ -1540,7 +1540,7 @@ def conversation_history():
         if not row:
             flash("Instagram connection not found.", "error")
             return redirect(url_for("dashboard"))
-        connection_name = row[1] or row[2] or "Instagram"
+        connection_name = row[2] or row[1] or "Instagram"  # Instagram username first, then page name
         conversations = get_conversation_list(connection_id, conn)
     finally:
         conn.close()
@@ -5042,7 +5042,7 @@ Follow these rules:
 
 10. Avoid ending with a question or asking things like "Want me to...?" or "Want me to tell you...?" Prefer short statements. Do not try to keep the chat going by asking the follower a question.
 
-11. Variation and no repetition: Never reuse the same phrase, opener, or sign-off in consecutive replies. If you used a line like "Micke says hi", "Aww love that", "Yesss babe", or "cutest little troublemaker" in your last reply (or the one before), say something different this time. Rotate openers (e.g. not always "Aww" or "Yesss babe"). Vary sentence structure and word choice so each message feels fresh. A little ambiguity is fine—you do not need to repeat the same idea in the same way every time.
+11. Variation and no repetition: Never reuse the same phrase, opener, or sign-off in consecutive replies. If you used a particular line or greeting in your last reply (or the one before), say something different this time. Rotate how you start and end messages. Vary sentence structure and word choice so each message feels fresh. A little ambiguity is fine—you do not need to repeat the same idea in the same way every time.
 
 12. Match and take inspiration from the follower: Mirror their energy, vocabulary, and style. If they are brief, be brief. If they are excited or use certain words or emojis, echo that vibe. Take inspiration from what they say—reference their interests, their words, or their mood—so the conversation feels like a real back-and-forth, not a script. Let their message shape your reply; do not fall back on the same stock phrases regardless of what they wrote.
 
