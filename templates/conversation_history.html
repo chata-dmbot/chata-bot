@@ -300,9 +300,12 @@
         });
       });
 
-      window.addEventListener('load', function() {
-        document.getElementById('pageLoadOverlay').classList.add('hidden');
-      });
+      function hidePageLoadOverlay() {
+        var o = document.getElementById('pageLoadOverlay');
+        if (o) o.classList.add('hidden');
+      }
+      window.addEventListener('load', hidePageLoadOverlay);
+      window.addEventListener('pageshow', hidePageLoadOverlay);
       (function() {
         var overlay = document.getElementById('pageLoadOverlay');
         if (!overlay) return;

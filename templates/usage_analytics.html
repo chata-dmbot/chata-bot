@@ -797,14 +797,17 @@
             }
         }
         
-        // Initialize grid on load and hide loading overlay
+        function hidePageLoadOverlay() {
+            var o = document.getElementById('pageLoadOverlay');
+            if (o) o.classList.add('hidden');
+        }
         window.addEventListener('load', function() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (overlay) overlay.classList.add('hidden');
+            hidePageLoadOverlay();
             window.scrollTo(0, 0);
             createInteractiveGrid();
             grid = document.getElementById('interactiveGrid');
         });
+        window.addEventListener('pageshow', hidePageLoadOverlay);
         (function() {
             var overlay = document.getElementById('pageLoadOverlay');
             if (!overlay) return;

@@ -964,14 +964,17 @@
             }
         }
         
-        // Initialize grid on load and hide loading overlay
-        window.addEventListener('load', function() {
+        function hidePageLoadOverlay() {
             var overlay = document.getElementById('pageLoadOverlay');
             if (overlay) overlay.classList.add('hidden');
+        }
+        window.addEventListener('load', function() {
+            hidePageLoadOverlay();
             window.scrollTo(0, 0);
             createInteractiveGrid();
             grid = document.getElementById('interactiveGrid');
         });
+        window.addEventListener('pageshow', hidePageLoadOverlay);
         // Show overlay when user clicks any same-origin link (so they see loading until new page loads)
         (function() {
             var overlay = document.getElementById('pageLoadOverlay');

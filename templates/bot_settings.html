@@ -1661,15 +1661,19 @@
         showToast();
       });
 
+      function hidePageLoadOverlay() {
+        var o = document.getElementById('pageLoadOverlay');
+        if (o) o.classList.add('hidden');
+      }
       window.addEventListener('load', () => {
-        var overlay = document.getElementById('pageLoadOverlay');
-        if (overlay) overlay.classList.add('hidden');
+        hidePageLoadOverlay();
         window.scrollTo(0, 0);
         createInteractiveGrid();
         updateGridOnScroll();
         updateGridLighting();
         setTimeout(createAmbientLighting, 800);
       });
+      window.addEventListener('pageshow', hidePageLoadOverlay);
 
       (function() {
         var overlay = document.getElementById('pageLoadOverlay');
