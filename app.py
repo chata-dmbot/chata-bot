@@ -4351,8 +4351,36 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
         print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
     except Exception as e:
         err_str = str(e).lower()
-        if "instagram_connection_id" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str):
+        try:
             conn.rollback()
+        except Exception:
+            pass
+        if "infailedsqltransaction" in err_str or "transaction is aborted" in err_str:
+            try:
+                cursor.execute(
+                    f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
+                    (instagram_user_id, instagram_connection_id, message_text, bot_response)
+                )
+                conn.commit()
+                print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
+            except Exception as e2:
+                err_str2 = str(e2).lower()
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                if "instagram_connection_id" in err_str2 and ("does not exist" in err_str2 or "undefinedcolumn" in err_str2):
+                    cursor.execute(
+                        f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                        (instagram_user_id, message_text, bot_response)
+                    )
+                    conn.commit()
+                    print(f"✅ Message saved (legacy schema) for Instagram user: {instagram_user_id}")
+                else:
+                    print(f"❌ Error saving message: {e2}")
+                    conn.rollback()
+                    raise
+        elif "instagram_connection_id" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str):
             cursor.execute(
                 f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
                 (instagram_user_id, message_text, bot_response)
@@ -4361,7 +4389,6 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
             print(f"✅ Message saved (legacy schema) for Instagram user: {instagram_user_id}")
         else:
             print(f"❌ Error saving message: {e}")
-            conn.rollback()
             raise
     finally:
         if should_close:
@@ -4396,7 +4423,12 @@ def get_last_messages(instagram_user_id, n=35, conn=None, instagram_connection_i
                     (instagram_user_id, instagram_connection_id, n)
                 )
             except Exception as col_err:
-                if "instagram_connection_id" in str(col_err).lower() and ("does not exist" in str(col_err).lower() or "undefinedcolumn" in str(col_err).lower()):
+                err_str = str(col_err).lower()
+                if "instagram_connection_id" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str or "infailedsqltransaction" in err_str):
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
                     cursor.execute(
                         f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
                         (instagram_user_id, n)
@@ -4423,6 +4455,10 @@ def get_last_messages(instagram_user_id, n=35, conn=None, instagram_connection_i
         
     except Exception as e:
         print(f"❌ Error retrieving messages: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         return []
     finally:
         if should_close:
