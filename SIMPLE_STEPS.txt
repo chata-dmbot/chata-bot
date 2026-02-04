@@ -1,0 +1,473 @@
+================================================================================
+META APP REVIEW: SIMPLE STEP-BY-STEP CHECKLIST
+================================================================================
+
+GOAL: Get your app approved by Meta so anyone can use it (no more tester accounts needed!)
+
+================================================================================
+STEP 1: WRITE PERMISSION JUSTIFICATIONS (15 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Writing 3 short explanations of why you need each permission.
+
+WHERE: Just open a text file or Google Doc.
+
+COPY AND PASTE THESE (they're already written for you):
+
+---
+
+Permission 1: instagram_basic
+
+We use instagram_basic to retrieve the user's Instagram Business account 
+information (username, account ID) immediately after they connect their 
+account through OAuth. This information is displayed in the user's 
+dashboard so they can identify which Instagram account is connected and 
+manage their bot settings for that specific account.
+
+---
+
+Permission 2: instagram_manage_messages
+
+This is the core permission for our AI chatbot service. We use 
+instagram_manage_messages to:
+1. Receive incoming messages from followers via Instagram webhooks
+2. Send automated AI-generated replies to those followers
+3. Access message history to provide context for AI responses
+
+This permission is essential - without it, our app cannot function as 
+it is the primary mechanism for message delivery and response.
+
+---
+
+Permission 3: pages_messaging
+
+Instagram messaging functionality is managed through Facebook Pages. 
+We require pages_messaging because:
+1. Instagram Business accounts must be linked to a Facebook Page
+2. The Instagram Messaging API requires this permission to send/receive messages
+3. We need to access the Page's messaging capabilities to connect Instagram accounts
+
+This is a technical requirement of the Instagram Graph API - without it, 
+we cannot access messaging features even with instagram_manage_messages.
+
+---
+
+DONE WHEN: You have these 3 texts saved somewhere (text file, notes app, Google Doc).
+
+================================================================================
+STEP 2: CREATE TWO TEST INSTAGRAM ACCOUNTS (30 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Creating TWO test accounts - one for connecting, one for messaging.
+
+WHY TWO ACCOUNTS?
+- Account A: Reviewers will connect this to your app (tests OAuth flow)
+- Account B: Reviewers will message Account A (tests bot replies)
+- This shows Meta the COMPLETE user experience
+
+ACCOUNT A (For Connecting):
+1. Use an existing Instagram account (or create new)
+2. Make it a Business Account:
+   - Settings → Account → Switch to Professional Account → Business
+3. Link it to a Facebook Page (Instagram will guide you)
+4. Note the Facebook account email/password (reviewers need this)
+
+ACCOUNT B (For Messaging):
+1. Create a new Instagram account (or use existing)
+2. Make it a Business Account (optional, but recommended)
+3. This account will send test messages to Account A
+
+DONE WHEN: 
+- Account A is Instagram Business + linked to Facebook Page
+- Account B exists and can send messages
+- You have credentials for both accounts written down
+
+NOTE: Don't use your personal accounts! These will be shared with Meta reviewers.
+
+================================================================================
+STEP 3: ADD BOTH ACCOUNTS AS TESTERS (10 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Telling Meta that both test accounts can use your app.
+
+WHERE TO DO IT:
+1. Go to: https://developers.facebook.com/apps/
+2. Click on your app (chata)
+3. Go to "Roles" → "Add People"
+4. Add the Facebook account linked to Account A → Make them a "Tester"
+5. Add Account B's Facebook account → Make them a "Tester"
+   (If Account B doesn't have Facebook, add its Instagram account)
+
+DONE WHEN: Both accounts appear in your tester list.
+
+================================================================================
+STEP 4: TEST THE FULL FLOW YOURSELF (15 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Making sure everything works before reviewers test it.
+
+WHERE TO DO IT:
+1. Log into your app: https://getchata.com/login
+2. Click "Connect Instagram"
+3. Connect Account A (use Facebook login → select Instagram Account A)
+4. Configure bot settings (set a personality, anything)
+5. Log into Instagram Account B
+6. Send a message to Account A
+7. Verify Account A's bot replies automatically
+8. Check your dashboard - you should see the conversation
+
+DONE WHEN: 
+- Account A is connected in your app
+- Account B can message Account A
+- Bot replies work correctly
+- You can see conversations in dashboard
+
+================================================================================
+STEP 5: WRITE DOWN TEST CREDENTIALS (10 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Writing down login info for reviewers (both accounts).
+
+WHERE: Open a text file or Google Doc.
+
+COPY THIS TEMPLATE AND FILL IT IN:
+
+================================================================================
+TEST ACCOUNTS FOR META REVIEWERS
+================================================================================
+
+WHY TWO ACCOUNTS?
+We provide two accounts so reviewers can test the COMPLETE user experience:
+1. Account A: Reviewers connect this to our app (tests OAuth/connection flow)
+2. Account B: Reviewers message Account A (tests bot messaging functionality)
+This demonstrates both how users connect their accounts AND how the bot works.
+
+================================================================================
+APP LOGIN CREDENTIALS
+================================================================================
+
+URL: https://getchata.com/login
+Email: [your-test-email]
+Password: [secure-password]
+
+================================================================================
+ACCOUNT A - For Connecting to App
+================================================================================
+
+Facebook Account (required for Instagram connection):
+- Email: [account-a-facebook-email]
+- Password: [account-a-facebook-password]
+
+Instagram Account (to connect):
+- Username: @[account-a-instagram-username]
+- Password: [account-a-instagram-password]
+- Note: This account is linked to the Facebook Page above
+- Note: This account is added as a tester in Meta Developer Console
+
+================================================================================
+ACCOUNT B - For Testing Messaging
+================================================================================
+
+Instagram Account (to send test messages):
+- Username: @[account-b-instagram-username]
+- Password: [account-b-instagram-password]
+- Note: This account is added as a tester in Meta Developer Console
+
+================================================================================
+HOW TO TEST THE FULL FLOW
+================================================================================
+
+PART 1: CONNECTION TEST (Tests OAuth flow)
+1. Go to https://getchata.com/login
+2. Sign up or log in using App Login credentials above
+3. Click "Connect Instagram Account"
+4. Log in with Account A's Facebook credentials
+5. Select Account A's Instagram account when prompted
+6. Complete the connection
+7. You should see Account A in your dashboard
+
+PART 2: MESSAGING TEST (Tests bot functionality)
+1. Log into Instagram Account B (use Account B credentials)
+2. Send a message to Account A's Instagram account
+3. The bot should automatically reply within seconds
+4. Check the dashboard - you should see the conversation
+
+PART 3: BOT SETTINGS TEST (Tests configuration)
+1. In the dashboard, go to "Bot Settings"
+2. Configure the bot personality/prompts
+3. Send another test message from Account B
+4. Verify the bot replies with the new settings
+
+================================================================================
+STRIPE TESTING (if applicable)
+================================================================================
+
+- App is in TEST MODE
+- Use test card: 4242 4242 4242 4242
+- Any future expiry date, any CVC
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+- Both accounts are added as testers in Meta Developer Console
+- Both accounts should be Instagram Business accounts
+- Account A must be linked to a Facebook Page
+- Webhook subscriptions activate automatically when Account A is connected
+- If webhook doesn't activate, check Meta Developer Console → Webhooks
+
+DONE WHEN: You have this complete document saved with all credentials filled in.
+
+================================================================================
+STEP 6: SWITCH STRIPE TO TEST MODE (10 minutes) - OPTIONAL
+================================================================================
+
+WHAT YOU'RE DOING: Making sure reviewers can test payments without real money.
+
+NOTE: If you've already done this, skip to Step 7!
+
+WHERE TO DO IT:
+1. Go to Stripe Dashboard: https://dashboard.stripe.com
+2. Make sure you're in TEST MODE (toggle in top right)
+3. Go to Render: https://dashboard.render.com
+4. Go to your app → Environment
+5. Update these variables:
+   - STRIPE_SECRET_KEY → Copy from Stripe (starts with sk_test_)
+   - STRIPE_PUBLISHABLE_KEY → Copy from Stripe (starts with pk_test_)
+6. Save and redeploy
+
+DONE WHEN: 
+- Stripe is in test mode
+- Environment variables updated
+- App redeployed
+- You can test with card 4242 4242 4242 4242
+
+================================================================================
+ABOUT THE TWO VIDEOS - WHY BOTH ARE NEEDED
+================================================================================
+
+VIDEO 1 (Full Flow):
+- Shows Meta reviewers HOW your app works
+- Demonstrates the complete user experience
+- Proves your app functions end-to-end
+- Shows: signup → connect → configure → message → reply
+
+VIDEO 2 (Permissions):
+- Shows Meta reviewers WHERE each permission is used
+- Maps permissions to specific features
+- Explains WHY you need each permission
+- Helps Meta understand your permission usage
+
+BOTH VIDEOS WORK TOGETHER:
+- Video 1 = "Here's what my app does"
+- Video 2 = "Here's why I need these permissions"
+- Together = Complete picture for Meta reviewers
+
+================================================================================
+STEP 7: RECORD SCREENCAST VIDEO 1 - FULL FLOW (25 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Recording a video showing the COMPLETE user experience from start to finish.
+
+WHY THIS VIDEO MATTERS:
+Meta reviewers need to see the ENTIRE flow - from signup to connecting to messaging.
+This video proves your app works end-to-end.
+
+HOW TO RECORD:
+- Windows: Press Win + G → Click record button
+- Or use: OBS Studio (free) or Loom (free, easy)
+- Make sure your screen is clear and readable
+
+WHAT TO RECORD (NARRATE AS YOU GO):
+
+PART 1: SIGNUP & CONNECTION (5 minutes)
+1. Start recording
+2. Go to https://getchata.com
+3. Show the homepage (say: "This is our homepage")
+4. Click "Sign Up" or "Log In"
+5. Create account or log in (say: "User creates account")
+6. Show dashboard (say: "This is the user dashboard")
+7. Click "Connect Instagram Account"
+8. Show Facebook login popup (say: "User logs in with Facebook")
+9. Show Instagram account selection (say: "User selects their Instagram account")
+10. Complete connection (say: "Account is now connected")
+11. Show dashboard with connected account (say: "Account appears in dashboard")
+
+PART 2: BOT CONFIGURATION (3 minutes)
+12. Go to "Bot Settings"
+13. Show configuration options (say: "Users can configure bot personality")
+14. Set some settings (say: "I'm configuring the bot now")
+15. Save settings
+
+PART 3: MESSAGING TEST (5 minutes)
+16. Open Instagram Account B in another tab/window
+17. Send a message to Account A (say: "Now I'm sending a test message")
+18. Switch back to dashboard
+19. Show the message appearing (say: "Message received via webhook")
+20. Show bot generating reply (say: "Bot is generating AI reply")
+21. Switch back to Instagram Account B
+22. Show the bot's reply (say: "Bot automatically replied")
+23. Switch back to dashboard
+24. Show conversation history (say: "Conversation saved in dashboard")
+
+PART 4: WRAP UP (1 minute)
+25. Summarize what was shown (say: "This demonstrates the complete flow")
+26. Stop recording
+
+TIPS:
+- Speak clearly and explain what you're doing
+- Don't rush - reviewers need to see everything
+- If you make a mistake, just pause and continue
+- Show both the app AND Instagram to prove it works
+
+DONE WHEN: 
+- You have a 10-15 minute video showing the complete flow
+- It includes signup, connection, configuration, and messaging
+- Upload it to YouTube (unlisted) or Vimeo
+- Copy the link (you'll need it for Step 9)
+
+================================================================================
+STEP 8: RECORD SCREENCAST VIDEO 2 - PERMISSIONS EXPLANATION (15 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Recording a focused video explaining WHERE and WHY each permission is used.
+
+WHY THIS VIDEO MATTERS:
+Meta needs to see that you're using permissions correctly. This video maps each permission
+to a specific feature in your app.
+
+HOW TO RECORD:
+- Same as Video 1 (Win + G or OBS/Loom)
+- Keep it shorter and more focused than Video 1
+
+WHAT TO RECORD (NARRATE CLEARLY):
+
+PART 1: PERMISSION 1 - instagram_basic (2 minutes)
+1. Start recording
+2. Show dashboard with connected Instagram account
+3. Point to the account username/info
+4. Say: "We use instagram_basic permission to retrieve the user's Instagram Business
+   account information immediately after they connect through OAuth. This information
+   is displayed here in the dashboard so users can identify which account is connected."
+
+PART 2: PERMISSION 2 - instagram_manage_messages (4 minutes)
+5. Show Bot Settings page
+6. Say: "This is where users configure their bot settings"
+7. Send a test message from Account B to Account A
+8. Show the message appearing in dashboard/webhook logs
+9. Say: "We use instagram_manage_messages to receive incoming messages from followers
+   via Instagram webhooks. This is how messages come into our system."
+10. Show the bot generating and sending a reply
+11. Show the reply in Instagram
+12. Say: "We also use instagram_manage_messages to send automated AI-generated replies
+    to followers. This is the core functionality - without this permission, our app
+    cannot function."
+
+PART 3: PERMISSION 3 - pages_messaging (3 minutes)
+13. Show the connection flow (or explain it)
+14. Say: "Instagram messaging functionality is managed through Facebook Pages. We require
+    pages_messaging because Instagram Business accounts must be linked to a Facebook Page,
+    and the Instagram Messaging API requires this permission to send and receive messages.
+    Without pages_messaging, we cannot access messaging features even with instagram_manage_messages."
+15. Show the connected account's page association (if visible)
+
+PART 4: SUMMARY (1 minute)
+16. Summarize: "These three permissions work together: instagram_basic for account info,
+    instagram_manage_messages for messaging, and pages_messaging for page-level access."
+17. Stop recording
+
+TIPS:
+- Be specific - point to exactly where each permission is used
+- Explain WHY you need each permission
+- Keep it concise but thorough
+- This video can be shorter than Video 1 (5-8 minutes is fine)
+
+DONE WHEN: 
+- You have a 5-8 minute video explaining all 3 permissions
+- Each permission is clearly mapped to a feature
+- Upload it to YouTube (unlisted) or Vimeo
+- Copy the link (you'll need it for Step 9)
+
+================================================================================
+STEP 9: SUBMIT TO META (30 minutes)
+================================================================================
+
+WHAT YOU'RE DOING: Actually submitting your app for review.
+
+WHERE TO DO IT:
+1. Go to: https://developers.facebook.com/apps/YOUR_APP_ID/app-review/
+2. Click "Permissions and Features"
+3. For EACH permission (instagram_basic, instagram_manage_messages, pages_messaging):
+   - Click "Request" or "Edit"
+   - Paste your justification text (from Step 1)
+   - Add BOTH video links:
+     * Video 1 (Full Flow) - Shows complete user experience
+     * Video 2 (Permissions) - Explains where each permission is used
+   - Answer any questions
+4. In "Instructions for Reviewers":
+   - Paste your complete test credentials document (from Step 5)
+   - Include explanation of why 2 accounts are needed
+5. Add Privacy Policy: https://getchata.com/privacy
+6. Add Terms of Service: https://getchata.com/terms
+7. Review everything one more time
+8. Click "Submit for Review"
+
+DONE WHEN: 
+- All 3 permissions submitted with both videos
+- Complete test credentials provided (both accounts explained)
+- Privacy Policy and Terms links added
+- Status shows "In Review"
+
+================================================================================
+WHAT YOU'LL HAVE AT THE END
+================================================================================
+
+1. 3 permission justifications (saved in a file)
+2. Two test Instagram accounts (Account A for connecting, Account B for messaging)
+3. Both accounts added as testers in Meta Developer Console
+4. Complete test credentials document (both accounts explained)
+5. Stripe in test mode (configured)
+6. 2 screencast videos:
+   - Video 1: Full flow (signup → connect → message → reply)
+   - Video 2: Permissions explanation (where each permission is used)
+7. App submitted to Meta (status: "In Review")
+
+Then you wait 1-2 weeks for Meta to review it!
+
+================================================================================
+QUICK CHECKLIST (Copy This!)
+================================================================================
+
+[ ] Step 1: Write permission justifications (15 min)
+[ ] Step 2: Create TWO test Instagram accounts (30 min)
+[ ] Step 3: Add BOTH accounts as testers (10 min)
+[ ] Step 4: Test the full flow yourself (15 min)
+[ ] Step 5: Write test credentials (both accounts) (10 min)
+[ ] Step 6: Switch Stripe to test mode - OPTIONAL (10 min)
+[ ] Step 7: Record video 1 - full flow (25 min)
+[ ] Step 8: Record video 2 - permissions (15 min)
+[ ] Step 9: Submit to Meta (30 min)
+
+Total time: ~2.5 hours (you can do it in one sitting or spread it out!)
+
+================================================================================
+TIPS
+================================================================================
+
+- Start with Step 1 - it's the easiest and gets you moving
+- Do Steps 2-4 together - they're all about setting up test accounts
+- Write down credentials as you create accounts (don't forget passwords!)
+- Test everything yourself before giving credentials to reviewers
+- Record videos when you're fresh - don't rush them
+- Speak clearly in videos - explain what you're doing
+- Take breaks - no need to rush
+- If you get stuck - just ask me, I'll help!
+
+IMPORTANT REMINDERS:
+- Both accounts must be added as testers in Meta Developer Console
+- Account A must be Instagram Business + linked to Facebook Page
+- Test the full flow yourself before submitting
+- Keep your test credentials document safe and organized
+
+You got this!
+
