@@ -138,6 +138,19 @@
             transform: scale(1.05);
         }
 
+        .page-load-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .page-load-overlay.hidden { display: none; }
+        .page-load-overlay .icon-plus { color: #22c55e; font-size: 2.5rem; font-weight: 300; }
+
         /* Hero Section */
         .dashboard-hero {
             position: relative;
@@ -685,6 +698,7 @@
     </style>
 </head>
 <body>
+    <div class="page-load-overlay" id="pageLoadOverlay"><span class="icon-plus">+</span></div>
     <!-- Interactive Grid Background -->
     <div class="interactive-grid" id="interactiveGrid"></div>
 
@@ -867,9 +881,7 @@
                                style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
                                 <i class="fas fa-unlink"></i> Disconnect
                             </button>
-                        </div>
-                        <div style="margin-top: 1rem; width: 100%;">
-                            <a href="{{ url_for('conversation_history', connection_id=connection.id) }}" class="btn-secondary" style="display: block; width: 100%; text-align: center; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);">
+                            <a href="{{ url_for('conversation_history', connection_id=connection.id) }}" class="btn-secondary" style="background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);">
                                 <i class="fas fa-comments"></i> Conversation History
                             </a>
                         </div>
@@ -952,9 +964,10 @@
             }
         }
         
-        // Initialize grid on load
+        // Initialize grid on load and hide loading overlay
         window.addEventListener('load', function() {
-            // Ensure page starts at top
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (overlay) overlay.classList.add('hidden');
             window.scrollTo(0, 0);
             createInteractiveGrid();
             grid = document.getElementById('interactiveGrid');

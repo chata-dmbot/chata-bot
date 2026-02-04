@@ -45,6 +45,39 @@
         linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
       background-size: 50px 50px;
       background-attachment: scroll;
+      transition: transform 0.3s ease;
+    }
+    .grid-cell {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border: 1px solid rgba(51, 102, 255, 0.1);
+      transition: all 0.6s ease;
+      pointer-events: auto;
+      background: transparent;
+    }
+    .grid-cell:hover,
+    .grid-cell.active {
+      background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+      border-color: var(--chata-blue);
+      box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+      transform: scale(1.05);
+    }
+    .page-load-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .page-load-overlay.hidden { display: none; }
+    .page-load-overlay .icon-plus {
+      color: #22c55e;
+      font-size: 2.5rem;
+      font-weight: 300;
     }
     .content-wrap { position: relative; z-index: 10; max-width: 900px; margin: 0 auto; padding: 2rem; padding-top: 100px; }
     .back-link {
@@ -83,7 +116,7 @@
       user-select: none;
     }
     .conv-head .label { font-weight: 500; color: #fff; }
-    .conv-head .id { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+    .conv-head .id { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: 0.5rem; }
     .search-wrap { margin-bottom: 1.25rem; }
     .search-input {
       width: 100%;
@@ -138,7 +171,10 @@
   </style>
 </head>
 <body>
-  <div class="interactive-grid"></div>
+  <div class="page-load-overlay" id="pageLoadOverlay">
+    <span class="icon-plus">+</span>
+  </div>
+  <div class="interactive-grid" id="interactiveGrid"></div>
   <div class="content-wrap">
     <a href="{{ url_for('dashboard') }}" class="back-link">
       <i class="fas fa-arrow-left"></i> Back to Dashboard
@@ -158,7 +194,7 @@
       <li class="conv-row" data-connection-id="{{ connection_id }}" data-user-id="{{ (c.instagram_user_id|string) }}" data-username="{{ (c.username or '')|lower }}">
         <div class="conv-head">
           <span>
-            <span class="label">{% if c.username %}{{ c.username }}{% else %}Account {{ (c.instagram_user_id|string)[-8:] if (c.instagram_user_id|string)|length > 8 else (c.instagram_user_id|string) }}{% endif %}</span>
+            <span class="label">{% if c.username %}@{{ c.username }}{% else %}Account{% endif %}</span>
             <span class="id">ID: {{ c.instagram_user_id }}</span>
           </span>
           <i class="fas fa-chevron-down chevron"></i>
@@ -263,6 +299,75 @@
           }
         });
       });
+
+      window.addEventListener('load', function() {
+        document.getElementById('pageLoadOverlay').classList.add('hidden');
+      });
+
+      var grid = document.getElementById('interactiveGrid');
+      var gridSize = 50;
+      var cols = Math.ceil(window.innerWidth / gridSize);
+      var rows = Math.ceil(window.innerHeight * 6 / gridSize);
+      for (var i = 0; i < rows; i++) {
+        for (var j = 0; j < cols; j++) {
+          var cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.style.left = (j * gridSize) + 'px';
+          cell.style.top = (i * gridSize) + 'px';
+          grid.appendChild(cell);
+        }
+      }
+      window.addEventListener('resize', function() {
+        grid.innerHTML = '';
+        cols = Math.ceil(window.innerWidth / gridSize);
+        rows = Math.ceil(window.innerHeight * 6 / gridSize);
+        for (var i = 0; i < rows; i++) {
+          for (var j = 0; j < cols; j++) {
+            var cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.style.left = (j * gridSize) + 'px';
+            cell.style.top = (i * gridSize) + 'px';
+            grid.appendChild(cell);
+          }
+        }
+      });
+      var mouseX = 0, mouseY = 0;
+      document.addEventListener('mousemove', function(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+      var cellTimeouts = {};
+      function updateGridLighting() {
+        var cells = grid.querySelectorAll('.grid-cell');
+        cells.forEach(function(cell) {
+          var rect = cell.getBoundingClientRect();
+          var isMouseOver = mouseX >= rect.left && mouseX < rect.right && mouseY >= rect.top && mouseY < rect.bottom;
+          if (isMouseOver) {
+            if (cellTimeouts[cell]) clearTimeout(cellTimeouts[cell]);
+            cell.style.background = 'rgba(51, 102, 255, 0.15)';
+            cell.style.borderColor = 'rgba(51, 102, 255, 0.6)';
+            cell.style.boxShadow = '0 0 20px rgba(51, 102, 255, 0.4)';
+            cell.style.transform = 'scale(1.02)';
+            cell.classList.add('active');
+            cellTimeouts[cell] = setTimeout(function() {
+              cell.style.background = '';
+              cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
+              cell.style.boxShadow = '';
+              cell.style.transform = 'scale(1)';
+              cell.classList.remove('active');
+              delete cellTimeouts[cell];
+            }, 1500);
+          }
+        });
+        requestAnimationFrame(updateGridLighting);
+      }
+      updateGridLighting();
+      var scrollY = 0;
+      function onScroll() {
+        scrollY = window.pageYOffset;
+        grid.style.transform = 'translateY(-' + (scrollY * 0.6) + 'px)';
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
     })();
   </script>
 </body>
