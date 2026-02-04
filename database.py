@@ -247,6 +247,7 @@ def _create_postgres_tables(cursor):
         CREATE TABLE IF NOT EXISTS messages (
             id SERIAL PRIMARY KEY,
             instagram_user_id VARCHAR(255) NOT NULL,
+            instagram_connection_id INTEGER REFERENCES instagram_connections(id),
             message_text TEXT NOT NULL,
             bot_response TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -315,6 +316,15 @@ def _create_postgres_tables(cursor):
         CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
             mid VARCHAR(512) PRIMARY KEY,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    # Cache sender usernames for conversation history search
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversation_senders (
+            instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+            instagram_user_id VARCHAR(255) NOT NULL,
+            username VARCHAR(255),
+            PRIMARY KEY (instagram_connection_id, instagram_user_id)
         )
     """)
 
@@ -486,6 +496,7 @@ def _create_sqlite_tables(cursor):
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             instagram_user_id TEXT NOT NULL,
+            instagram_connection_id INTEGER REFERENCES instagram_connections(id),
             message_text TEXT NOT NULL,
             bot_response TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -566,6 +577,17 @@ def _create_sqlite_tables(cursor):
         """)
     except Exception as e:
         print(f"Note: instagram_webhook_processed_mids table may already exist: {e}")
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS conversation_senders (
+                instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                instagram_user_id TEXT NOT NULL,
+                username TEXT,
+                PRIMARY KEY (instagram_connection_id, instagram_user_id)
+            )
+        """)
+    except Exception as e:
+        print(f"Note: conversation_senders table may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""

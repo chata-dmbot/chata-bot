@@ -868,6 +868,11 @@
                                 <i class="fas fa-unlink"></i> Disconnect
                             </button>
                         </div>
+                        <div style="margin-top: 1rem; width: 100%;">
+                            <a href="{{ url_for('conversation_history', connection_id=connection.id) }}" class="btn-secondary" style="display: block; width: 100%; text-align: center; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);">
+                                <i class="fas fa-comments"></i> Conversation History
+                            </a>
+                        </div>
                     </div>
                 {% endfor %}
             {% else %}

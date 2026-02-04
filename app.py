@@ -1515,6 +1515,69 @@ def dashboard():
                          subscription_status=subscription_status,
                          bot_paused=bot_paused)
 
+
+@app.route("/dashboard/conversation-history")
+@login_required
+def conversation_history():
+    """Conversation history page for one Instagram connection: list of conversations, expandable to show messages."""
+    connection_id = request.args.get("connection_id", type=int)
+    if not connection_id:
+        flash("Please select an Instagram connection.", "error")
+        return redirect(url_for("dashboard"))
+    user_id = session["user_id"]
+    conn = get_db_connection()
+    if not conn:
+        flash("Database error. Please try again.", "error")
+        return redirect(url_for("dashboard"))
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(
+            f"SELECT id, instagram_page_name, instagram_username FROM instagram_connections WHERE id = {placeholder} AND user_id = {placeholder}",
+            (connection_id, user_id)
+        )
+        row = cursor.fetchone()
+        if not row:
+            flash("Instagram connection not found.", "error")
+            return redirect(url_for("dashboard"))
+        connection_name = row[1] or row[2] or "Instagram"
+        conversations = get_conversation_list(connection_id, conn)
+    finally:
+        conn.close()
+    return render_template(
+        "conversation_history.html",
+        connection_id=connection_id,
+        connection_name=connection_name,
+        conversations=conversations,
+    )
+
+
+@app.route("/api/conversation-history/<int:connection_id>/<instagram_user_id>/messages")
+@login_required
+def api_conversation_messages(connection_id, instagram_user_id):
+    """Return JSON list of messages for one conversation (for expandable dropdown)."""
+    user_id = session["user_id"]
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database error"}), 500
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(
+            f"SELECT 1 FROM instagram_connections WHERE id = {placeholder} AND user_id = {placeholder}",
+            (connection_id, user_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({"error": "Connection not found"}), 404
+        limit = min(int(request.args.get("limit", 10)), 50)
+        offset = int(request.args.get("offset", 0))
+        messages = get_messages_for_conversation(connection_id, instagram_user_id, limit=limit, offset=offset, conn=conn)
+        total = get_conversation_message_count(connection_id, instagram_user_id, conn=conn)
+        return jsonify({"messages": messages, "total": total})
+    finally:
+        conn.close()
+
+
 # ---- Bot Settings Management ----
 
 def get_client_settings(user_id, connection_id=None, conn=None):
@@ -4260,15 +4323,16 @@ def set_setting(key, value):
 
 # ---- Message DB helpers ----
 
-def save_message(instagram_user_id, message_text, bot_response, conn=None):
+def save_message(instagram_user_id, message_text, bot_response, conn=None, instagram_connection_id=None):
     """
     Save a message to the database.
     
     Args:
-        instagram_user_id: Instagram user ID
+        instagram_user_id: Instagram user ID (the sender who DMed the page)
         message_text: Message text from user
         bot_response: Bot response text
         conn: Optional database connection to reuse. If None, opens and closes its own connection.
+        instagram_connection_id: Optional. Which Instagram connection (page) this message belongs to.
     """
     should_close = False
     if conn is None:
@@ -4280,8 +4344,8 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None):
     
     try:
         cursor.execute(
-            f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
-            (instagram_user_id, message_text, bot_response)
+            f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
+            (instagram_user_id, instagram_connection_id, message_text, bot_response)
         )
         conn.commit()
         print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
@@ -4293,14 +4357,15 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None):
         if should_close:
             conn.close()
 
-def get_last_messages(instagram_user_id, n=35, conn=None):
+def get_last_messages(instagram_user_id, n=35, conn=None, instagram_connection_id=None):
     """
-    Get conversation history for a specific Instagram user.
+    Get conversation history for a specific Instagram user (sender).
     
     Args:
-        instagram_user_id: Instagram user ID
+        instagram_user_id: Instagram user ID (the sender)
         n: Number of messages to retrieve (default: 35)
         conn: Optional database connection to reuse. If None, opens and closes its own connection.
+        instagram_connection_id: Optional. When set, only messages for this connection are returned.
     
     Returns:
         List of messages in OpenAI format
@@ -4314,10 +4379,16 @@ def get_last_messages(instagram_user_id, n=35, conn=None):
     placeholder = get_param_placeholder()
     
     try:
-        cursor.execute(
-            f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
-            (instagram_user_id, n)
-        )
+        if instagram_connection_id is not None:
+            cursor.execute(
+                f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} AND instagram_connection_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
+                (instagram_user_id, instagram_connection_id, n)
+            )
+        else:
+            cursor.execute(
+                f"SELECT message_text, bot_response FROM messages WHERE instagram_user_id = {placeholder} ORDER BY id DESC LIMIT {placeholder}",
+                (instagram_user_id, n)
+            )
         rows = cursor.fetchall()
         
         # Convert to OpenAI format
@@ -4337,6 +4408,157 @@ def get_last_messages(instagram_user_id, n=35, conn=None):
     finally:
         if should_close:
             conn.close()
+
+
+def get_conversation_list(instagram_connection_id, conn=None):
+    """
+    Get list of conversations (distinct senders) for an Instagram connection.
+    Ordered by instagram_user_id (no heavy aggregation). Includes username when cached.
+    Returns list of dicts: [{"instagram_user_id": str, "username": str or None}, ...]
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    try:
+        # Simple distinct list; join optional username from conversation_senders if table exists
+        cursor.execute(
+            f"""
+            SELECT DISTINCT m.instagram_user_id
+            FROM messages m
+            WHERE m.instagram_connection_id = {placeholder}
+            ORDER BY m.instagram_user_id
+            """,
+            (instagram_connection_id,)
+        )
+        user_ids = [row[0] for row in cursor.fetchall()]
+        # Try to attach usernames from conversation_senders (may not exist yet)
+        result = []
+        for uid in user_ids:
+            username = None
+            try:
+                cursor.execute(
+                    f"SELECT username FROM conversation_senders WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}",
+                    (instagram_connection_id, str(uid))
+                )
+                r = cursor.fetchone()
+                if r and r[0]:
+                    username = r[0]
+            except Exception:
+                pass
+            result.append({"instagram_user_id": uid, "username": username})
+        return result
+    except Exception as e:
+        print(f"❌ Error getting conversation list: {e}")
+        return []
+    finally:
+        if should_close:
+            conn.close()
+
+
+def upsert_conversation_sender_username(instagram_connection_id, instagram_user_id, username, conn=None):
+    """Store or update sender username for conversation history search (called from webhook when we have it)."""
+    if not username or not instagram_connection_id:
+        return
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    try:
+        cursor.execute(
+            f"INSERT INTO conversation_senders (instagram_connection_id, instagram_user_id, username) VALUES ({placeholder}, {placeholder}, {placeholder})",
+            (instagram_connection_id, str(instagram_user_id), username)
+        )
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        err = str(e).lower()
+        if "unique" in err or "duplicate" in err or "constraint" in err:
+            try:
+                cursor.execute(
+                    f"UPDATE conversation_senders SET username = {placeholder} WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}",
+                    (username, instagram_connection_id, str(instagram_user_id))
+                )
+                conn.commit()
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+    finally:
+        if should_close:
+            conn.close()
+
+
+def get_messages_for_conversation(instagram_connection_id, instagram_user_id, limit=10, offset=0, conn=None):
+    """
+    Get messages for one conversation (one sender, one connection), chronological order.
+    Returns list of dicts: [{"message_text": str, "bot_response": str, "created_at": ...}, ...]
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    try:
+        cursor.execute(
+            f"""
+            SELECT message_text, bot_response, created_at
+            FROM messages
+            WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}
+            ORDER BY id ASC
+            LIMIT {placeholder} OFFSET {placeholder}
+            """,
+            (instagram_connection_id, instagram_user_id, limit, offset)
+        )
+        rows = cursor.fetchall()
+        return [
+            {
+                "message_text": row[0] or "",
+                "bot_response": row[1] or "",
+                "created_at": row[2].isoformat() if hasattr(row[2], "isoformat") else str(row[2]) if row[2] else None,
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        print(f"❌ Error getting messages for conversation: {e}")
+        return []
+    finally:
+        if should_close:
+            conn.close()
+
+
+def get_conversation_message_count(instagram_connection_id, instagram_user_id, conn=None):
+    """Total number of message rows for this conversation (for 'Load more' cap)."""
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    try:
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) FROM messages
+            WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}
+            """,
+            (instagram_connection_id, instagram_user_id)
+        )
+        return cursor.fetchone()[0]
+    except Exception as e:
+        return 0
+    finally:
+        if should_close:
+            conn.close()
+
 
 # ---- Instagram Connection Helpers ----
 
@@ -5084,7 +5306,7 @@ def webhook():
                         print(f"⚠️ Error checking bot pause status: {e}")
                 
                 for event in events:
-                    save_message(sender_id, event["text"], "", webhook_conn)
+                    save_message(sender_id, event["text"], "", webhook_conn, instagram_connection_id=connection_id)
                 print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
 
                 # Check reply limit before generating response (only for registered users)
@@ -5121,6 +5343,8 @@ def webhook():
                                         continue
                                     else:
                                         print(f"✅ Sender {sender_username} is not blocked. Proceeding with reply.")
+                                    if sender_username:
+                                        upsert_conversation_sender_username(connection_id, sender_id, sender_username, webhook_conn)
                                 else:
                                     print(f"⚠️ Could not fetch sender username (status {response.status_code}), proceeding anyway")
                             except Exception as e:
@@ -5128,7 +5352,7 @@ def webhook():
                     except Exception as e:
                         print(f"⚠️ Error getting client settings for blocked users check: {e}. Proceeding with reply.")
 
-                history = get_last_messages(sender_id, 35, webhook_conn)
+                history = get_last_messages(sender_id, 35, webhook_conn, instagram_connection_id=connection_id)
                 print(f"📚 History for {sender_id}: {len(history)} messages")
 
                 ai_start = time.time()
@@ -5137,7 +5361,7 @@ def webhook():
                 print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                save_message(sender_id, "", reply_text, webhook_conn)
+                save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id)
                 print(f"✅ Saved bot response for {sender_id}")
 
                 page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID

@@ -145,11 +145,103 @@ def migrate_instagram_connections():
     finally:
         conn.close()
 
+def migrate_messages_connection_id():
+    """Add instagram_connection_id to messages table so messages can be scoped per Instagram connection"""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    
+    cursor = conn.cursor()
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+        
+        column_name = 'instagram_connection_id'
+        if is_postgres:
+            # Check if column exists in PostgreSQL
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='messages' AND column_name=%s
+            """, (column_name,))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    ALTER TABLE messages 
+                    ADD COLUMN instagram_connection_id INTEGER REFERENCES instagram_connections(id)
+                """)
+                print("✅ Added column messages.instagram_connection_id")
+            else:
+                print("⏭️  Column messages.instagram_connection_id already exists")
+        else:
+            # SQLite: try to add, ignore if it already exists
+            try:
+                cursor.execute("""
+                    ALTER TABLE messages 
+                    ADD COLUMN instagram_connection_id INTEGER REFERENCES instagram_connections(id)
+                """)
+                print("✅ Added column messages.instagram_connection_id")
+            except Exception as e:
+                if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
+                    print("⏭️  Column messages.instagram_connection_id already exists")
+                else:
+                    raise
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ messages table migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def migrate_conversation_senders():
+    """Create conversation_senders table for caching sender usernames (search by username)."""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    cursor = conn.cursor()
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+        if is_postgres:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_senders (
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    instagram_user_id VARCHAR(255) NOT NULL,
+                    username VARCHAR(255),
+                    PRIMARY KEY (instagram_connection_id, instagram_user_id)
+                )
+            """)
+        else:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_senders (
+                    instagram_connection_id INTEGER REFERENCES instagram_connections(id),
+                    instagram_user_id TEXT NOT NULL,
+                    username TEXT,
+                    PRIMARY KEY (instagram_connection_id, instagram_user_id)
+                )
+            """)
+        conn.commit()
+        print("✅ conversation_senders table ready")
+        return True
+    except Exception as e:
+        print(f"❌ conversation_senders migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     print("🔧 Running database migration to add missing columns...")
     ok1 = migrate_client_settings()
     ok2 = migrate_instagram_connections()
-    if ok1 and ok2:
+    ok3 = migrate_messages_connection_id()
+    ok4 = migrate_conversation_senders()
+    if ok1 and ok2 and ok3 and ok4:
         print("✅ Your database is now updated and ready!")
     else:
         print("❌ Migration failed. Please check the errors above.")
