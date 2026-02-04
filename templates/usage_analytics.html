@@ -138,6 +138,19 @@
             transform: scale(1.05);
         }
 
+        .page-load-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .page-load-overlay.hidden { display: none; }
+        .page-load-overlay .icon-plus { color: #22c55e; font-size: 2.5rem; font-weight: 300; }
+
         /* Hero Section */
         .dashboard-hero {
             position: relative;
@@ -561,6 +574,7 @@
     </style>
 </head>
 <body>
+    <div class="page-load-overlay" id="pageLoadOverlay"><span class="icon-plus">+</span></div>
     <!-- Interactive Grid Background -->
     <div class="interactive-grid" id="interactiveGrid"></div>
 
@@ -783,13 +797,28 @@
             }
         }
         
-        // Initialize grid on load
+        // Initialize grid on load and hide loading overlay
         window.addEventListener('load', function() {
-            // Ensure page starts at top
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (overlay) overlay.classList.add('hidden');
             window.scrollTo(0, 0);
             createInteractiveGrid();
             grid = document.getElementById('interactiveGrid');
         });
+        (function() {
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (!overlay) return;
+            document.querySelectorAll('a[href]').forEach(function(a) {
+                var href = a.getAttribute('href');
+                if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
+                try {
+                    var url = new URL(a.href, window.location.href);
+                    if (url.origin === window.location.origin && url.pathname) {
+                        a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
+                    }
+                } catch (e) {}
+            });
+        })();
         window.addEventListener('resize', createInteractiveGrid);
         window.addEventListener('scroll', updateGridOnScroll, { passive: true });
         
