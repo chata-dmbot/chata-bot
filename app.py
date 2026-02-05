@@ -2508,7 +2508,10 @@ def disconnect_instagram(connection_id):
             flash("Connection not found or you don't have permission to disconnect it.", "error")
             return redirect(url_for('dashboard'))
         
-        # First delete associated client settings (to avoid foreign key constraint)
+        # Delete dependent rows first (foreign key constraints)
+        cursor.execute(f"DELETE FROM conversation_senders WHERE instagram_connection_id = {placeholder}", (connection_id,))
+        cursor.execute(f"DELETE FROM messages WHERE instagram_connection_id = {placeholder}", (connection_id,))
+        cursor.execute(f"DELETE FROM usage_logs WHERE instagram_connection_id = {placeholder}", (connection_id,))
         cursor.execute(f"DELETE FROM client_settings WHERE instagram_connection_id = {placeholder}", (connection_id,))
         
         # Then delete the connection
