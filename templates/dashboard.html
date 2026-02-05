@@ -974,6 +974,7 @@
             grid = document.getElementById('interactiveGrid');
         });
         window.addEventListener('pageshow', hidePageLoadOverlay);
+        window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
         // Show overlay when user clicks any same-origin link (so they see loading until new page loads)
         (function() {
             var overlay = document.getElementById('pageLoadOverlay');

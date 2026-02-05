@@ -807,6 +807,7 @@
             grid = document.getElementById('interactiveGrid');
         });
         window.addEventListener('pageshow', hidePageLoadOverlay);
+        window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
         (function() {
             var overlay = document.getElementById('pageLoadOverlay');
             if (!overlay) return;
