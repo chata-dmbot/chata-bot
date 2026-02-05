@@ -1,0 +1,73 @@
+/* Page load overlay + 3D spinning cube (shared across templates) */
+.page-load-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.page-load-overlay.hidden {
+  display: none;
+}
+
+/* Cube scene - scoped to overlay only */
+.page-load-overlay .overlay-scene {
+  perspective: 1000px;
+  width: 200px;
+  height: 200px;
+}
+.page-load-overlay .overlay-cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: overlaySpinCube 8s linear infinite;
+}
+.page-load-overlay .overlay-face {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border: 2px solid rgba(59, 130, 246, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow:
+    inset 0 0 30px rgba(59, 130, 246, 0.2),
+    0 0 30px rgba(59, 130, 246, 0.3);
+}
+.page-load-overlay .overlay-face-front { transform: translateZ(100px); }
+.page-load-overlay .overlay-face-back { transform: rotateY(180deg) translateZ(100px); }
+.page-load-overlay .overlay-face-right { transform: rotateY(90deg) translateZ(100px); }
+.page-load-overlay .overlay-face-left { transform: rotateY(-90deg) translateZ(100px); }
+.page-load-overlay .overlay-face-top { transform: rotateX(90deg) translateZ(100px); }
+.page-load-overlay .overlay-face-bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+/* Glow effect for the cube */
+.page-load-overlay .overlay-cube::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform: translateZ(-50px);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+  filter: blur(30px);
+  animation: overlayPulse 3s ease-in-out infinite;
+}
+
+@keyframes overlaySpinCube {
+  0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  25%  { transform: rotateX(90deg) rotateY(90deg) rotateZ(0deg); }
+  50%  { transform: rotateX(180deg) rotateY(180deg) rotateZ(45deg); }
+  75%  { transform: rotateX(270deg) rotateY(270deg) rotateZ(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(0deg); }
+}
+@keyframes overlayPulse {
+  0%, 100% { opacity: 0.5; transform: translateZ(-50px) scale(1); }
+  50%      { opacity: 1; transform: translateZ(-50px) scale(1.2); }
+}

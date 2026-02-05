@@ -9,6 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
@@ -352,19 +353,6 @@
             transform: scale(1.05);
         }
 
-        .page-load-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-        .page-load-overlay.hidden { display: none; }
-        .page-load-overlay .icon-plus { color: #22c55e; font-size: 2.5rem; font-weight: 300; }
-        
         .grid-cell.active {
             background: radial-gradient(circle, rgba(51, 102, 255, 0.3) 0%, rgba(51, 102, 255, 0.15) 50%, transparent 70%);
             border-color: var(--chata-blue);
@@ -789,7 +777,18 @@
     </style>
 </head>
 <body>
-    <div class="page-load-overlay" id="pageLoadOverlay"><span class="icon-plus">+</span></div>
+    <div class="page-load-overlay" id="pageLoadOverlay">
+        <div class="overlay-scene">
+            <div class="overlay-cube">
+                <div class="overlay-face overlay-face-front"></div>
+                <div class="overlay-face overlay-face-back"></div>
+                <div class="overlay-face overlay-face-right"></div>
+                <div class="overlay-face overlay-face-left"></div>
+                <div class="overlay-face overlay-face-top"></div>
+                <div class="overlay-face overlay-face-bottom"></div>
+            </div>
+        </div>
+    </div>
     <!-- Interactive Grid Background -->
     <div class="interactive-grid" id="interactiveGrid"></div>
     

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Spinning Cube</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .scene {
+            perspective: 1000px;
+            width: 200px;
+            height: 200px;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: spinCube 8s linear infinite;
+        }
+
+        .face {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(59, 130, 246, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: rgba(59, 130, 246, 0.9);
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 
+                inset 0 0 30px rgba(59, 130, 246, 0.2),
+                0 0 30px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Front face */
+        .face-front {
+            transform: translateZ(100px);
+        }
+
+        /* Back face */
+        .face-back {
+            transform: rotateY(180deg) translateZ(100px);
+        }
+
+        /* Right face */
+        .face-right {
+            transform: rotateY(90deg) translateZ(100px);
+        }
+
+        /* Left face */
+        .face-left {
+            transform: rotateY(-90deg) translateZ(100px);
+        }
+
+        /* Top face */
+        .face-top {
+            transform: rotateX(90deg) translateZ(100px);
+        }
+
+        /* Bottom face */
+        .face-bottom {
+            transform: rotateX(-90deg) translateZ(100px);
+        }
+
+        @keyframes spinCube {
+            0% {
+                transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+            }
+            25% {
+                transform: rotateX(90deg) rotateY(90deg) rotateZ(0deg);
+            }
+            50% {
+                transform: rotateX(180deg) rotateY(180deg) rotateZ(45deg);
+            }
+            75% {
+                transform: rotateX(270deg) rotateY(270deg) rotateZ(0deg);
+            }
+            100% {
+                transform: rotateX(360deg) rotateY(360deg) rotateZ(0deg);
+            }
+        }
+
+        /* Glow effect for the cube */
+        .cube::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform: translateZ(-50px);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+            filter: blur(30px);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: translateZ(-50px) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translateZ(-50px) scale(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scene">
+        <div class="cube">
+            <div class="face face-front"></div>
+            <div class="face face-back"></div>
+            <div class="face face-right"></div>
+            <div class="face face-left"></div>
+            <div class="face face-top"></div>
+            <div class="face face-bottom"></div>
+        </div>
+    </div>
+
+    <script>
+        // Optional: Add mouse interaction to rotate cube
+        const cube = document.querySelector('.cube');
+
+        cube.addEventListener('mouseenter', () => {
+            cube.style.animationPlayState = 'paused';
+        });
+
+        cube.addEventListener('mouseleave', () => {
+            cube.style.animationPlayState = 'running';
+        });
+
+        // Optional: Click to change rotation speed
+        let speedIndex = 0;
+        const speeds = ['8s', '4s', '2s', '1s', '8s'];
+        
+        cube.addEventListener('click', () => {
+            speedIndex = (speedIndex + 1) % speeds.length;
+            cube.style.animationDuration = speeds[speedIndex];
+        });
+    </script>
+</body>
+</html>
