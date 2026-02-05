@@ -1578,6 +1578,76 @@ def api_conversation_messages(connection_id, instagram_user_id):
         conn.close()
 
 
+@app.route("/api/conversation-history/<int:connection_id>/<instagram_user_id>/send-pending", methods=["POST"])
+@login_required
+def api_send_pending_reply(connection_id, instagram_user_id):
+    """Send a pending bot reply (App Review manual-send mode). Request body: {"message_id": 123}."""
+    user_id = session["user_id"]
+    data = request.get_json() or {}
+    message_id = data.get("message_id")
+    if not message_id:
+        return jsonify({"error": "message_id required"}), 400
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database error"}), 500
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(
+            f"SELECT 1 FROM instagram_connections WHERE id = {placeholder} AND user_id = {placeholder}",
+            (connection_id, user_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({"error": "Connection not found"}), 404
+        cursor.execute(
+            f"SELECT bot_response FROM messages WHERE id = {placeholder} AND instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder} AND (sent_via_api = FALSE OR sent_via_api = 0)",
+            (message_id, connection_id, instagram_user_id)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Pending message not found or already sent"}), 404
+        reply_text = row[0] or ""
+        if not reply_text:
+            return jsonify({"error": "No reply text"}), 400
+        cursor.execute(
+            f"SELECT page_access_token, instagram_page_id, user_id FROM instagram_connections WHERE id = {placeholder}",
+            (connection_id,)
+        )
+        conn_row = cursor.fetchone()
+        if not conn_row:
+            return jsonify({"error": "Connection not found"}), 404
+        page_access_token, page_id, conn_user_id = conn_row[0], conn_row[1], conn_row[2]
+        if not page_id:
+            page_id = Config.INSTAGRAM_USER_ID
+        url = f"https://graph.facebook.com/v18.0/{page_id}/messages?access_token={page_access_token}"
+        payload = {"recipient": {"id": instagram_user_id}, "message": {"text": reply_text}}
+        r = requests.post(url, json=payload, timeout=45)
+        if r.status_code != 200:
+            return jsonify({"error": "Failed to send", "details": r.text}), 502
+        ph = get_param_placeholder()
+        try:
+            cursor.execute(f"UPDATE messages SET sent_via_api = {ph} WHERE id = {ph}", (True if ph == '%s' else 1, message_id))
+        except Exception as col_err:
+            err_str = str(col_err).lower()
+            if "sent_via_api" in err_str and ("no such column" in err_str or "does not exist" in err_str or "undefinedcolumn" in err_str):
+                pass
+            else:
+                raise
+        conn.commit()
+        if conn_user_id:
+            increment_reply_count(conn_user_id, conn)
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"❌ Error sending pending reply: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return jsonify({"error": "Server error"}), 500
+    finally:
+        conn.close()
+
+
 # ---- Bot Settings Management ----
 
 def get_client_settings(user_id, connection_id=None, conn=None):
@@ -4323,7 +4393,7 @@ def set_setting(key, value):
 
 # ---- Message DB helpers ----
 
-def save_message(instagram_user_id, message_text, bot_response, conn=None, instagram_connection_id=None):
+def save_message(instagram_user_id, message_text, bot_response, conn=None, instagram_connection_id=None, sent_via_api=True):
     """
     Save a message to the database.
     
@@ -4333,6 +4403,7 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
         bot_response: Bot response text
         conn: Optional database connection to reuse. If None, opens and closes its own connection.
         instagram_connection_id: Optional. Which Instagram connection (page) this message belongs to.
+        sent_via_api: If False, reply is saved but not yet sent (App Review manual-send mode). Default True.
     """
     should_close = False
     if conn is None:
@@ -4341,11 +4412,14 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
     
     cursor = conn.cursor()
     placeholder = get_param_placeholder()
-    
+    sent_val = True if sent_via_api else False
+    if get_param_placeholder() == '?':
+        sent_val = 1 if sent_via_api else 0
+
     try:
         cursor.execute(
-            f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
-            (instagram_user_id, instagram_connection_id, message_text, bot_response)
+            f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response, sent_via_api) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
+            (instagram_user_id, instagram_connection_id, message_text, bot_response, sent_val)
         )
         conn.commit()
         print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
@@ -4358,8 +4432,8 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
         if "infailedsqltransaction" in err_str or "transaction is aborted" in err_str:
             try:
                 cursor.execute(
-                    f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
-                    (instagram_user_id, instagram_connection_id, message_text, bot_response)
+                    f"INSERT INTO messages (instagram_user_id, instagram_connection_id, message_text, bot_response, sent_via_api) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
+                    (instagram_user_id, instagram_connection_id, message_text, bot_response, sent_val)
                 )
                 conn.commit()
                 print(f"✅ Message saved successfully for Instagram user: {instagram_user_id}")
@@ -4371,8 +4445,8 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
                     pass
                 if "instagram_connection_id" in err_str2 and ("does not exist" in err_str2 or "undefinedcolumn" in err_str2):
                     cursor.execute(
-                        f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                        (instagram_user_id, message_text, bot_response)
+                        f"INSERT INTO messages (instagram_user_id, message_text, bot_response, sent_via_api) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
+                        (instagram_user_id, message_text, bot_response, sent_val)
                     )
                     conn.commit()
                     print(f"✅ Message saved (legacy schema) for Instagram user: {instagram_user_id}")
@@ -4382,8 +4456,8 @@ def save_message(instagram_user_id, message_text, bot_response, conn=None, insta
                     raise
         elif "instagram_connection_id" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str):
             cursor.execute(
-                f"INSERT INTO messages (instagram_user_id, message_text, bot_response) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                (instagram_user_id, message_text, bot_response)
+                f"INSERT INTO messages (instagram_user_id, message_text, bot_response, sent_via_api) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})",
+                (instagram_user_id, message_text, bot_response, sent_val)
             )
             conn.commit()
             print(f"✅ Message saved (legacy schema) for Instagram user: {instagram_user_id}")
@@ -4555,7 +4629,7 @@ def upsert_conversation_sender_username(instagram_connection_id, instagram_user_
 def get_messages_for_conversation(instagram_connection_id, instagram_user_id, limit=10, offset=0, conn=None):
     """
     Get messages for one conversation (one sender, one connection), chronological order.
-    Returns list of dicts: [{"message_text": str, "bot_response": str, "created_at": ...}, ...]
+    Returns list of dicts: [{"id": int, "message_text": str, "bot_response": str, "created_at": ..., "sent_via_api": bool}, ...]
     """
     should_close = False
     if conn is None:
@@ -4566,7 +4640,7 @@ def get_messages_for_conversation(instagram_connection_id, instagram_user_id, li
     try:
         cursor.execute(
             f"""
-            SELECT message_text, bot_response, created_at
+            SELECT id, message_text, bot_response, created_at, sent_via_api
             FROM messages
             WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}
             ORDER BY id ASC
@@ -4575,15 +4649,52 @@ def get_messages_for_conversation(instagram_connection_id, instagram_user_id, li
             (instagram_connection_id, instagram_user_id, limit, offset)
         )
         rows = cursor.fetchall()
-        return [
-            {
-                "message_text": row[0] or "",
-                "bot_response": row[1] or "",
-                "created_at": row[2].isoformat() if hasattr(row[2], "isoformat") else str(row[2]) if row[2] else None,
-            }
-            for row in rows
-        ]
+        result = []
+        for row in rows:
+            sent = row[4] if len(row) > 4 else True
+            if sent is None:
+                sent = True
+            if hasattr(sent, 'numerator'):  # 0/1 from SQLite
+                sent = bool(sent)
+            result.append({
+                "id": row[0],
+                "message_text": row[1] or "",
+                "bot_response": row[2] or "",
+                "created_at": row[3].isoformat() if hasattr(row[3], "isoformat") else str(row[3]) if row[3] else None,
+                "sent_via_api": sent,
+            })
+        return result
     except Exception as e:
+        err_str = str(e).lower()
+        if "sent_via_api" in err_str and ("does not exist" in err_str or "undefinedcolumn" in err_str or "no such column" in err_str):
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                cursor.execute(
+                    f"""
+                    SELECT id, message_text, bot_response, created_at
+                    FROM messages
+                    WHERE instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder}
+                    ORDER BY id ASC
+                    LIMIT {placeholder} OFFSET {placeholder}
+                    """,
+                    (instagram_connection_id, instagram_user_id, limit, offset)
+                )
+                rows = cursor.fetchall()
+                return [
+                    {
+                        "id": row[0],
+                        "message_text": row[1] or "",
+                        "bot_response": row[2] or "",
+                        "created_at": row[3].isoformat() if hasattr(row[3], "isoformat") else str(row[3]) if row[3] else None,
+                        "sent_via_api": True,
+                    }
+                    for row in rows
+                ]
+            except Exception:
+                pass
         print(f"❌ Error getting messages for conversation: {e}")
         return []
     finally:
@@ -5416,25 +5527,12 @@ def webhook():
                 print(f"🕒 AI reply generation time: {ai_duration:.2f}s")
                 print(f"🤖 AI generated reply: {reply_text[:50]}...")
 
-                save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id)
-                print(f"✅ Saved bot response for {sender_id}")
+                app_review_manual_send = getattr(Config, 'APP_REVIEW_MANUAL_SEND', False)
+                save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id, sent_via_api=not app_review_manual_send)
+                print(f"✅ Saved bot response for {sender_id}" + (" (pending approval in Conversation History)" if app_review_manual_send else ""))
 
-                page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
-                url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
-                payload = {
-                    "recipient": {"id": sender_id},
-                    "message": {"text": reply_text}
-                }
-
-                send_start = time.time()
-                r = requests.post(url, json=payload, timeout=45)
-                send_duration = time.time() - send_start
-                print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
-                if r.status_code != 200:
-                    print(f"❌ Error sending reply: {r.text}")
-                else:
-                    print(f"✅ Reply sent successfully to {sender_id}")
-                    # Mark message as processed for idempotency (Issue 4 - avoid double reply on retry)
+                if app_review_manual_send:
+                    # App Review mode: do not send via API; user will click Send in Conversation History
                     if message_mid:
                         try:
                             ph = get_param_placeholder()
@@ -5456,9 +5554,47 @@ def webhook():
                                 webhook_conn.rollback()
                             except Exception:
                                 pass
-                    # Increment reply count only for registered users and only on successful send
-                    if instagram_connection and user_id:
-                        increment_reply_count(user_id, webhook_conn)
+                else:
+                    page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
+                    url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
+                    payload = {
+                        "recipient": {"id": sender_id},
+                        "message": {"text": reply_text}
+                    }
+
+                    send_start = time.time()
+                    r = requests.post(url, json=payload, timeout=45)
+                    send_duration = time.time() - send_start
+                    print(f"📤 Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
+                    if r.status_code != 200:
+                        print(f"❌ Error sending reply: {r.text}")
+                    else:
+                        print(f"✅ Reply sent successfully to {sender_id}")
+                        # Mark message as processed for idempotency (Issue 4 - avoid double reply on retry)
+                        if message_mid:
+                            try:
+                                ph = get_param_placeholder()
+                                is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                                if is_pg:
+                                    cursor.execute(
+                                        f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({ph}) ON CONFLICT (mid) DO NOTHING",
+                                        (message_mid,)
+                                    )
+                                else:
+                                    cursor.execute(
+                                        f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({ph})",
+                                        (message_mid,)
+                                    )
+                                webhook_conn.commit()
+                            except Exception as e:
+                                print(f"⚠️ Failed to store processed mid: {e}")
+                                try:
+                                    webhook_conn.rollback()
+                                except Exception:
+                                    pass
+                        # Increment reply count only for registered users and only on successful send
+                        if instagram_connection and user_id:
+                            increment_reply_count(user_id, webhook_conn)
                     
                 total_duration = time.time() - handler_start
                 print(f"⏱️ Total webhook handling time for {sender_id}: {total_duration:.2f}s")

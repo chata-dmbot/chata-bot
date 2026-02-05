@@ -25,6 +25,9 @@ class Config:
     ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
     INSTAGRAM_USER_ID = os.getenv("INSTAGRAM_USER_ID")
     
+    # Meta App Review: when True, bot replies are saved but not sent; user must click Send in Conversation History (temporary for review)
+    APP_REVIEW_MANUAL_SEND = os.getenv("APP_REVIEW_MANUAL_SEND", "false").lower() in ("true", "1", "yes")
+
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")

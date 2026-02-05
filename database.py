@@ -327,6 +327,8 @@ def _create_postgres_tables(cursor):
             PRIMARY KEY (instagram_connection_id, instagram_user_id)
         )
     """)
+    # App Review mode: bot reply saved but not sent until user clicks Send in Conversation History
+    cursor.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS sent_via_api BOOLEAN DEFAULT TRUE")
 
 def _create_sqlite_tables(cursor):
     """Create SQLite tables"""
@@ -588,6 +590,10 @@ def _create_sqlite_tables(cursor):
         """)
     except Exception as e:
         print(f"Note: conversation_senders table may already exist: {e}")
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN sent_via_api INTEGER DEFAULT 1")
+    except Exception as e:
+        print(f"Note: messages.sent_via_api column may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""

@@ -153,6 +153,14 @@
     .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .conv-loading { padding: 1rem; text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
     .empty-conv { padding: 1.5rem; text-align: center; color: rgba(255,255,255,0.6); }
+    .msg.pending-approval { border-left-color: rgba(255, 193, 7, 0.9); background: rgba(255, 193, 7, 0.08); }
+    .pending-approval-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: rgba(255, 193, 7, 0.95); font-size: 0.85rem; }
+    .pending-approval-head i.fa-exclamation-triangle { font-size: 1rem; }
+    .pending-approval-text { margin: 0.5rem 0; white-space: pre-wrap; word-break: break-word; }
+    .pending-approval-note { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.5rem; }
+    .pending-send-btn { margin-top: 0.5rem; padding: 0.5rem 1rem; background: var(--chata-blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .pending-send-btn:hover { background: var(--chata-blue-light); }
+    .pending-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -244,10 +252,48 @@
               messagesEl.appendChild(div);
             }
             if (m.bot_response) {
+              var pending = m.sent_via_api === false || m.sent_via_api === 0;
               var div = document.createElement('div');
-              div.className = 'msg bot';
-              div.innerHTML = '<div>Bot: ' + escapeHtml(m.bot_response) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
-              messagesEl.appendChild(div);
+              div.className = 'msg bot' + (pending ? ' pending-approval' : '');
+              if (pending) {
+                div.innerHTML =
+                  '<div class="pending-approval-head"><i class="fas fa-exclamation-triangle"></i> <span>The bot has generated the following message. Please approve before sending.</span></div>' +
+                  '<div class="pending-approval-text">' + escapeHtml(m.bot_response) + '</div>' +
+                  '<div class="pending-approval-note">We have added this feature temporarily for the Meta App Review. Messages will be sent automatically once the review is approved.</div>' +
+                  '<button type="button" class="pending-send-btn" data-message-id="' + escapeHtml(String(m.id)) + '"><i class="fas fa-paper-plane"></i> Send</button>' +
+                  (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
+                messagesEl.appendChild(div);
+                div.querySelector('.pending-send-btn').addEventListener('click', function() {
+                  var btn = this;
+                  var mid = btn.getAttribute('data-message-id');
+                  if (!mid) return;
+                  btn.disabled = true;
+                  btn.textContent = 'Sending…';
+                  fetch('/api/conversation-history/' + connectionId + '/' + encodeURIComponent(userId) + '/send-pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message_id: parseInt(mid, 10) })
+                  })
+                    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+                    .then(function(result) {
+                      if (result.ok && result.data.success) {
+                        fetchMessages(0, 10, false);
+                      } else {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                        alert(result.data.error || 'Failed to send');
+                      }
+                    })
+                    .catch(function() {
+                      btn.disabled = false;
+                      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                      alert('Failed to send');
+                    });
+                });
+              } else {
+                div.innerHTML = '<div>Bot: ' + escapeHtml(m.bot_response) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
+                messagesEl.appendChild(div);
+              }
             }
           });
         }
