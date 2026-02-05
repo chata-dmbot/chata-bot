@@ -1599,8 +1599,11 @@ def api_send_pending_reply(connection_id, instagram_user_id):
         )
         if not cursor.fetchone():
             return jsonify({"error": "Connection not found"}), 404
+        # PostgreSQL: sent_via_api is BOOLEAN (FALSE). SQLite: INTEGER (0).
+        is_pg = bool(Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")))
+        pending_cond = "sent_via_api = FALSE" if is_pg else "(sent_via_api = 0 OR sent_via_api = FALSE)"
         cursor.execute(
-            f"SELECT bot_response FROM messages WHERE id = {placeholder} AND instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder} AND (sent_via_api = FALSE OR sent_via_api = 0)",
+            f"SELECT bot_response FROM messages WHERE id = {placeholder} AND instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder} AND {pending_cond}",
             (message_id, connection_id, instagram_user_id)
         )
         row = cursor.fetchone()
@@ -5474,6 +5477,26 @@ def webhook():
                 for event in events:
                     save_message(sender_id, event["text"], "", webhook_conn, instagram_connection_id=connection_id)
                 print(f"✅ Saved {len(events)} user message(s) for {sender_id}")
+
+                # Ensure sender username is stored for Conversation History (e.g. professional accounts)
+                if instagram_connection and connection_id and access_token:
+                    try:
+                        ph = get_param_placeholder()
+                        cursor.execute(
+                            f"SELECT username FROM conversation_senders WHERE instagram_connection_id = {ph} AND instagram_user_id = {ph}",
+                            (connection_id, str(sender_id))
+                        )
+                        row = cursor.fetchone()
+                        if not row or not row[0]:
+                            url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
+                            r = requests.get(url, timeout=5)
+                            if r.status_code == 200:
+                                data = r.json()
+                                uname = (data.get("username") or "").strip().lower()
+                                if uname:
+                                    upsert_conversation_sender_username(connection_id, sender_id, uname, webhook_conn)
+                    except Exception as e:
+                        print(f"⚠️ Error fetching/saving sender username for conversation list: {e}")
 
                 # Check reply limit before generating response (only for registered users)
                 if instagram_connection and user_id:
