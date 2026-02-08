@@ -41,13 +41,13 @@ class Config:
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
     # Instagram webhook signature verification (X-Hub-Signature-256).
-    # Set to "true" = SKIP verification (insecure: anyone who knows the URL can POST). Set to "false" = verify.
-    # We default to skip because verification currently fails in production (Render): our HMAC never matches Meta's.
-    # Cause: we fixed encoding (Meta sends hex; we now use hexdigest()). Secret matches Meta. Body we receive is
-    # valid JSON and looks correct, but bytes we hash != bytes Meta signed. Likely the proxy (Render) decompresses
-    # gzip request bodies before our app sees them, so we hash decompressed bytes while Meta signed compressed.
-    # We added compact-JSON fallback (no effect). To re-enable verification: set this env to "false", then either
-    # ensure the platform passes raw body (no decompression) for POST /webhook, or get Meta's exact body format.
+    # Set to "true" = SKIP verification (insecure). Set to "false" = verify.
+    # We default to skip because verification fails in production (Render): our HMAC never matches Meta's.
+    # Research (see WEBHOOK_SIGNATURE_IMPLEMENTATION_NOTES.md): Meta typically sends uncompressed JSON;
+    # transparent gzip decompression by the proxy is unlikely. More likely the bytes we hash are not the exact
+    # bytes Meta signed (body consumed/rewritten elsewhere, or read after another layer decoded it). We use
+    # request.get_data(cache=True) as the single canonical raw body and do not parse before verify. If it still
+    # fails, reduce proxy layers in front of /webhook or verify at an edge that preserves raw bytes.
     SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION = os.getenv("SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION", "true").lower() in ("true", "1", "yes")
     FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://getchata.com/auth/instagram/callback")
     

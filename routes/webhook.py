@@ -150,10 +150,10 @@ def webhook():
             return "Forbidden", 403
 
     elif request.method == "POST":
-        # Use middleware-captured body for verification if present (earliest read, before proxy/server changes)
-        raw_body = request.environ.get("chata.webhook_raw_body")
-        if raw_body is None:
-            raw_body = request.get_data()
+        # Single canonical raw body for signature verification (Meta: hash exact bytes received; see research PDF).
+        # request.get_data(cache=True) reads once and caches; our middleware may have already read wsgi.input
+        # and replaced it with BytesIO(body), in which case get_data() returns the same bytes.
+        raw_body = request.get_data(cache=True)
         sig_header = request.headers.get("X-Hub-Signature-256", "")
         body_source = "middleware" if request.environ.get("chata.webhook_raw_body") is not None else "get_data"
         content_encoding = request.headers.get("Content-Encoding", "") or "(none)"
@@ -161,8 +161,8 @@ def webhook():
         logger.debug(f"Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source} Content-Encoding={content_encoding!r}")
         if not raw_body:
             logger.warning("Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
-        # Signature verification: see config.py SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION (currently skipped
-        # in prod because body bytes we receive likely differ from Meta's e.g. proxy decompression).
+        # Signature verification: see config.py SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION and
+        # WEBHOOK_SIGNATURE_IMPLEMENTATION_NOTES.md (single canonical raw body, no parse before verify).
         if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
             _sig_ok = True
         else:
