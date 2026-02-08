@@ -1,144 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - CHATA</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
-        :root {
-            --chata-blue: #3366ff;
-            --chata-blue-light: #4d7cff;
-            --chata-blue-dark: #1a4dcc;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            color: #ffffff;
-            overflow-x: hidden;
-            font-weight: 300;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            min-height: 100vh;
-            position: relative;
-        }
+{% block title %}Dashboard - CHATA{% endblock %}
 
-        /* Global subtle blur overlay - behind animations, in front of grid */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(1px);
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        /* Navigation */
-        .glass-nav {
-            backdrop-filter: none;
-            background: transparent;
-            border: none;
-        }
-        
-        .navigation {
-            opacity: 0;
-            transform: translateY(-50px);
-            animation: slideDown 1s ease-out forwards;
-            position: relative;
-            z-index: 15;
-        }
-
-        .nav-item {
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-item:hover {
-            color: var(--chata-blue);
-        }
-        
-        .nav-item::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--chata-blue);
-            transition: width 0.3s ease;
-        }
-        
-        .nav-item:hover::after {
-            width: 100%;
-        }
-
-        .logo-blue {
-            color: #3366ff;
-        }
-
-        .cta-button {
-            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
-        }
-
-        /* Interactive Grid Background */
-        .interactive-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 600%;
-            z-index: -1;
-            background: #000000;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-attachment: scroll;
-            transition: all 0.3s ease;
-        }
-
-        .grid-cell {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 1px solid rgba(51, 102, 255, 0.1);
-            transition: all 0.6s ease;
-            pointer-events: auto;
-            background: transparent;
-        }
-        
-        .grid-cell:hover,
-        .grid-cell.active {
-            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
-            transform: scale(1.05);
-        }
-
+{% block page_styles %}
         /* Hero Section */
         .dashboard-hero {
             position: relative;
@@ -426,26 +290,6 @@
             margin: 0.25rem 0;
         }
 
-        .alert {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-            padding: 1rem;
-            border-radius: 10px;
-            margin: 1rem 0;
-            text-align: center;
-            position: relative;
-            z-index: 20;
-        }
-
-        .alert-success {
-            background: rgba(34, 197, 94, 0.1);
-            border-color: rgba(34, 197, 94, 0.3);
-            color: #22c55e;
-            position: relative;
-            z-index: 20;
-        }
-
         /* Disconnect Modal */
         .disconnect-modal {
             position: fixed;
@@ -530,130 +374,6 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Footer Styles */
-        .site-footer {
-            margin-top: 60px;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 40px 0 20px 0;
-            position: relative;
-            z-index: 15;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        .footer-brand {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .footer-logo {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #3366ff;
-            text-decoration: none;
-        }
-
-        .footer-description {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1rem;
-            line-height: 1.6;
-            max-width: 300px;
-            text-transform: uppercase;
-        }
-
-        .footer-section h3 {
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            letter-spacing: 0.1em;
-        }
-
-        .footer-section a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.95rem;
-            display: block;
-            margin-bottom: 8px;
-            transition: color 0.3s ease;
-            text-transform: none;
-        }
-
-        .footer-section a:hover {
-            color: #3366ff;
-        }
-
-        .contact-info {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.95rem;
-            line-height: 1.4;
-            text-transform: none;
-        }
-
-        .contact-item i {
-            color: #3366ff;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            line-height: 1;
-            margin-top: 0.2em;
-        }
-
-        .contact-item a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: color 0.3s ease;
-            text-transform: none;
-        }
-
-        .contact-item a:hover {
-            color: #3366ff;
-        }
-
-        .footer-bottom {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
-            text-transform: none;
-        }
-
-        /* Animations */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .dashboard-hero h1 {
@@ -677,37 +397,17 @@
             .action-card {
                 padding: 1rem;
             }
-
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
         }
-    </style>
-</head>
-<body>
-    <div class="page-load-overlay hidden" id="pageLoadOverlay">
-        <div class="overlay-scene">
-            <div class="overlay-cube">
-                <div class="overlay-face overlay-face-front"></div>
-                <div class="overlay-face overlay-face-back"></div>
-                <div class="overlay-face overlay-face-right"></div>
-                <div class="overlay-face overlay-face-left"></div>
-                <div class="overlay-face overlay-face-top"></div>
-                <div class="overlay-face overlay-face-bottom"></div>
-            </div>
-        </div>
-    </div>
-    <!-- Interactive Grid Background -->
-    <div class="interactive-grid" id="interactiveGrid"></div>
+{% endblock %}
 
+{% block navigation %}
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div class="flex items-center h-16">
                 <!-- Logo - Left aligned -->
                 <div class="absolute left-0">
-                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                    <a href="{{ url_for('pages.home') }}" class="text-3xl font-bold logo-blue pl-4">
                         CHATA
                     </a>
                 </div>
@@ -715,17 +415,17 @@
                 <!-- Desktop Navigation - Centered -->
                 <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
                     <div class="flex items-center space-x-8">
-                        <a href="{{ url_for('dashboard') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">DASHBOARD</a>
-                        <a href="{{ url_for('home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                        <a href="{{ url_for('dashboard_bp.dashboard') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('pages.home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
                     </div>
                 </div>
   
                 <!-- CTA Buttons - Right aligned -->
                 <div class="hidden md:block absolute right-0">
                     <div class="flex items-center space-x-4 pr-4">
-                        <a href="{{ url_for('support') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SUPPORT</a>
-                        <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
-                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                        <a href="{{ url_for('pages.support') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SUPPORT</a>
+                        <a href="{{ url_for('dashboard_bp.account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                        <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
                     </div>
                 </div>
   
@@ -740,17 +440,9 @@
             </div>
         </div>
     </nav>
+{% endblock %}
 
-    <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div>
-            <h1>Dashboard</h1>
-            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
-            <p>Here you can manage your assistant settings and your own settings</p>
-        </div>
-    </section>
-
-    <!-- Flash Messages -->
+{% block flash_messages %}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="dashboard-content" style="z-index: 20; position: relative;">
@@ -762,6 +454,17 @@
             </div>
         {% endif %}
     {% endwith %}
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="dashboard-hero">
+        <div>
+            <h1>Dashboard</h1>
+            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
+            <p>Here you can manage your assistant settings and your own settings</p>
+        </div>
+    </section>
 
     <!-- Content -->
     <main class="dashboard-content">
@@ -772,13 +475,13 @@
                 <h2><i class="fas fa-user"></i> Account Information</h2>
                 <p><strong>Username:</strong> {{ user.username if user.username else 'Not set' }}</p>
                 <p><strong>Email:</strong> {{ user.email }}</p>
-                <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</p>
+                <p><strong>Member Since:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at and user.created_at.strftime is defined else (user.created_at[:10] if user.created_at else 'N/A') }}</p>
                 {% if subscription_status == 'canceled' %}
                     <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
                         <span style="color: rgba(255, 255, 255, 0.5); font-weight: 600;">No Active Plan</span>
                     </p>
                     <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">Your subscription has been canceled. You can still use your remaining replies, but cannot purchase add-ons.</p>
-                    <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                    <a href="{{ url_for('pages.pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
                         <i class="fas fa-rocket"></i> Reactivate Subscription
                     </a>
                 {% elif current_plan %}
@@ -788,7 +491,8 @@
                     {% if current_plan == 'starter' %}
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€9/month • 150 replies</p>
                         <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <form method="POST" action="{{ url_for('create_upgrade_checkout') }}" style="display: inline-block;">
+                            <form method="POST" action="{{ url_for('payments.create_upgrade_checkout') }}" style="display: inline-block;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-primary">
                                     <i class="fas fa-arrow-up"></i> Upgrade to Standard
                                 </button>
@@ -800,7 +504,8 @@
                     {% elif current_plan == 'standard' %}
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€29/month • 1500 replies</p>
                         <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <form method="POST" action="{{ url_for('create_downgrade_checkout') }}" style="display: inline-block;">
+                            <form method="POST" action="{{ url_for('payments.create_downgrade_checkout') }}" style="display: inline-block;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-secondary">
                                     <i class="fas fa-arrow-down"></i> Downgrade to Starter
                                 </button>
@@ -813,7 +518,8 @@
                     <!-- Add Replies Button (only when plan is active, not canceled) -->
                     {% if subscription_status != 'canceled' %}
                     <div style="margin-top: 1rem;">
-                        <form method="POST" action="{{ url_for('create_addon_checkout') }}" style="display: inline-block;">
+                        <form method="POST" action="{{ url_for('payments.create_addon_checkout') }}" style="display: inline-block;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                                 <i class="fas fa-plus"></i> Add Replies (€5 / 150 replies)
                             </button>
@@ -822,7 +528,7 @@
                     {% endif %}
                 {% else %}
                     <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.7);"><strong>Current Plan:</strong> None</p>
-                    <a href="{{ url_for('pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
+                    <a href="{{ url_for('pages.pricing') }}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">
                         <i class="fas fa-rocket"></i> Get Started
                     </a>
                 {% endif %}
@@ -859,19 +565,20 @@
                             <p><strong>Page ID:</strong> {{ connection.instagram_page_id }}</p>
                             <p><strong>Instagram Username:</strong> {{ connection.instagram_username or 'Unknown' }}</p>
                             <p><strong>Instagram ID:</strong> {{ connection.instagram_user_id }}</p>
-                            <p><strong>Connected:</strong> {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at else 'N/A' }}</p>
+                            <p><strong>Connected:</strong> {{ connection.created_at.strftime('%Y-%m-%d') if connection.created_at and connection.created_at.strftime is defined else (connection.created_at[:10] if connection.created_at else 'N/A') }}</p>
                         </div>
                         <div class="connection-actions">
                             <span class="status-badge status-{{ 'active' if connection.is_active else 'inactive' }}">
                                 {{ 'Active' if connection.is_active else 'Inactive' }}
                             </span>
-                            <a href="{{ url_for('bot_settings', connection_id=connection.id) }}" class="btn-secondary">
+                            <a href="{{ url_for('dashboard_bp.bot_settings', connection_id=connection.id) }}" class="btn-secondary">
                                 <i class="fas fa-robot"></i> AI Settings
                             </a>
-                            <a href="{{ url_for('conversation_history', connection_id=connection.id) }}" class="btn-secondary" style="background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);">
+                            <a href="{{ url_for('dashboard_bp.conversation_history', connection_id=connection.id) }}" class="btn-secondary" style="background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);">
                                 <i class="fas fa-comments"></i> Conversation History
                             </a>
-                            <form method="POST" action="{{ url_for('toggle_bot_pause') }}" style="display: inline-block; margin: 0;">
+                            <form method="POST" action="{{ url_for('dashboard_bp.toggle_bot_pause') }}" style="display: inline-block; margin: 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-secondary" style="{% if bot_paused %}background-color: #ff6b6b;{% else %}background-color: #51cf66;{% endif %}">
                                     <i class="fas fa-{% if bot_paused %}play{% else %}pause{% endif %}"></i> 
                                     {% if bot_paused %}Resume{% else %}Pause{% endif %}
@@ -890,7 +597,7 @@
                 <div class="empty-state">
                     <i class="fas fa-instagram"></i>
                     <p>No Instagram accounts connected yet</p>
-                    <a href="{{ url_for('instagram_auth') }}" class="btn-primary">Connect Your First Account</a>
+                    <a href="{{ url_for('auth.instagram_auth') }}" class="btn-primary">Connect Your First Account</a>
                 </div>
             {% endif %}
         </div>
@@ -900,17 +607,17 @@
             <h2><i class="fas fa-cog"></i> Quick Actions</h2>
             
             <div class="action-buttons-grid" style="grid-template-columns: repeat(3, 1fr); max-width: 900px; margin: 1rem auto;">
-                <a href="{{ url_for('support') }}" class="action-card">
+                <a href="{{ url_for('pages.support') }}" class="action-card">
                     <i class="fas fa-life-ring"></i>
                     <h3>Get Support</h3>
                     <p>Contact our support team for help</p>
                 </a>
-                <a href="{{ url_for('usage_analytics') }}" class="action-card">
+                <a href="{{ url_for('dashboard_bp.usage_analytics') }}" class="action-card">
                     <i class="fas fa-chart-line"></i>
                     <h3>Analytics</h3>
                     <p>View detailed usage statistics and insights</p>
                 </a>
-                <a href="{{ url_for('account_settings') }}" class="action-card">
+                <a href="{{ url_for('dashboard_bp.account_settings') }}" class="action-card">
                     <i class="fas fa-user-cog"></i>
                     <h3>Account Settings</h3>
                     <p>Manage your account preferences and security</p>
@@ -919,192 +626,45 @@
         </div>
     </main>
 
-    <!-- Interactive Grid Script -->
+    <!-- Cancel Subscription Modal -->
+    <div id="cancelModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center;">
+        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; position: relative;">
+            <span onclick="closeCancelModal()" style="position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: color 0.3s;">&times;</span>
+            <h2 style="color: var(--chata-blue); margin-bottom: 1rem;">Cancel Subscription</h2>
+            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">Are you sure you want to cancel your subscription?</p>
+            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-bottom: 1.5rem;">You can still use your remaining replies, but you won't be able to purchase add-ons until you reactivate your subscription.</p>
+            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                <form method="POST" action="{{ url_for('payments.cancel_subscription') }}" style="margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                        Cancel Plan
+                    </button>
+                </form>
+                <button type="button" class="btn-secondary" onclick="closeCancelModal()" style="width: 100%;">
+                    Keep Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disconnect Instagram Modal -->
+    <div id="disconnectModal" class="disconnect-modal">
+        <div class="disconnect-modal-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Disconnect Instagram Account</h3>
+            <p><strong>Are you sure you want to disconnect this Instagram account?</strong></p>
+            <p>This will stop your AI assistant from responding to messages on this account. You can reconnect it later if needed.</p>
+            <div class="disconnect-modal-actions">
+                <button class="btn-cancel-modal" onclick="closeDisconnectModal()">Cancel</button>
+                <a href="#" class="btn-danger-modal" onclick="confirmDisconnect(); return false;">
+                    <i class="fas fa-unlink"></i> Disconnect
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
     <script>
-        // Interactive Grid Background with scroll following
-        function createInteractiveGrid() {
-            const grid = document.getElementById('interactiveGrid');
-            const gridSize = 50;
-            const cols = Math.ceil(window.innerWidth / gridSize);
-            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage (matches 600% CSS height)
-            
-            // Clear existing grid
-            grid.innerHTML = '';
-            
-            // Create grid cells
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    cell.style.left = j * gridSize + 'px';
-                    cell.style.top = i * gridSize + 'px';
-                    grid.appendChild(cell);
-                }
-            }
-        }
-        
-        // Optimized scroll-based grid movement
-        let ticking = false;
-        let grid = null;
-        
-        function updateGridOnScroll() {
-            if (!ticking) {
-                requestAnimationFrame(function() {
-                    if (!grid) {
-                        grid = document.getElementById('interactiveGrid');
-                    }
-                    const scrollY = window.pageYOffset;
-                    
-                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
-                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        }
-        
-        function hidePageLoadOverlay() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (overlay) overlay.classList.add('hidden');
-        }
-        window.addEventListener('load', function() {
-            hidePageLoadOverlay();
-            window.scrollTo(0, 0);
-            createInteractiveGrid();
-            grid = document.getElementById('interactiveGrid');
-        });
-        window.addEventListener('pageshow', hidePageLoadOverlay);
-        window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
-        // Show overlay when user clicks any same-origin link (so they see loading until new page loads)
-        (function() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (!overlay) return;
-            document.querySelectorAll('a[href]').forEach(function(a) {
-                var href = a.getAttribute('href');
-                if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-                try {
-                    var url = new URL(a.href, window.location.href);
-                    if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
-                        a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
-                    }
-                } catch (e) {}
-            });
-        })();
-        window.addEventListener('resize', createInteractiveGrid);
-        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
-        
-        // Individual square timing system
-        let cellTimeouts = new Map(); // Track individual timeouts for each cell
-        
-        // High refresh rate mouse tracking
-        let mouseX = 0;
-        let mouseY = 0;
-        let animationFrameId = null;
-        
-        // Track mouse position with high frequency
-        document.addEventListener('mousemove', function(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-        
-        // Smooth grid lighting with requestAnimationFrame
-        function updateGridLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            cells.forEach(cell => {
-                const rect = cell.getBoundingClientRect();
-                
-                // Check if mouse is directly over this cell (exact square only)
-                const isMouseOver = mouseX >= rect.left && 
-                                  mouseX < rect.right && 
-                                  mouseY >= rect.top && 
-                                  mouseY < rect.bottom;
-                
-                if (isMouseOver) {
-                    // Clear any existing timeout for this cell
-                    if (cellTimeouts.has(cell)) {
-                        clearTimeout(cellTimeouts.get(cell));
-                        cellTimeouts.delete(cell);
-                    }
-                    
-                    // Activate only this exact square with solid illumination
-                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
-                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
-                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
-                    cell.style.transform = `scale(1.02)`;
-                    cell.classList.add('active');
-                    
-                    // Set individual timeout for this cell
-                    const timeoutId = setTimeout(() => {
-                        cell.style.background = '';
-                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                        cell.style.boxShadow = '';
-                        cell.style.transform = 'scale(1)';
-                        cell.classList.remove('active');
-                        cellTimeouts.delete(cell);
-                    }, 1500);
-                    
-                    cellTimeouts.set(cell, timeoutId);
-                }
-            });
-            
-            // Continue the animation loop
-            animationFrameId = requestAnimationFrame(updateGridLighting);
-        }
-        
-        // Start the high refresh rate animation
-        updateGridLighting();
-        
-        // Ambient grid lighting - random squares light up occasionally
-        function createAmbientLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            function lightRandomSquare() {
-                if (cells.length === 0) return;
-                
-                // Pick a random cell
-                const randomCell = cells[Math.floor(Math.random() * cells.length)];
-                
-                // Random intensity (more visible)
-                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
-                
-                // Random duration (1-3 seconds)
-                const duration = Math.random() * 2000 + 1000;
-                
-                // Light up the square with white orb and subtle border
-                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
-                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
-                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
-                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
-                randomCell.classList.add('active');
-                
-                // Fade out after duration
-                setTimeout(() => {
-                    randomCell.style.background = '';
-                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                    randomCell.style.boxShadow = '';
-                    randomCell.style.transform = 'scale(1)';
-                    randomCell.classList.remove('active');
-                }, duration);
-            }
-            
-            // Light up random squares every 2-5 seconds
-            function scheduleNextLight() {
-                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
-                setTimeout(() => {
-                    lightRandomSquare();
-                    scheduleNextLight();
-                }, delay);
-            }
-            
-            scheduleNextLight();
-        }
-        
-        // Start ambient lighting after a short delay
-        setTimeout(createAmbientLighting, 2000);
-        
         // Cancel subscription modal
         function showCancelModal() {
             const modal = document.getElementById('cancelModal');
@@ -1153,88 +713,8 @@
         
         function confirmDisconnect() {
             if (disconnectConnectionId) {
-                window.location.href = "{{ url_for('disconnect_instagram', connection_id=0) }}".replace('0', disconnectConnectionId);
+                window.location.href = "{{ url_for('dashboard_bp.disconnect_instagram', connection_id=0) }}".replace('0', disconnectConnectionId);
             }
         }
     </script>
-    
-    <!-- Cancel Subscription Modal -->
-    <div id="cancelModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center;">
-        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; position: relative;">
-            <span onclick="closeCancelModal()" style="position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem; color: rgba(255, 255, 255, 0.7); cursor: pointer; transition: color 0.3s;">&times;</span>
-            <h2 style="color: var(--chata-blue); margin-bottom: 1rem;">Cancel Subscription</h2>
-            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">Are you sure you want to cancel your subscription?</p>
-            <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-bottom: 1.5rem;">You can still use your remaining replies, but you won't be able to purchase add-ons until you reactivate your subscription.</p>
-            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                <form method="POST" action="{{ url_for('cancel_subscription') }}" style="margin: 0;">
-                    <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-                        Cancel Plan
-                    </button>
-                </form>
-                <button type="button" class="btn-secondary" onclick="closeCancelModal()" style="width: 100%;">
-                    Keep Subscription
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Disconnect Instagram Modal -->
-    <div id="disconnectModal" class="disconnect-modal">
-        <div class="disconnect-modal-content">
-            <h3><i class="fas fa-exclamation-triangle"></i> Disconnect Instagram Account</h3>
-            <p><strong>Are you sure you want to disconnect this Instagram account?</strong></p>
-            <p>This will stop your AI assistant from responding to messages on this account. You can reconnect it later if needed.</p>
-            <div class="disconnect-modal-actions">
-                <button class="btn-cancel-modal" onclick="closeDisconnectModal()">Cancel</button>
-                <a href="#" class="btn-danger-modal" onclick="confirmDisconnect(); return false;">
-                    <i class="fas fa-unlink"></i> Disconnect
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-content">
-            <!-- Brand Section -->
-            <div class="footer-brand">
-                <a href="{{ url_for('home') }}" class="footer-logo">CHATA</a>
-                <p class="footer-description">
-                    instagram ai engagement
-                </p>
-            </div>
-
-            <!-- Legal Links Section -->
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <a href="{{ url_for('privacy') }}">Privacy Policy</a>
-                <a href="{{ url_for('terms') }}">Terms of Service</a>
-                <a href="{{ url_for('data_deletion') }}">Data Deletion</a>
-            </div>
-
-            <!-- Contact Section -->
-            <div class="footer-section">
-                <h3>Contact</h3>
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <i class="fas fa-envelope"></i>
-                        <a href="mailto:chata.dmbot@gmail.com">chata.dmbot@gmail.com</a>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-phone"></i>
-                        <a href="tel:+37063204061">+37063204061</a>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fab fa-instagram"></i>
-                        <a href="https://instagram.com/chata.dmbot" target="_blank">chata.dmbot</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2025 CHATA (Tauras Nienius). All rights reserved.</p>
-        </div>
-    </footer>
-</body>
-</html>
+{% endblock %}

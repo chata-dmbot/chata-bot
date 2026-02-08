@@ -1,985 +1,466 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usage Analytics - CHATA</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
-        :root {
-            --chata-blue: #3366ff;
-            --chata-blue-light: #4d7cff;
-            --chata-blue-dark: #1a4dcc;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            color: #ffffff;
-            overflow-x: hidden;
-            font-weight: 300;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            min-height: 100vh;
-            position: relative;
-        }
+{% block title %}Usage Analytics - CHATA{% endblock %}
 
-        /* Global subtle blur overlay - behind animations, in front of grid */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(1px);
-            z-index: 1;
-            pointer-events: none;
-        }
+{% block page_styles %}
+    /* Hero Section */
+    .dashboard-hero {
+        position: relative;
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        margin-top: 80px;
+        z-index: 10;
+    }
 
-        /* Navigation */
-        .glass-nav {
-            backdrop-filter: none;
-            background: transparent;
-            border: none;
-        }
-        
-        .navigation {
-            opacity: 0;
-            transform: translateY(-50px);
-            animation: slideDown 1s ease-out forwards;
-            position: relative;
-            z-index: 15;
-        }
+    .dashboard-hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #fff, #ccc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 
-        .nav-item {
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-item:hover {
-            color: var(--chata-blue);
-        }
-        
-        .nav-item::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--chata-blue);
-            transition: width 0.3s ease;
-        }
-        
-        .nav-item:hover::after {
-            width: 100%;
-        }
+    .dashboard-hero p {
+        font-size: 1.2rem;
+        font-weight: 300;
+        letter-spacing: 0.05em;
+        color: #888;
+        text-transform: none;
+    }
 
-        .logo-blue {
-            color: #3366ff;
-        }
+    /* Content Section */
+    .dashboard-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        position: relative;
+        z-index: 10;
+    }
 
-        .cta-button {
-            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
-        }
+    /* Dashboard Layout */
+    .dashboard-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
 
-        /* Interactive Grid Background */
-        .interactive-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 600%;
-            z-index: -1;
-            background: #000000;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-attachment: scroll;
-            transition: all 0.3s ease;
-        }
+    .dashboard-section-block {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-        .grid-cell {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 1px solid rgba(51, 102, 255, 0.1);
-            transition: all 0.6s ease;
-            pointer-events: auto;
-            background: transparent;
-        }
-        
-        .grid-cell:hover,
-        .grid-cell.active {
-            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
-            transform: scale(1.05);
-        }
+    .dashboard-section-block::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+        opacity: 0.3;
+    }
 
-        /* Hero Section */
-        .dashboard-hero {
-            position: relative;
-            min-height: 60vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-            margin-top: 80px;
-            z-index: 10;
-        }
+    .dashboard-section-block:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(51, 102, 255, 0.3);
+        transform: translateY(-2px);
+    }
 
-        .dashboard-hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #fff, #ccc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+    .dashboard-section-block h2 {
+        color: var(--chata-blue);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-        .dashboard-hero p {
-            font-size: 1.2rem;
-            font-weight: 300;
-            letter-spacing: 0.05em;
-            color: #888;
-            text-transform: none;
-        }
+    .dashboard-section-block h3 {
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
 
-        /* Content Section */
-        .dashboard-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            z-index: 10;
-        }
+    .dashboard-section-block p {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 0.5rem;
+    }
 
-        /* Dashboard Layout */
-        .dashboard-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
 
-        .dashboard-section-block {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+    }
 
-        .dashboard-section-block::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
-            opacity: 0.3;
-        }
+    .stat-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(51, 102, 255, 0.3);
+    }
 
-        .dashboard-section-block:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(51, 102, 255, 0.3);
-            transform: translateY(-2px);
-        }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--chata-blue);
+        margin-bottom: 0.5rem;
+    }
 
-        .dashboard-section-block h2 {
-            color: var(--chata-blue);
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+    .stat-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        letter-spacing: 0.1em;
+    }
 
-        .dashboard-section-block h3 {
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
+    /* Limit Progress Bars */
+    .limit-item {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
 
-        .dashboard-section-block p {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            margin-bottom: 0.5rem;
-        }
+    .limit-label {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 0.5rem;
+    }
 
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
+    .limit-progress {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
 
-        .stat-item {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-        }
+    .limit-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
 
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(51, 102, 255, 0.3);
-        }
+    .limit-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--chata-blue);
-            margin-bottom: 0.5rem;
-        }
+    .limit-text {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        white-space: nowrap;
+    }
 
-        .stat-label {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            letter-spacing: 0.1em;
-        }
+    /* Metric Items */
+    .metric-item {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
 
-        /* Limit Progress Bars */
-        .limit-item {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+    .metric-label {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 0.5rem;
+    }
 
-        .limit-label {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 0.5rem;
-        }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--chata-blue);
+        margin-bottom: 0.5rem;
+    }
 
-        .limit-progress {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+    .metric-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
 
-        .limit-bar {
-            flex: 1;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
+    .metric-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
+        border-radius: 3px;
+    }
 
-        .limit-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
+    /* Activity List */
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
 
-        .limit-text {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            white-space: nowrap;
-        }
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+    }
 
-        /* Metric Items */
-        .metric-item {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+    .activity-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(51, 102, 255, 0.3);
+    }
 
-        .metric-label {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 0.5rem;
-        }
+    .activity-icon {
+        font-size: 1.5rem;
+        color: var(--chata-blue);
+        width: 40px;
+        text-align: center;
+    }
 
-        .metric-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--chata-blue);
-            margin-bottom: 0.5rem;
-        }
+    .activity-content {
+        flex: 1;
+    }
 
-        .metric-bar {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
+    .activity-title {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 0.25rem;
+    }
 
-        .metric-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--chata-blue), var(--chata-blue-light));
-            border-radius: 3px;
-        }
+    .activity-time {
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
 
-        /* Activity List */
-        .activity-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
 
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-        }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
 
-        .activity-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(51, 102, 255, 0.3);
-        }
+    /* Alert overrides for this page */
+    .alert {
+        text-transform: none;
+        letter-spacing: normal;
+    }
+{% endblock %}
 
-        .activity-icon {
-            font-size: 1.5rem;
-            color: var(--chata-blue);
-            width: 40px;
-            text-align: center;
-        }
+{% block navigation %}
+<nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="flex items-center h-16">
+            <!-- Logo - Left aligned -->
+            <div class="absolute left-0">
+                <a href="{{ url_for('pages.home') }}" class="text-3xl font-bold logo-blue pl-4">
+                    CHATA
+                </a>
+            </div>
 
-        .activity-content {
-            flex: 1;
-        }
+            <!-- Desktop Navigation - Centered -->
+            <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                <div class="flex items-center space-x-8">
+                    <a href="{{ url_for('dashboard_bp.dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                    <a href="{{ url_for('dashboard_bp.usage_analytics') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">USAGE</a>
+                    <a href="{{ url_for('dashboard_bp.bot_settings') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                </div>
+            </div>
 
-        .activity-title {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0.25rem;
-        }
+            <!-- CTA Buttons - Right aligned -->
+            <div class="hidden md:block absolute right-0">
+                <div class="flex items-center space-x-4 pr-4">
+                    <a href="{{ url_for('dashboard_bp.account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">ACCOUNT</a>
+                    <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                </div>
+            </div>
 
-        .activity-time {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 2rem;
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        /* Flash Messages */
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            text-transform: none;
-            letter-spacing: normal;
-        }
-
-        .alert-success {
-            background: rgba(63, 207, 100, 0.2);
-            border: 1px solid rgba(63, 207, 100, 0.5);
-            color: #3fcf64;
-        }
-
-        .alert-error {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            color: #ef4444;
-        }
-
-        @keyframes slideDown {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Footer Styles */
-        .site-footer {
-            margin-top: 60px;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 40px 0 20px 0;
-            position: relative;
-            z-index: 15;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        .footer-brand {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .footer-logo {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #3366ff;
-            text-decoration: none;
-        }
-
-        .footer-description {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1rem;
-            line-height: 1.6;
-            max-width: 300px;
-            text-transform: uppercase;
-        }
-
-        .footer-section h3 {
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            letter-spacing: 0.1em;
-        }
-
-        .footer-section a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.95rem;
-            display: block;
-            margin-bottom: 8px;
-            transition: color 0.3s ease;
-            text-transform: none;
-        }
-
-        .footer-section a:hover {
-            color: #3366ff;
-        }
-
-        .contact-info {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.95rem;
-            line-height: 1.4;
-            text-transform: none;
-        }
-
-        .contact-item i {
-            color: #3366ff;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            line-height: 1;
-            margin-top: 0.2em;
-        }
-
-        .contact-item a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: color 0.3s ease;
-            text-transform: none;
-        }
-
-        .contact-item a:hover {
-            color: #3366ff;
-        }
-
-        .footer-bottom {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
-            text-transform: none;
-        }
-
-        @media (max-width: 768px) {
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="page-load-overlay hidden" id="pageLoadOverlay">
-        <div class="overlay-scene">
-            <div class="overlay-cube">
-                <div class="overlay-face overlay-face-front"></div>
-                <div class="overlay-face overlay-face-back"></div>
-                <div class="overlay-face overlay-face-right"></div>
-                <div class="overlay-face overlay-face-left"></div>
-                <div class="overlay-face overlay-face-top"></div>
-                <div class="overlay-face overlay-face-bottom"></div>
+            <!-- Mobile menu button -->
+            <div class="md:hidden absolute right-0 pr-4">
+                <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
-    <!-- Interactive Grid Background -->
-    <div class="interactive-grid" id="interactiveGrid"></div>
+</nav>
+{% endblock %}
 
-    <!-- Navigation -->
-    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <div class="flex items-center h-16">
-                <!-- Logo - Left aligned -->
-                <div class="absolute left-0">
-                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
-                        CHATA
-                    </a>
+{% block flash_messages %}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="dashboard-hero">
+    <div>
+        <h1>Usage Analytics</h1>
+        <p>Track your AI's performance and usage statistics</p>
+    </div>
+</section>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="dashboard-content" style="z-index: 20; position: relative;">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
+                    {{ message }}
                 </div>
-      
-                <!-- Desktop Navigation - Centered -->
-                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
-                    <div class="flex items-center space-x-8">
-                        <a href="{{ url_for('dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
-                        <a href="{{ url_for('usage_analytics') }}" class="nav-item text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">USAGE</a>
-                        <a href="{{ url_for('bot_settings') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<!-- Content -->
+<main class="dashboard-content">
+    <div class="dashboard-row">
+        <!-- This Month -->
+        <div class="dashboard-section-block">
+            <h2><i class="fas fa-calendar-alt"></i> This Month</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                    <div class="stat-number">{{ replies_sent }}</div>
+                    <div class="stat-label">Replies Sent</div>
                     </div>
-                </div>
-  
-                <!-- CTA Buttons - Right aligned -->
-                <div class="hidden md:block absolute right-0">
-                    <div class="flex items-center space-x-4 pr-4">
-                        <a href="{{ url_for('account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">ACCOUNT</a>
-                        <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    <div class="stat-item">
+                    <div class="stat-number">{{ minutes_saved }}</div>
+                    <div class="stat-label">Minutes Saved</div>
                     </div>
+                    <div class="stat-item">
+                    <div class="stat-number">{{ remaining_replies }}</div>
+                    <div class="stat-label">Remaining Replies</div>
                 </div>
-  
-                <!-- Mobile menu button -->
-                <div class="md:hidden absolute right-0 pr-4">
-                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-            </div>
             </div>
         </div>
-    </nav>
 
-    <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div>
-            <h1>Usage Analytics</h1>
-            <p>Track your AI's performance and usage statistics</p>
+        <!-- Reply Limits -->
+        <div class="dashboard-section-block">
+            <h2><i class="fas fa-shield-alt"></i> Reply Limits</h2>
+            <div class="limit-item">
+                <div class="limit-label">Monthly Replies ({{ replies_sent }} / {{ replies_limit }})</div>
+                <div class="limit-progress">
+                    <div class="limit-bar">
+                        {% set monthly_percent = (replies_sent / replies_limit * 100) if replies_limit > 0 else 0 %}
+                        {% set monthly_percent_limited = monthly_percent if monthly_percent <= 100 else 100 %}
+                        <div class="limit-fill" style="width: {{ monthly_percent_limited }}%"></div>
+            </div>
+                    <span class="limit-text">{{ replies_sent }} / {{ replies_limit }}</span>
+            </div>
         </div>
-    </section>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="dashboard-content" style="z-index: 20; position: relative;">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
-                        {{ message }}
+            {% if replies_purchased > 0 %}
+            <div class="limit-item">
+                <div class="limit-label">Purchased Replies ({{ replies_used_purchased }} / {{ replies_purchased }})</div>
+                <div class="limit-progress">
+                    <div class="limit-bar">
+                        {% set purchased_percent = (replies_used_purchased / replies_purchased * 100) if replies_purchased > 0 else 0 %}
+                        {% set purchased_percent_limited = purchased_percent if purchased_percent <= 100 else 100 %}
+                        <div class="limit-fill" style="width: {{ purchased_percent_limited }}%"></div>
                     </div>
-                {% endfor %}
+                    <span class="limit-text">{{ replies_used_purchased }} / {{ replies_purchased }}</span>
+            </div>
                 </div>
-        {% endif %}
-    {% endwith %}
+            {% endif %}
 
-    <!-- Content -->
-    <main class="dashboard-content">
-        <div class="dashboard-row">
-            <!-- This Month -->
-            <div class="dashboard-section-block">
-                <h2><i class="fas fa-calendar-alt"></i> This Month</h2>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                        <div class="stat-number">{{ replies_sent }}</div>
-                        <div class="stat-label">Replies Sent</div>
-                        </div>
-                        <div class="stat-item">
-                        <div class="stat-number">{{ minutes_saved }}</div>
-                        <div class="stat-label">Minutes Saved</div>
-                        </div>
-                        <div class="stat-item">
-                        <div class="stat-number">{{ remaining_replies }}</div>
-                        <div class="stat-label">Remaining Replies</div>
-                    </div>
+            <div class="limit-item">
+                <div class="limit-label">Total Remaining</div>
+                <div class="limit-progress">
+                    <div class="limit-bar">
+                        {% set total_percent = (total_replies_used / total_replies_available * 100) if total_replies_available > 0 else 0 %}
+                        {% set total_percent_limited = total_percent if total_percent <= 100 else 100 %}
+                        <div class="limit-fill" style="width: {{ total_percent_limited }}%"></div>
+                </div>
+                    <span class="limit-text">{{ remaining_replies }} remaining</span>
+                </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Reply Limits -->
-            <div class="dashboard-section-block">
-                <h2><i class="fas fa-shield-alt"></i> Reply Limits</h2>
-                <div class="limit-item">
-                    <div class="limit-label">Monthly Replies ({{ replies_sent }} / {{ replies_limit }})</div>
-                    <div class="limit-progress">
-                        <div class="limit-bar">
-                            {% set monthly_percent = (replies_sent / replies_limit * 100) if replies_limit > 0 else 0 %}
-                            {% set monthly_percent_limited = monthly_percent if monthly_percent <= 100 else 100 %}
-                            <div class="limit-fill" style="width: {{ monthly_percent_limited }}%"></div>
-                </div>
-                        <span class="limit-text">{{ replies_sent }} / {{ replies_limit }}</span>
-                </div>
-            </div>
-
-                {% if replies_purchased > 0 %}
-                <div class="limit-item">
-                    <div class="limit-label">Purchased Replies ({{ replies_used_purchased }} / {{ replies_purchased }})</div>
-                    <div class="limit-progress">
-                        <div class="limit-bar">
-                            {% set purchased_percent = (replies_used_purchased / replies_purchased * 100) if replies_purchased > 0 else 0 %}
-                            {% set purchased_percent_limited = purchased_percent if purchased_percent <= 100 else 100 %}
-                            <div class="limit-fill" style="width: {{ purchased_percent_limited }}%"></div>
-                        </div>
-                        <span class="limit-text">{{ replies_used_purchased }} / {{ replies_purchased }}</span>
-                </div>
-                    </div>
-                {% endif %}
-                
-                <div class="limit-item">
-                    <div class="limit-label">Total Remaining</div>
-                    <div class="limit-progress">
-                        <div class="limit-bar">
-                            {% set total_percent = (total_replies_used / total_replies_available * 100) if total_replies_available > 0 else 0 %}
-                            {% set total_percent_limited = total_percent if total_percent <= 100 else 100 %}
-                            <div class="limit-fill" style="width: {{ total_percent_limited }}%"></div>
-                    </div>
-                        <span class="limit-text">{{ remaining_replies }} remaining</span>
-                    </div>
-                    </div>
-                </div>
-            </div>
-
-        <!-- Recent Activity - Bottom Middle -->
-        <div style="display: flex; justify-content: center;">
-            <div class="dashboard-section-block" style="max-width: 800px; width: 100%;">
-                <h2><i class="fas fa-history"></i> Recent Activity</h2>
-                    <div class="activity-list">
-                        {% if recent_activity %}
-                            {% for activity in recent_activity %}
-                                <div class="activity-item">
-                                    <div class="activity-icon">
+    <!-- Recent Activity - Bottom Middle -->
+    <div style="display: flex; justify-content: center;">
+        <div class="dashboard-section-block" style="max-width: 800px; width: 100%;">
+            <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                <div class="activity-list">
+                    {% if recent_activity %}
+                        {% for activity in recent_activity %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    {% if activity[0] == 'login' %}
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    {% elif activity[0] == 'settings_updated' %}
+                                        <i class="fas fa-cog"></i>
+                                    {% elif activity[0] == 'profile_updated' %}
+                                        <i class="fas fa-user-edit"></i>
+                                {% elif activity[0] == 'test_payment' %}
+                                    <i class="fas fa-coins"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">
                                         {% if activity[0] == 'login' %}
-                                            <i class="fas fa-sign-in-alt"></i>
+                                            User logged in
                                         {% elif activity[0] == 'settings_updated' %}
-                                            <i class="fas fa-cog"></i>
+                                            AI settings updated
                                         {% elif activity[0] == 'profile_updated' %}
-                                            <i class="fas fa-user-edit"></i>
+                                            Profile updated
                                     {% elif activity[0] == 'test_payment' %}
-                                        <i class="fas fa-coins"></i>
+                                        Test payment: Added replies
                                         {% else %}
-                                            <i class="fas fa-info-circle"></i>
+                                            {{ activity[1] or activity[0] }}
                                         {% endif %}
                                     </div>
-                                    <div class="activity-content">
-                                        <div class="activity-title">
-                                            {% if activity[0] == 'login' %}
-                                                User logged in
-                                            {% elif activity[0] == 'settings_updated' %}
-                                                AI settings updated
-                                            {% elif activity[0] == 'profile_updated' %}
-                                                Profile updated
-                                        {% elif activity[0] == 'test_payment' %}
-                                            Test payment: Added replies
-                                            {% else %}
-                                                {{ activity[1] or activity[0] }}
-                                            {% endif %}
-                                        </div>
-                                    <div class="activity-time">{{ activity[2] }}</div>
-                                    </div>
+                                <div class="activity-time">{{ activity[2] }}</div>
                                 </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p>No recent activity</p>
                             </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-    </main>
-
-    <script>
-        // Interactive Grid Background with scroll following
-        function createInteractiveGrid() {
-            const grid = document.getElementById('interactiveGrid');
-            const gridSize = 50;
-            const cols = Math.ceil(window.innerWidth / gridSize);
-            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage (matches 600% CSS height)
-            
-            // Clear existing grid
-            grid.innerHTML = '';
-            
-            // Create grid cells
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    cell.style.left = j * gridSize + 'px';
-                    cell.style.top = i * gridSize + 'px';
-                    grid.appendChild(cell);
-                }
-            }
-        }
-        
-        // Optimized scroll-based grid movement
-        let ticking = false;
-        let grid = null;
-        
-        function updateGridOnScroll() {
-            if (!ticking) {
-                requestAnimationFrame(function() {
-                    if (!grid) {
-                        grid = document.getElementById('interactiveGrid');
-                    }
-                    const scrollY = window.pageYOffset;
-                    
-                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
-                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        }
-        
-        function hidePageLoadOverlay() {
-            var o = document.getElementById('pageLoadOverlay');
-            if (o) o.classList.add('hidden');
-        }
-        window.addEventListener('load', function() {
-            hidePageLoadOverlay();
-            window.scrollTo(0, 0);
-            createInteractiveGrid();
-            grid = document.getElementById('interactiveGrid');
-        });
-        window.addEventListener('pageshow', hidePageLoadOverlay);
-        window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
-        (function() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (!overlay) return;
-            document.querySelectorAll('a[href]').forEach(function(a) {
-                var href = a.getAttribute('href');
-                if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-                try {
-                    var url = new URL(a.href, window.location.href);
-                    if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
-                        a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
-                    }
-                } catch (e) {}
-            });
-        })();
-        window.addEventListener('resize', createInteractiveGrid);
-        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
-        
-        // Individual square timing system
-        let cellTimeouts = new Map(); // Track individual timeouts for each cell
-        
-        // High refresh rate mouse tracking
-        let mouseX = 0;
-        let mouseY = 0;
-        let animationFrameId = null;
-        
-        // Track mouse position with high frequency
-        document.addEventListener('mousemove', function(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-        
-        // Smooth grid lighting with requestAnimationFrame
-        function updateGridLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            cells.forEach(cell => {
-                const rect = cell.getBoundingClientRect();
-                
-                // Check if mouse is directly over this cell (exact square only)
-                const isMouseOver = mouseX >= rect.left && 
-                                  mouseX < rect.right && 
-                                  mouseY >= rect.top && 
-                                  mouseY < rect.bottom;
-                
-                if (isMouseOver) {
-                    // Clear any existing timeout for this cell
-                    if (cellTimeouts.has(cell)) {
-                        clearTimeout(cellTimeouts.get(cell));
-                        cellTimeouts.delete(cell);
-                    }
-                    
-                    // Activate only this exact square with solid illumination
-                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
-                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
-                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
-                    cell.style.transform = `scale(1.02)`;
-                    cell.classList.add('active');
-                    
-                    // Set individual timeout for this cell
-                    const timeoutId = setTimeout(() => {
-                        cell.style.background = '';
-                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                        cell.style.boxShadow = '';
-                        cell.style.transform = 'scale(1)';
-                        cell.classList.remove('active');
-                        cellTimeouts.delete(cell);
-                    }, 1500);
-                    
-                    cellTimeouts.set(cell, timeoutId);
-                }
-            });
-            
-            // Continue the animation loop
-            animationFrameId = requestAnimationFrame(updateGridLighting);
-        }
-        
-        // Start the high refresh rate animation
-        updateGridLighting();
-        
-        // Ambient grid lighting - random squares light up occasionally
-        function createAmbientLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            function lightRandomSquare() {
-                if (cells.length === 0) return;
-                
-                // Pick a random cell
-                const randomCell = cells[Math.floor(Math.random() * cells.length)];
-                
-                // Random intensity (more visible)
-                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
-                
-                // Random duration (1-3 seconds)
-                const duration = Math.random() * 2000 + 1000;
-                
-                // Light up the square with white orb and subtle border
-                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
-                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
-                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
-                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
-                randomCell.classList.add('active');
-                
-                // Fade out after duration
-                setTimeout(() => {
-                    randomCell.style.background = '';
-                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                    randomCell.style.boxShadow = '';
-                    randomCell.style.transform = 'scale(1)';
-                    randomCell.classList.remove('active');
-                }, duration);
-            }
-            
-            // Light up random squares every 2-5 seconds
-            function scheduleNextLight() {
-                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
-                setTimeout(() => {
-                    lightRandomSquare();
-                    scheduleNextLight();
-                }, delay);
-            }
-            
-            scheduleNextLight();
-        }
-        
-        // Start ambient lighting after a short delay
-        setTimeout(createAmbientLighting, 2000);
-    </script>
-
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-content">
-            <!-- Brand Section -->
-            <div class="footer-brand">
-                <a href="{{ url_for('home') }}" class="footer-logo">CHATA</a>
-                <p class="footer-description">
-                    instagram ai engagement
-                </p>
-            </div>
-
-            <!-- Legal Links Section -->
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <a href="{{ url_for('privacy') }}">Privacy Policy</a>
-                <a href="{{ url_for('terms') }}">Terms of Service</a>
-                <a href="{{ url_for('data_deletion') }}">Data Deletion</a>
-            </div>
-
-            <!-- Contact Section -->
-            <div class="footer-section">
-                <h3>Contact</h3>
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <i class="fas fa-envelope"></i>
-                        <a href="mailto:chata.dmbot@gmail.com">chata.dmbot@gmail.com</a>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-phone"></i>
-                        <a href="tel:+37063204061">+37063204061</a>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fab fa-instagram"></i>
-                        <a href="https://instagram.com/chata.dmbot" target="_blank">chata.dmbot</a>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2025 CHATA (Tauras Nienius). All rights reserved.</p>
-        </div>
-    </footer>
-</body>
-</html>
+</main>
+{% endblock %}

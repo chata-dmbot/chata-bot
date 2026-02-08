@@ -1,116 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conversation History - CHATA</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    :root {
-      --chata-blue: #3366ff;
-      --chata-blue-light: #4d7cff;
-      --chata-blue-dark: #1a4dcc;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+{% extends "base.html" %}
+
+{% block title %}Conversation History - CHATA{% endblock %}
+
+{% block page_styles %}
     body {
-      font-family: 'Inter', sans-serif;
-      background: #000000;
-      color: #ffffff;
-      overflow-x: hidden;
-      font-weight: 300;
-      letter-spacing: 0.05em;
-      min-height: 100vh;
-      position: relative;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(1px);
-      z-index: 1;
-      pointer-events: none;
-    }
-    .interactive-grid {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 600%;
-      z-index: -1;
-      background: #000000;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 50px 50px;
-      background-attachment: scroll;
-      transition: transform 0.3s ease;
-    }
-    .grid-cell {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      border: 1px solid rgba(51, 102, 255, 0.1);
-      transition: all 0.6s ease;
-      pointer-events: auto;
-      background: transparent;
-    }
-    .grid-cell:hover,
-    .grid-cell.active {
-      background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
-      border-color: var(--chata-blue);
-      box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
-      transform: scale(1.05);
+        letter-spacing: 0.05em;
+        text-transform: none;
     }
     .content-wrap { position: relative; z-index: 10; max-width: 900px; margin: 0 auto; padding: 2rem; padding-top: 100px; }
     .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--chata-blue);
-      text-decoration: none;
-      font-weight: 500;
-      margin-bottom: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--chata-blue);
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
     }
     .back-link:hover { color: var(--chata-blue-light); }
     h1 {
-      font-size: 1.75rem;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 0.5rem;
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 0.5rem;
     }
     .subtitle { color: rgba(255,255,255,0.7); font-size: 0.95rem; margin-bottom: 1.5rem; }
     .conv-list { list-style: none; }
     .conv-row {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      margin-bottom: 0.75rem;
-      overflow: hidden;
-      transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+        transition: all 0.2s ease;
     }
     .conv-row:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(51, 102, 255, 0.3); }
     .conv-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-      user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        user-select: none;
     }
     .conv-head .label { font-weight: 500; color: #fff; }
     .conv-head .id { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: 0.5rem; }
     .search-wrap { margin-bottom: 1.25rem; }
     .search-input {
-      width: 100%;
-      padding: 0.75rem 1rem 0.75rem 2.5rem;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.06);
-      color: #fff;
-      font-size: 0.95rem;
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
+        font-size: 0.95rem;
     }
     .search-input::placeholder { color: rgba(255,255,255,0.5); }
     .search-input:focus { outline: none; border-color: var(--chata-blue); }
@@ -119,35 +62,35 @@
     .conv-head .chevron { color: var(--chata-blue); transition: transform 0.2s; }
     .conv-row.open .conv-head .chevron { transform: rotate(180deg); }
     .conv-body {
-      display: none;
-      padding: 0 1.25rem 1rem;
-      border-top: 1px solid rgba(255,255,255,0.08);
+        display: none;
+        padding: 0 1.25rem 1rem;
+        border-top: 1px solid rgba(255,255,255,0.08);
     }
     .conv-row.open .conv-body { display: block; }
     .conv-messages { margin-top: 0.75rem; }
     .msg {
-      margin-bottom: 0.75rem;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      line-height: 1.4;
-      text-transform: none;
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        text-transform: none;
     }
     .msg.user { background: rgba(51, 102, 255, 0.2); border-left: 3px solid var(--chata-blue); }
     .msg.bot { background: rgba(255,255,255,0.06); border-left: 3px solid rgba(255,255,255,0.3); }
     .msg-meta { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem; }
     .load-more-wrap { text-align: center; margin-top: 0.75rem; }
     .load-more-btn {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     .load-more-btn:hover { background: rgba(51, 102, 255, 0.2); border-color: var(--chata-blue); }
     .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -161,79 +104,68 @@
     .pending-send-btn { margin-top: 0.5rem; padding: 0.5rem 1rem; background: var(--chata-blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem; }
     .pending-send-btn:hover { background: var(--chata-blue-light); }
     .pending-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  </style>
-</head>
-<body>
-  <div class="page-load-overlay hidden" id="pageLoadOverlay">
-    <div class="overlay-scene">
-      <div class="overlay-cube">
-        <div class="overlay-face overlay-face-front"></div>
-        <div class="overlay-face overlay-face-back"></div>
-        <div class="overlay-face overlay-face-right"></div>
-        <div class="overlay-face overlay-face-left"></div>
-        <div class="overlay-face overlay-face-top"></div>
-        <div class="overlay-face overlay-face-bottom"></div>
-      </div>
-    </div>
-  </div>
-  <div class="interactive-grid" id="interactiveGrid"></div>
-  <div class="content-wrap">
-    <a href="{{ url_for('dashboard') }}" class="back-link">
-      <i class="fas fa-arrow-left"></i> Back to Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="content-wrap">
+    <a href="{{ url_for('dashboard_bp.dashboard') }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
     </a>
     <h1>Conversation History</h1>
     <p class="subtitle">{{ connection_name }}</p>
 
     {% if conversations %}
     <div class="search-wrap">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" id="searchConv" placeholder="Search by username or account ID" autocomplete="off">
-      </div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" class="search-input" id="searchConv" placeholder="Search by username or account ID" autocomplete="off">
+        </div>
     </div>
     <ul class="conv-list" id="convList">
-      {% for c in conversations %}
-      <li class="conv-row" data-connection-id="{{ connection_id }}" data-user-id="{{ (c.instagram_user_id|string) }}" data-username="{{ (c.username or '')|lower }}">
-        <div class="conv-head">
-          <span>
-            <span class="label">{% if c.username %}@{{ c.username }}{% else %}Account{% endif %}</span>
-            <span class="id">ID: {{ c.instagram_user_id }}</span>
-          </span>
-          <i class="fas fa-chevron-down chevron"></i>
-        </div>
-        <div class="conv-body">
-          <div class="conv-messages"></div>
-          <div class="load-more-wrap" style="display: none;">
-            <button type="button" class="load-more-btn" data-limit="10"><i class="fas fa-plus"></i> Load more</button>
-          </div>
-        </div>
-      </li>
-      {% endfor %}
+        {% for c in conversations %}
+        <li class="conv-row" data-connection-id="{{ connection_id }}" data-user-id="{{ (c.instagram_user_id|string) }}" data-username="{{ (c.username or '')|lower }}">
+            <div class="conv-head">
+                <span>
+                    <span class="label">{% if c.username %}@{{ c.username }}{% else %}Account{% endif %}</span>
+                    <span class="id">ID: {{ c.instagram_user_id }}</span>
+                </span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="conv-body">
+                <div class="conv-messages"></div>
+                <div class="load-more-wrap" style="display: none;">
+                    <button type="button" class="load-more-btn" data-limit="10"><i class="fas fa-plus"></i> Load more</button>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
     </ul>
     {% else %}
     <p class="empty-conv">No conversations yet. Messages will appear here once people message your Instagram account.</p>
     {% endif %}
-  </div>
+</div>
+{% endblock %}
 
-  <script>
-    (function() {
-      var connectionId = {{ connection_id }};
-      var searchEl = document.getElementById('searchConv');
-      var listEl = document.getElementById('convList');
-      if (searchEl && listEl) {
+{% block extra_js %}
+<script>
+(function() {
+    var connectionId = {{ connection_id }};
+    var searchEl = document.getElementById('searchConv');
+    var listEl = document.getElementById('convList');
+    if (searchEl && listEl) {
         searchEl.addEventListener('input', function() {
-          var q = (searchEl.value || '').toLowerCase().trim();
-          var rows = listEl.querySelectorAll('.conv-row');
-          rows.forEach(function(row) {
-            var uid = (row.dataset.userId || '').toLowerCase();
-            var username = (row.dataset.username || '').toLowerCase();
-            var show = !q || uid.indexOf(q) !== -1 || username.indexOf(q) !== -1;
-            row.style.display = show ? '' : 'none';
-          });
+            var q = (searchEl.value || '').toLowerCase().trim();
+            var rows = listEl.querySelectorAll('.conv-row');
+            rows.forEach(function(row) {
+                var uid = (row.dataset.userId || '').toLowerCase();
+                var username = (row.dataset.username || '').toLowerCase();
+                var show = !q || uid.indexOf(q) !== -1 || username.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+            });
         });
-      }
-      var rows = document.querySelectorAll('.conv-row');
-      rows.forEach(function(row) {
+    }
+    var rows = document.querySelectorAll('.conv-row');
+    rows.forEach(function(row) {
         var head = row.querySelector('.conv-head');
         var body = row.querySelector('.conv-body');
         var messagesEl = row.querySelector('.conv-messages');
@@ -244,192 +176,101 @@
         var total = 0;
 
         function renderMessages(messages) {
-          messages.forEach(function(m) {
-            if (m.message_text) {
-              var div = document.createElement('div');
-              div.className = 'msg user';
-              div.innerHTML = '<div>' + escapeHtml(m.message_text) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
-              messagesEl.appendChild(div);
-            }
-            if (m.bot_response) {
-              var pending = m.sent_via_api === false || m.sent_via_api === 0;
-              var div = document.createElement('div');
-              div.className = 'msg bot' + (pending ? ' pending-approval' : '');
-              if (pending) {
-                div.innerHTML =
-                  '<div class="pending-approval-head"><i class="fas fa-exclamation-triangle"></i> <span>The bot has generated the following message. Please approve before sending.</span></div>' +
-                  '<div class="pending-approval-text">' + escapeHtml(m.bot_response) + '</div>' +
-                  '<div class="pending-approval-note">We have added this feature temporarily for the Meta App Review. Messages will be sent automatically once the review is approved.</div>' +
-                  '<button type="button" class="pending-send-btn" data-message-id="' + escapeHtml(String(m.id)) + '"><i class="fas fa-paper-plane"></i> Send</button>' +
-                  (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
-                messagesEl.appendChild(div);
-                div.querySelector('.pending-send-btn').addEventListener('click', function() {
-                  var btn = this;
-                  var mid = btn.getAttribute('data-message-id');
-                  if (!mid) return;
-                  btn.disabled = true;
-                  btn.textContent = 'Sending…';
-                  fetch('/api/conversation-history/' + connectionId + '/' + encodeURIComponent(userId) + '/send-pending', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message_id: parseInt(mid, 10) })
-                  })
-                    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-                    .then(function(result) {
-                      if (result.ok && result.data.success) {
-                        fetchMessages(0, 10, false);
-                      } else {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
-                        alert(result.data.error || 'Failed to send');
-                      }
-                    })
-                    .catch(function() {
-                      btn.disabled = false;
-                      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
-                      alert('Failed to send');
-                    });
-                });
-              } else {
-                div.innerHTML = '<div>Bot: ' + escapeHtml(m.bot_response) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
-                messagesEl.appendChild(div);
-              }
-            }
-          });
-        }
-
-        function escapeHtml(s) {
-          if (!s) return '';
-          var div = document.createElement('div');
-          div.textContent = s;
-          return div.innerHTML;
-        }
-
-        function fetchMessages(offset, limit, append) {
-          if (!append) messagesEl.innerHTML = '<div class="conv-loading">Loading…</div>';
-          fetch('/api/conversation-history/' + connectionId + '/' + encodeURIComponent(userId) + '/messages?limit=' + limit + '&offset=' + offset)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (!append) messagesEl.innerHTML = '';
-              total = data.total || 0;
-              var ms = data.messages || [];
-              loaded = (append ? loaded : 0) + ms.length;
-              renderMessages(ms);
-              if (loaded < total && total > 10) {
-                loadMoreWrap.style.display = 'block';
-                loadMoreBtn.disabled = false;
-                loadMoreBtn.onclick = function() {
-                  loadMoreBtn.disabled = true;
-                  fetchMessages(loaded, 10, true);
-                };
-              } else {
-                loadMoreWrap.style.display = 'none';
-              }
-              loadMoreBtn.disabled = false;
-            })
-            .catch(function() {
-              if (!append) messagesEl.innerHTML = '<div class="conv-loading">Could not load messages.</div>';
+            messages.forEach(function(m) {
+                if (m.message_text) {
+                    var div = document.createElement('div');
+                    div.className = 'msg user';
+                    div.innerHTML = '<div>' + escapeHtml(m.message_text) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
+                    messagesEl.appendChild(div);
+                }
+                if (m.bot_response) {
+                    var pending = m.sent_via_api === false || m.sent_via_api === 0;
+                    var div = document.createElement('div');
+                    div.className = 'msg bot' + (pending ? ' pending-approval' : '');
+                    if (pending) {
+                        div.innerHTML =
+                            '<div class="pending-approval-head"><i class="fas fa-exclamation-triangle"></i> <span>The bot has generated the following message. Please approve before sending.</span></div>' +
+                            '<div class="pending-approval-text">' + escapeHtml(m.bot_response) + '</div>' +
+                            '<div class="pending-approval-note">We have added this feature temporarily for the Meta App Review. Messages will be sent automatically once the review is approved.</div>' +
+                            '<button type="button" class="pending-send-btn" data-message-id="' + escapeHtml(String(m.id)) + '"><i class="fas fa-paper-plane"></i> Send</button>' +
+                            (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
+                        messagesEl.appendChild(div);
+                        div.querySelector('.pending-send-btn').addEventListener('click', function() {
+                            var btn = this;
+                            var mid = btn.getAttribute('data-message-id');
+                            if (!mid) return;
+                            btn.disabled = true;
+                            btn.textContent = 'Sending\u2026';
+                            fetch('/api/conversation-history/' + connectionId + '/' + encodeURIComponent(userId) + '/send-pending', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message_id: parseInt(mid, 10) })
+                            })
+                                .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+                                .then(function(result) {
+                                    if (result.ok && result.data.success) {
+                                        fetchMessages(0, 10, false);
+                                    } else {
+                                        btn.disabled = false;
+                                        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                                        alert(result.data.error || 'Failed to send');
+                                    }
+                                })
+                                .catch(function() {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                                    alert('Failed to send');
+                                });
+                        });
+                    } else {
+                        div.innerHTML = '<div>Bot: ' + escapeHtml(m.bot_response) + '</div>' + (m.created_at ? '<div class="msg-meta">' + escapeHtml(m.created_at) + '</div>' : '');
+                        messagesEl.appendChild(div);
+                    }
+                }
             });
         }
 
+        function escapeHtml(s) {
+            if (!s) return '';
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function fetchMessages(offset, limit, append) {
+            if (!append) messagesEl.innerHTML = '<div class="conv-loading">Loading\u2026</div>';
+            fetch('/api/conversation-history/' + connectionId + '/' + encodeURIComponent(userId) + '/messages?limit=' + limit + '&offset=' + offset)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!append) messagesEl.innerHTML = '';
+                    total = data.total || 0;
+                    var ms = data.messages || [];
+                    loaded = (append ? loaded : 0) + ms.length;
+                    renderMessages(ms);
+                    if (loaded < total && total > 10) {
+                        loadMoreWrap.style.display = 'block';
+                        loadMoreBtn.disabled = false;
+                        loadMoreBtn.onclick = function() {
+                            loadMoreBtn.disabled = true;
+                            fetchMessages(loaded, 10, true);
+                        };
+                    } else {
+                        loadMoreWrap.style.display = 'none';
+                    }
+                    loadMoreBtn.disabled = false;
+                })
+                .catch(function() {
+                    if (!append) messagesEl.innerHTML = '<div class="conv-loading">Could not load messages.</div>';
+                });
+        }
+
         head.addEventListener('click', function() {
-          var isOpen = row.classList.toggle('open');
-          if (isOpen && messagesEl.children.length === 0) {
-            fetchMessages(0, 10, false);
-          }
-        });
-      });
-
-      function hidePageLoadOverlay() {
-        var o = document.getElementById('pageLoadOverlay');
-        if (o) o.classList.add('hidden');
-      }
-      window.addEventListener('load', hidePageLoadOverlay);
-      window.addEventListener('pageshow', hidePageLoadOverlay);
-      window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
-      (function() {
-        var overlay = document.getElementById('pageLoadOverlay');
-        if (!overlay) return;
-        document.querySelectorAll('a[href]').forEach(function(a) {
-          var href = a.getAttribute('href');
-          if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-          try {
-            var url = new URL(a.href, window.location.href);
-            if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
-              a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
+            var isOpen = row.classList.toggle('open');
+            if (isOpen && messagesEl.children.length === 0) {
+                fetchMessages(0, 10, false);
             }
-          } catch (e) {}
         });
-      })();
-
-      var grid = document.getElementById('interactiveGrid');
-      var gridSize = 50;
-      var cols = Math.ceil(window.innerWidth / gridSize);
-      var rows = Math.ceil(window.innerHeight * 6 / gridSize);
-      for (var i = 0; i < rows; i++) {
-        for (var j = 0; j < cols; j++) {
-          var cell = document.createElement('div');
-          cell.className = 'grid-cell';
-          cell.style.left = (j * gridSize) + 'px';
-          cell.style.top = (i * gridSize) + 'px';
-          grid.appendChild(cell);
-        }
-      }
-      window.addEventListener('resize', function() {
-        grid.innerHTML = '';
-        cols = Math.ceil(window.innerWidth / gridSize);
-        rows = Math.ceil(window.innerHeight * 6 / gridSize);
-        for (var i = 0; i < rows; i++) {
-          for (var j = 0; j < cols; j++) {
-            var cell = document.createElement('div');
-            cell.className = 'grid-cell';
-            cell.style.left = (j * gridSize) + 'px';
-            cell.style.top = (i * gridSize) + 'px';
-            grid.appendChild(cell);
-          }
-        }
-      });
-      var mouseX = 0, mouseY = 0;
-      document.addEventListener('mousemove', function(e) {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-      });
-      var cellTimeouts = new Map();
-      function updateGridLighting() {
-        var cells = grid.querySelectorAll('.grid-cell');
-        cells.forEach(function(cell) {
-          var rect = cell.getBoundingClientRect();
-          var isMouseOver = mouseX >= rect.left && mouseX < rect.right && mouseY >= rect.top && mouseY < rect.bottom;
-          if (isMouseOver) {
-            if (cellTimeouts.has(cell)) {
-              clearTimeout(cellTimeouts.get(cell));
-              cellTimeouts.delete(cell);
-            }
-            cell.style.background = 'rgba(51, 102, 255, 0.15)';
-            cell.style.borderColor = 'rgba(51, 102, 255, 0.6)';
-            cell.style.boxShadow = '0 0 20px rgba(51, 102, 255, 0.4)';
-            cell.style.transform = 'scale(1.02)';
-            cell.classList.add('active');
-            cellTimeouts.set(cell, setTimeout(function() {
-              cell.style.background = '';
-              cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-              cell.style.boxShadow = '';
-              cell.style.transform = 'scale(1)';
-              cell.classList.remove('active');
-              cellTimeouts.delete(cell);
-            }, 1500));
-          }
-        });
-        requestAnimationFrame(updateGridLighting);
-      }
-      updateGridLighting();
-      var scrollY = 0;
-      function onScroll() {
-        scrollY = window.pageYOffset;
-        grid.style.transform = 'translateY(-' + (scrollY * 0.6) + 'px)';
-      }
-      window.addEventListener('scroll', onScroll, { passive: true });
-    })();
-  </script>
-</body>
-</html>
+    });
+})();
+</script>
+{% endblock %}

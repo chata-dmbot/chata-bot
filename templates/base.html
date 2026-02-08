@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block extra_meta %}{% endblock %}
+    <title>{% block title %}CHATA{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    {% block extra_css %}{% endblock %}
+    <style>
+        {% block page_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="page-load-overlay hidden" id="pageLoadOverlay">
+        <div class="overlay-scene">
+            <div class="overlay-cube">
+                <div class="overlay-face overlay-face-front"></div>
+                <div class="overlay-face overlay-face-back"></div>
+                <div class="overlay-face overlay-face-right"></div>
+                <div class="overlay-face overlay-face-left"></div>
+                <div class="overlay-face overlay-face-top"></div>
+                <div class="overlay-face overlay-face-bottom"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Grid Background -->
+    <div class="interactive-grid" id="interactiveGrid"></div>
+
+    {% block navigation %}{% endblock %}
+
+    {% block flash_messages %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem; z-index: 20; position: relative;">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+
+    {% block footer %}
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <a href="{{ url_for('pages.home') }}" class="footer-logo">CHATA</a>
+                <p class="footer-description">
+                    instagram ai engagement
+                </p>
+            </div>
+            <div class="footer-section">
+                <h3>Legal</h3>
+                <a href="{{ url_for('pages.privacy') }}">Privacy Policy</a>
+                <a href="{{ url_for('pages.terms') }}">Terms of Service</a>
+                <a href="{{ url_for('pages.data_deletion') }}">Data Deletion</a>
+            </div>
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <a href="mailto:chata.dmbot@gmail.com">chata.dmbot@gmail.com</a>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <a href="tel:+37063204061">+37063204061</a>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-instagram"></i>
+                        <a href="https://instagram.com/chata.dmbot" target="_blank">chata.dmbot</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 CHATA (Tauras Nienius). All rights reserved.</p>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

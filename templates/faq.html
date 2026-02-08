@@ -1,280 +1,411 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>FAQ – Everything You Need to Know</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Favicon -->
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
-  <!-- CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-  <!-- Icon Libraries -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/heroicons@2.0.18/24/outline/esm/index.js"></script>
-</head>
-<body>
-  <!-- Background Elements -->
-  <div class="background-container">
-    <!-- Animated background bubbles -->
-    <div class="background-bubble bubble-1"></div>
-    <div class="background-bubble bubble-2"></div>
-    <div class="background-bubble bubble-3"></div>
-    <div class="background-bubble bubble-4"></div>
-    <div class="background-bubble bubble-5"></div>
-    
-    <!-- Dynamic scroll-triggered shapes -->
-    <div class="scroll-shape scroll-shape-1"></div>
-    <div class="scroll-shape scroll-shape-2"></div>
-    <div class="scroll-shape scroll-shape-3"></div>
-    <div class="scroll-shape scroll-shape-4"></div>
-    <div class="scroll-shape scroll-shape-5"></div>
-    
-    <!-- Blurred icons scattered in background -->
-    <div class="background-icon icon-1"></div>
-    <div class="background-icon icon-2"></div>
-    <div class="background-icon icon-3"></div>
-    <div class="background-icon icon-4"></div>
-    <div class="background-icon icon-5"></div>
-    
-    <!-- Gradient orbs -->
-    <div class="gradient-orb orb-1"></div>
-    <div class="gradient-orb orb-2"></div>
-    <div class="gradient-orb orb-3"></div>
-    
-    <!-- Subtle grid pattern -->
-    <div class="grid-pattern"></div>
-  </div>
+{% extends "base.html" %}
+
+{% block title %}FAQ - Everything You Need to Know{% endblock %}
+
+{% block page_styles %}
+/* Hero Section */
+.faq-hero {
+    position: relative;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    margin-top: 80px;
+    z-index: 10;
+}
+
+.faq-hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff, #ccc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.faq-hero p {
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    color: #888;
+    text-transform: none;
+}
+
+/* FAQ Content */
+.faq-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+    z-index: 10;
+}
+
+/* FAQ Grid */
+.faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.faq-item {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.faq-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.faq-item:hover::before {
+    opacity: 1;
+}
+
+.faq-item:hover {
+    transform: translateY(-5px);
+    border-color: var(--chata-blue);
+    box-shadow: 0 20px 40px rgba(51, 102, 255, 0.1);
+}
+
+.faq-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: rgba(51, 102, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: var(--chata-blue);
+    font-size: 1.3rem;
+}
+
+.faq-item h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #fff;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.faq-item p {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.8;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+
+/* CTA Section */
+.faq-cta {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.faq-cta h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #fff;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.faq-cta .subtitle {
+    font-size: 1.1rem;
+    color: #888;
+    margin-bottom: 1.5rem;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 300;
+}
+
+.faq-cta .description {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 2rem;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+
+.faq-cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.faq-cta-buttons a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.faq-cta-buttons .btn-primary {
+    background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+}
+
+.faq-cta-buttons .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+}
+
+.faq-cta-buttons .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.faq-cta-buttons .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--chata-blue);
+    transform: translateY(-2px);
+}
+
+/* Fade-in animation */
+.fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .faq-hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .faq-content {
+        padding: 1rem;
+    }
+
+    .faq-grid {
+        grid-template-columns: 1fr;
+    }
+}
+{% endblock %}
+
+{% block navigation %}
+<nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="flex items-center h-16">
+            <!-- Logo - Left aligned -->
+            <div class="absolute left-0">
+                <a href="{{ url_for('pages.home') }}" class="text-3xl font-bold logo-blue pl-4">
+                    CHATA
+                </a>
+            </div>
   
-  <!-- Header and Logo -->
-  <header>
-    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Chata logo" class="logo">
-    <nav>
-      <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
-      <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
-      {% if session.get('user_id') %}
-        <a href="{{ url_for('dashboard') }}" class="nav-cta"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="{{ url_for('logout') }}" class="nav-cta secondary"><i class="fas fa-sign-out-alt"></i> Logout</a>
-      {% else %}
-        <a href="{{ url_for('login') }}" class="nav-cta"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-        <a href="{{ url_for('signup') }}" class="nav-cta secondary"><i class="fas fa-user-plus"></i> Sign Up</a>
-      {% endif %}
-    </nav>
-  </header>
+            <!-- Desktop Navigation - Centered -->
+            <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                <div class="flex items-center space-x-8">
+                    <a href="{{ url_for('pages.home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                    <a href="{{ url_for('pages.faq') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">FAQ</a>
+                </div>
+            </div>
 
-  <!-- Main Content -->
-  <main>
-    <section class="faq fade-in">
-      <div class="section-header">
-        <h1>Frequently Asked Questions</h1>
-        <p class="section-subtitle">Everything you need to know about Chata and how it works</p>
-      </div>
-      
-      <div class="faq-grid">
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-cog"></i>
-          </div>
-          <h3>How does Chata work?</h3>
-          <p>Chata connects to your Instagram account through Meta's official API. When someone sends you a DM, our AI analyzes the message and responds using your personalized settings. Think of it as having a smart assistant who knows exactly how you talk and can handle conversations just like you would.</p>
-        </div>
+            <!-- CTA Buttons - Right aligned -->
+            <div class="hidden md:block absolute right-0">
+                <div class="flex items-center space-x-4 pr-4">
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('dashboard_bp.dashboard') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">LOGIN</a>
+                        <a href="{{ url_for('auth.signup') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
+                            GET STARTED
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
 
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-shield-alt"></i>
-          </div>
-          <h3>Is it safe to connect my Instagram account?</h3>
-          <p>Absolutely! We use Instagram's official API and Meta's secure authentication system. We never store your password and only access the permissions you explicitly grant. Your account security is our top priority - we take this very seriously.</p>
+            <!-- Mobile menu button -->
+            <div class="md:hidden absolute right-0 pr-4">
+                <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
         </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-magic"></i>
-          </div>
-          <h3>Can I customize how Chata responds?</h3>
-          <p>Yes! You can set your bot's personality, tone, and even specific responses for common questions. You can also add custom links, offers, or promotional messages that Chata will share when appropriate. It's like training your own personal assistant.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-edit"></i>
-          </div>
-          <h3>What if Chata gives a wrong answer?</h3>
-          <p>Chata is designed to be helpful but not perfect. You can review all conversations in your dashboard and manually respond to any messages that need your personal touch. The AI learns from your corrections to improve over time, so it gets better with every interaction.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-users"></i>
-          </div>
-          <h3>Can I use Chata for multiple Instagram accounts?</h3>
-          <p>Yes! Our Pro and Creator plans support multiple Instagram accounts. You can set up different personalities and settings for each account, making it perfect for managing multiple brands or personal accounts. Each account gets its own unique voice.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-tags"></i>
-          </div>
-          <h3>How much does it cost?</h3>
-          <p>We offer three simple pricing tiers: Starter ($29/month), Creator ($49/month), and Pro ($99/month). All plans include a 7-day free trial, and you can cancel anytime. Contact us for full details on our pricing plans.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-rocket"></i>
-          </div>
-          <h3>Do I need technical skills to use Chata?</h3>
-          <p>Not at all! Chata is designed to be super simple. Just connect your Instagram account, set your preferences, and you're ready to go. No coding or technical knowledge required - if you can use Instagram, you can use Chata.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-play"></i>
-          </div>
-          <h3>Can I try Chata before paying?</h3>
-          <p>Yes! We offer a free demo that you can try right now. Just click the "Try the Demo" button to see how Chata works with sample conversations. We also offer a 7-day free trial on all paid plans, so you can test it with your real account.</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-headset"></i>
-          </div>
-          <h3>What kind of support do you offer?</h3>
-          <p>We provide email support for all users, with priority support for Pro and Creator plans. Our team is here to help you get the most out of Chata and answer any questions you might have. We want you to succeed!</p>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-icon">
-            <i class="fas fa-lock"></i>
-          </div>
-          <h3>Is my data private and secure?</h3>
-          <p>Yes! We take data privacy seriously. All conversations are encrypted, and we never share your data with third parties. You can delete your data at any time, and we comply with all major privacy regulations. Your privacy is non-negotiable.</p>
-        </div>
-      </div>
-
-      <div class="faq-cta fade-in">
-        <div class="section-header">
-          <h2>Still have questions?</h2>
-          <p class="section-subtitle">We're here to help you get the most out of Chata</p>
-        </div>
-        <div class="cta-section">
-          <p>Can't find what you're looking for? Our team is ready to help you succeed with Chata.</p>
-          <div class="hero-cta">
-            <a class="cta-btn primary" href="mailto:chata.dmbot@gmail.com"><i class="fas fa-envelope"></i> Contact Us</a>
-            <a class="cta-btn secondary" href="/admin/prompt"><i class="fas fa-play"></i> Try the Demo</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-content">
-      <div class="footer-brand">
-        <img src="{{ url_for('static', filename='images/icon.png') }}?v=2" alt="Chata" class="footer-logo">
-        <p>&copy; 2024 Chata — Crafted for creators by creators.</p>
-      </div>
-      <div class="footer-links">
-        <a href="{{ url_for('privacy') }}"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
-        <a href="mailto:chata.dmbot@gmail.com"><i class="fas fa-envelope"></i> Contact</a>
-        <a href="{{ url_for('faq') }}"><i class="fas fa-question-circle"></i> FAQ</a>
-      </div>
-      <div class="footer-cta">
-        <a class="cta-btn primary" href="/admin/prompt"><i class="fas fa-play"></i> Try Chata</a>
-      </div>
     </div>
-  </footer>
+</nav>
+{% endblock %}
 
-  <!-- Animation scripts -->
-  <script>
+{% block content %}
+    <!-- Hero Section -->
+    <section class="faq-hero fade-in">
+        <div>
+            <h1>Frequently Asked Questions</h1>
+            <p>Everything you need to know about Chata and how it works</p>
+        </div>
+    </section>
+
+    <!-- Content -->
+    <main class="faq-content">
+        <div class="faq-grid">
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3>How does Chata work?</h3>
+                <p>Chata connects to your Instagram account through Meta's official API. When someone sends you a DM, our AI analyzes the message and responds using your personalized settings. Think of it as having a smart assistant who knows exactly how you talk and can handle conversations just like you would.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Is it safe to connect my Instagram account?</h3>
+                <p>Absolutely! We use Instagram's official API and Meta's secure authentication system. We never store your password and only access the permissions you explicitly grant. Your account security is our top priority - we take this very seriously.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-magic"></i>
+                </div>
+                <h3>Can I customize how Chata responds?</h3>
+                <p>Yes! You can set your bot's personality, tone, and even specific responses for common questions. You can also add custom links, offers, or promotional messages that Chata will share when appropriate. It's like training your own personal assistant.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <h3>What if Chata gives a wrong answer?</h3>
+                <p>Chata is designed to be helpful but not perfect. You can review all conversations in your dashboard and manually respond to any messages that need your personal touch. The AI learns from your corrections to improve over time, so it gets better with every interaction.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Can I use Chata for multiple Instagram accounts?</h3>
+                <p>Yes! Our Pro and Creator plans support multiple Instagram accounts. You can set up different personalities and settings for each account, making it perfect for managing multiple brands or personal accounts. Each account gets its own unique voice.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <h3>How much does it cost?</h3>
+                <p>We offer three simple pricing tiers: Starter ($29/month), Creator ($49/month), and Pro ($99/month). All plans include a 7-day free trial, and you can cancel anytime. Contact us for full details on our pricing plans.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h3>Do I need technical skills to use Chata?</h3>
+                <p>Not at all! Chata is designed to be super simple. Just connect your Instagram account, set your preferences, and you're ready to go. No coding or technical knowledge required - if you can use Instagram, you can use Chata.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-play"></i>
+                </div>
+                <h3>Can I try Chata before paying?</h3>
+                <p>Yes! We offer a free demo that you can try right now. Just click the "Try the Demo" button to see how Chata works with sample conversations. We also offer a 7-day free trial on all paid plans, so you can test it with your real account.</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <h3>What kind of support do you offer?</h3>
+                <p>We provide email support for all users, with priority support for Pro and Creator plans. Our team is here to help you get the most out of Chata and answer any questions you might have. We want you to succeed!</p>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>Is my data private and secure?</h3>
+                <p>Yes! We take data privacy seriously. All conversations are encrypted, and we never share your data with third parties. You can delete your data at any time, and we comply with all major privacy regulations. Your privacy is non-negotiable.</p>
+            </div>
+        </div>
+
+        <div class="faq-cta fade-in">
+            <h2>Still have questions?</h2>
+            <p class="subtitle">We're here to help you get the most out of Chata</p>
+            <p class="description">Can't find what you're looking for? Our team is ready to help you succeed with Chata.</p>
+            <div class="faq-cta-buttons">
+                <a class="btn-primary" href="mailto:chata.dmbot@gmail.com"><i class="fas fa-envelope"></i> Contact Us</a>
+                <a class="btn-secondary" href="/admin/prompt"><i class="fas fa-play"></i> Try the Demo</a>
+            </div>
+        </div>
+    </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
     // Fade-in animation observer
     const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
     };
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
     }, observerOptions);
 
     document.querySelectorAll('.fade-in').forEach(el => {
-      observer.observe(el);
+        observer.observe(el);
     });
 
-    // Gentle floating animation for background elements
-    function animateBackgroundElements() {
-      const icons = document.querySelectorAll('.background-icon');
-      const orbs = document.querySelectorAll('.gradient-orb');
-      
-      icons.forEach((icon, index) => {
-        const delay = index * 0.5;
-        const duration = 6 + index * 2;
-        icon.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
-      });
-      
-      orbs.forEach((orb, index) => {
-        const delay = index * 1;
-        const duration = 8 + index * 3;
-        orb.style.animation = `pulse ${duration}s ease-in-out ${delay}s infinite`;
-      });
-    }
-
-    // Scroll effect for logo and navigation
-    function handleScroll() {
-      const logo = document.querySelector('.logo');
-      const navLinks = document.querySelectorAll('nav a');
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      
-      if (scrollTop > 50) {
-        logo.classList.add('scrolled');
-        navLinks.forEach(link => link.classList.add('scrolled'));
-      } else {
-        logo.classList.remove('scrolled');
-        navLinks.forEach(link => link.classList.remove('scrolled'));
-      }
-      
-      // Trigger dynamic background shapes based on scroll position
-      triggerBackgroundShapes(scrollTop);
-    }
-    
-    // Dynamic background shapes on scroll
-    function triggerBackgroundShapes(scrollTop) {
-      const shapes = document.querySelectorAll('.scroll-shape');
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      
-      shapes.forEach((shape, index) => {
-        const triggerPoint = (windowHeight * 0.8) + (index * windowHeight * 0.3);
-        
-        if (scrollTop > triggerPoint && scrollTop < triggerPoint + windowHeight) {
-          if (!shape.classList.contains('active')) {
-            shape.classList.add('active');
-            // Remove active class after animation completes
-            setTimeout(() => {
-              shape.classList.remove('active');
-            }, 3000);
-          }
+    // Add scroll effect to navigation
+    window.addEventListener('scroll', function() {
+        const nav = document.querySelector('nav');
+        if (window.scrollY > 100) {
+            nav.style.background = 'rgba(0, 0, 0, 0.8)';
+        } else {
+            nav.style.background = 'rgba(0, 0, 0, 0.3)';
         }
-      });
-    }
-
-    // Initialize animations when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      animateBackgroundElements();
-      
-      // Add scroll event listener
-      window.addEventListener('scroll', handleScroll);
-      
-      // Initial check for scroll position
-      handleScroll();
     });
-  </script>
-</body>
-</html>
+</script>
+{% endblock %}

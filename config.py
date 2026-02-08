@@ -13,6 +13,9 @@ class Config:
     # Flask Configuration
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
     
+    # Safety: refuse to start in production with the default placeholder secret key
+    _DEFAULT_SECRET = "your-secret-key-change-this-in-production"
+    
     # Database Configuration
     DATABASE_URL = os.getenv("DATABASE_URL")
     DB_FILE = "chata.db"  # Fallback for local development
@@ -27,6 +30,12 @@ class Config:
     
     # Meta App Review: when True, bot replies are saved but not sent; user must click Send in Conversation History (temporary for review)
     APP_REVIEW_MANUAL_SEND = os.getenv("APP_REVIEW_MANUAL_SEND", "false").lower() in ("true", "1", "yes")
+    
+    # Debug routes: disabled by default; set to "true" to enable /dashboard/debug/* routes
+    DEBUG_ROUTES_ENABLED = os.getenv("DEBUG_ROUTES_ENABLED", "false").lower() in ("true", "1", "yes")
+    
+    # Admin user IDs (comma-separated): only these user IDs can access /admin/* routes
+    ADMIN_USER_IDS = [int(x.strip()) for x in os.getenv("ADMIN_USER_IDS", "").split(",") if x.strip().isdigit()]
 
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
@@ -46,6 +55,18 @@ class Config:
     STRIPE_STARTER_PLAN_PRICE_ID = os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
     STRIPE_STANDARD_PLAN_PRICE_ID = os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
     STRIPE_ADDON_PRICE_ID = os.getenv("STRIPE_ADDON_PRICE_ID")
+    
+    # ---------------------------------------------------------------------------
+    # Application constants (replace magic numbers throughout the codebase)
+    # ---------------------------------------------------------------------------
+    BASE_URL = os.getenv("BASE_URL", "https://getchata.com")
+    SUPPORT_EMAIL = "chata.dmbot@gmail.com"
+    
+    # Reply plan limits
+    STARTER_MONTHLY_REPLIES = 150
+    STANDARD_MONTHLY_REPLIES = 250
+    ADDON_REPLIES = 150          # replies per add-on purchase
+    REPLY_WARNING_THRESHOLD = 50  # warn user when remaining replies fall to this
     
     # Production Settings
     PORT = int(os.environ.get("PORT", 5000))
@@ -70,3 +91,15 @@ class Config:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
         return True
+    
+    @classmethod
+    def check_secret_key(cls):
+        """Raise an error if the default SECRET_KEY is used in production (DATABASE_URL is set)."""
+        is_production = cls.DATABASE_URL and (
+            cls.DATABASE_URL.startswith("postgres://") or cls.DATABASE_URL.startswith("postgresql://")
+        )
+        if is_production and cls.SECRET_KEY == cls._DEFAULT_SECRET:
+            raise RuntimeError(
+                "FATAL: SECRET_KEY is still the default placeholder. "
+                "Set a strong SECRET_KEY environment variable before running in production."
+            )

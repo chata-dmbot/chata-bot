@@ -1,0 +1,286 @@
+/* ===== Common CSS — shared across all Chata pages ===== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* --- CSS Variables --- */
+:root {
+    --chata-blue: #3366ff;
+    --chata-blue-light: #4d7cff;
+    --chata-blue-dark: #1a4dcc;
+}
+
+/* --- Reset --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* --- Body --- */
+body {
+    font-family: 'Inter', sans-serif;
+    background: #000000;
+    color: #ffffff;
+    overflow-x: hidden;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Global subtle blur overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(1px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* --- Navigation --- */
+.glass-nav {
+    backdrop-filter: none;
+    background: transparent;
+    border: none;
+}
+
+.navigation {
+    opacity: 0;
+    transform: translateY(-50px);
+    animation: slideDown 1s ease-out forwards;
+    position: relative;
+    z-index: 15;
+}
+
+.nav-item {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.nav-item:hover {
+    color: var(--chata-blue);
+}
+
+.nav-item::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--chata-blue);
+    transition: width 0.3s ease;
+}
+
+.nav-item:hover::after {
+    width: 100%;
+}
+
+.logo-blue {
+    color: #3366ff;
+}
+
+.cta-button {
+    background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
+}
+
+/* --- Interactive Grid Background --- */
+.interactive-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 600%;
+    z-index: -1;
+    background: #000000;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-attachment: scroll;
+    transition: all 0.3s ease;
+}
+
+.grid-cell {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(51, 102, 255, 0.1);
+    transition: all 0.6s ease;
+    pointer-events: auto;
+    background: transparent;
+}
+
+.grid-cell:hover,
+.grid-cell.active {
+    background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
+    border-color: var(--chata-blue);
+    box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
+    transform: scale(1.05);
+}
+
+/* --- Alert / Flash Messages --- */
+.alert {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 1rem;
+    border-radius: 10px;
+    margin: 1rem 0;
+    text-align: center;
+    position: relative;
+    z-index: 20;
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+    position: relative;
+    z-index: 20;
+}
+
+/* --- Footer --- */
+.site-footer {
+    margin-top: 60px;
+    background: rgba(0, 0, 0, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 40px 0 20px 0;
+    position: relative;
+    z-index: 15;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+.footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.footer-logo {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3366ff;
+    text-decoration: none;
+}
+
+.footer-description {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 300px;
+    text-transform: uppercase;
+}
+
+.footer-section h3 {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    letter-spacing: 0.1em;
+}
+
+.footer-section a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 8px;
+    transition: color 0.3s ease;
+    text-transform: none;
+}
+
+.footer-section a:hover {
+    color: #3366ff;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    text-transform: none;
+}
+
+.contact-item i {
+    color: #3366ff;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 0.2em;
+}
+
+.contact-item a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    text-transform: none;
+}
+
+.contact-item a:hover {
+    color: #3366ff;
+}
+
+.footer-bottom {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    text-transform: none;
+}
+
+/* --- Animations --- */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Responsive: Footer --- */
+@media (max-width: 768px) {
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}

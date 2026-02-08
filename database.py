@@ -1,26 +1,65 @@
 """
-Database connection and management utilities
+Database connection and management utilities.
+Uses connection pooling for PostgreSQL in production.
 """
 import os
+import logging
 import sqlite3
 import psycopg2
+import psycopg2.pool
 from config import Config
 
+logger = logging.getLogger("chata.database")
+
+# ---------------------------------------------------------------------------
+# PostgreSQL connection pool (initialised lazily on first use)
+# ---------------------------------------------------------------------------
+_pg_pool = None
+
+
+def _get_pg_pool():
+    """Return (and lazily create) the PostgreSQL connection pool."""
+    global _pg_pool
+    if _pg_pool is None:
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            _pg_pool = psycopg2.pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=10,
+                dsn=database_url,
+            )
+    return _pg_pool
+
+
 def get_db_connection():
-    """Get database connection - automatically chooses between SQLite and PostgreSQL"""
+    """Get database connection — uses pool for PostgreSQL, direct for SQLite."""
     database_url = os.environ.get('DATABASE_URL')
-    
+
     if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
-        print(f"🔗 Connecting to PostgreSQL database...")
-        try:
-            conn = psycopg2.connect(database_url)
-            print(f"✅ PostgreSQL connected successfully")
-            return conn
-        except Exception as e:
-            print(f"❌ PostgreSQL connection error: {e}")
-            return None
+        pool = _get_pg_pool()
+        if pool:
+            try:
+                conn = pool.getconn()
+                # Wrap .close() so callers still call conn.close() but it returns to pool
+                original_close = conn.close
+                def return_to_pool():
+                    try:
+                        pool.putconn(conn)
+                    except Exception:
+                        original_close()
+                conn.close = return_to_pool
+                return conn
+            except Exception as e:
+                logger.error(f"PostgreSQL pool error: {e}")
+                return None
+        else:
+            # Fallback: direct connection if pool failed to init
+            try:
+                return psycopg2.connect(database_url)
+            except Exception as e:
+                logger.error(f"PostgreSQL connection error: {e}")
+                return None
     else:
-        print(f"Using SQLite database (local development)")
         return sqlite3.connect(Config.DB_FILE)
 
 def get_param_placeholder():
@@ -33,15 +72,15 @@ def get_param_placeholder():
 
 def init_database():
     """Initialize database tables"""
-    print("Initializing database...")
+    logger.info("Initializing database...")
     
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
-        print(f"Database connection - DATABASE_URL: {database_url[:50]}...")
+        logger.info(f"Database connection - DATABASE_URL: {database_url[:50]}...")
     
     conn = get_db_connection()
     if not conn:
-        print("❌ Failed to get database connection")
+        logger.error("Failed to get database connection")
         return False
     
     try:
@@ -51,10 +90,10 @@ def init_database():
         is_postgres = bool(database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')))
         
         if is_postgres:
-            print("✅ Using PostgreSQL database")
+            logger.info("Using PostgreSQL database")
             _create_postgres_tables(cursor)
         else:
-            print("Using SQLite database")
+            logger.info("Using SQLite database")
             _create_sqlite_tables(cursor)
         
         # Insert default settings
@@ -83,20 +122,20 @@ def init_database():
                     AND (replies_limit_monthly IS NULL OR replies_limit_monthly > 0)
                     AND (has_received_free_trial IS NULL OR has_received_free_trial = 0)
                 """)
-            print("✅ Updated users without active subscriptions to 0 replies (preserving free trial replies)")
+            logger.info("Updated users without active subscriptions to 0 replies (preserving free trial replies)")
         except Exception as e:
-            print(f"Note: Could not update existing users' limits: {e}")
+            logger.warning(f"Could not update existing users' limits: {e}")
         
         conn.commit()
-        print("Database initialized successfully")
+        logger.info("Database initialized successfully")
         return True
         
     except Exception as e:
-        print(f"Error initializing database: {e}")
-        print(f"Error type: {type(e).__name__}")
+        logger.error(f"Error initializing database: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
         try:
             conn.rollback()
-            print("Transaction rolled back, continuing...")
+            logger.info("Transaction rolled back, continuing...")
         except:
             pass
         return False
@@ -138,7 +177,7 @@ def _create_postgres_tables(cursor):
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_warning_threshold INTEGER")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_received_free_trial BOOLEAN DEFAULT FALSE")
     except Exception as e:
-        print(f"Note: Some columns may already exist: {e}")
+        logger.debug(f"Some columns may already exist: {e}")
     
     # Create instagram_connections table
     cursor.execute("""
@@ -549,7 +588,7 @@ def _create_sqlite_tables(cursor):
             )
         """)
     except Exception as e:
-        print(f"Note: subscriptions table may already exist: {e}")
+        logger.debug(f"Subscriptions table may already exist: {e}")
     
     # Create stripe_webhook_events table for webhook idempotency
     try:
@@ -560,14 +599,14 @@ def _create_sqlite_tables(cursor):
             )
         """)
     except Exception as e:
-        print(f"Note: stripe_webhook_events table may already exist: {e}")
+        logger.debug(f"stripe_webhook_events table may already exist: {e}")
     
     # Indexes on instagram_connections for fast webhook lookups
     try:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_user_id ON instagram_connections(instagram_user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_instagram_connections_page_id ON instagram_connections(instagram_page_id)")
     except Exception as e:
-        print(f"Note: instagram_connections indexes may already exist: {e}")
+        logger.debug(f"instagram_connections indexes may already exist: {e}")
     
     # Instagram webhook idempotency (processed message ids)
     try:
@@ -578,7 +617,7 @@ def _create_sqlite_tables(cursor):
             )
         """)
     except Exception as e:
-        print(f"Note: instagram_webhook_processed_mids table may already exist: {e}")
+        logger.debug(f"instagram_webhook_processed_mids table may already exist: {e}")
     try:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS conversation_senders (
@@ -589,11 +628,11 @@ def _create_sqlite_tables(cursor):
             )
         """)
     except Exception as e:
-        print(f"Note: conversation_senders table may already exist: {e}")
+        logger.debug(f"conversation_senders table may already exist: {e}")
     try:
         cursor.execute("ALTER TABLE messages ADD COLUMN sent_via_api INTEGER DEFAULT 1")
     except Exception as e:
-        print(f"Note: messages.sent_via_api column may already exist: {e}")
+        logger.debug(f"messages.sent_via_api column may already exist: {e}")
 
 def _insert_default_settings(cursor, is_postgres):
     """Insert default settings into the database"""

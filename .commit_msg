@@ -1,0 +1,16 @@
+Major refactor: modularize app, add security, template inheritance, logging
+
+- Split monolithic app.py (6500 lines) into route blueprints and service modules
+  routes/: auth, dashboard, payments, webhook, admin, pages
+  services/: auth, users, email, ai, instagram, stripe_handlers, subscription, messaging, activity
+- Add CSRF protection (flask-wtf) on all POST forms, exempt webhooks
+- Add admin_required decorator; protect all /admin/* routes with user ID check
+- Gate debug routes behind DEBUG_ROUTES_ENABLED env var
+- Fail on default SECRET_KEY in production
+- Create base.html with Jinja2 template inheritance; all 18 templates now extend it
+- Extract shared CSS into static/css/common.css and JS into static/js/common.js
+- Add PostgreSQL connection pooling (psycopg2.pool.SimpleConnectionPool)
+- Replace all print() with structured Python logging (configurable LOG_LEVEL)
+- Extract magic numbers into Config constants (STARTER/STANDARD_MONTHLY_REPLIES, ADDON_REPLIES, BASE_URL, SUPPORT_EMAIL)
+- Pin all dependency versions in requirements.txt
+- Delete dead files (cube.html, test_railway_connection.py, update_db.py, update_instagram_id.py, SIMPLE_STEPS.txt, WEBHOOK_SIGNATURE_TIMELINE.md)

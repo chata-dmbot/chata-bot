@@ -1,50 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="facebook-domain-verification" content="xjdsycm57z6rx69nvq43jusysoit1q" />
-  <title>Chata - AI Instagram Automation</title>
-  <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}?v=2">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-load-overlay.css') }}">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
-        :root {
-            --chata-blue: #3366ff;
-            --chata-blue-light: #4d7cff;
-            --chata-blue-dark: #1a4dcc;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            color: #ffffff;
-            overflow-x: hidden;
-            font-weight: 300;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            min-height: 100vh; /* Adjust for footer */
-            position: relative;
-        }
+{% extends "base.html" %}
 
-        /* Global subtle blur overlay - behind animations, in front of grid */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(1px);
-            z-index: 1;
-            pointer-events: none;
-        }
-        
+{% block extra_meta %}
+<meta name="facebook-domain-verification" content="xjdsycm57z6rx69nvq43jusysoit1q" />
+{% endblock %}
+
+{% block title %}Chata - AI Instagram Automation{% endblock %}
+
+{% block page_styles %}
         .hero-title {
             font-weight: 700;
             letter-spacing: 0.1em;
@@ -56,47 +18,6 @@
             font-weight: 300;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-        }
-        
-        .glass-nav {
-            backdrop-filter: none;
-            background: transparent;
-            border: none;
-        }
-        
-        .nav-item {
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-item:hover {
-            color: var(--chata-blue);
-        }
-        
-        .nav-item::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--chata-blue);
-            transition: width 0.3s ease;
-        }
-        
-        .nav-item:hover::after {
-            width: 100%;
-        }
-        
-        .cta-button {
-            background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(51, 102, 255, 0.3);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.4);
         }
         
         .letter-animation {
@@ -224,18 +145,6 @@
         }
         
         
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        
         .stats-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -314,65 +223,11 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
-        .logo-blue {
-            color: #3366ff;
-        }
-        
-        /* Interactive Grid Background */
-        .interactive-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: #000000;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-attachment: scroll;
-            transition: all 0.3s ease;
-        }
-        
-        .grid-cell {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 1px solid rgba(51, 102, 255, 0.1);
-            transition: all 0.6s ease;
-            pointer-events: none;
-            background: transparent;
-        }
-        
-        .grid-cell:hover {
-            background: radial-gradient(circle, rgba(51, 102, 255, 0.4) 0%, rgba(51, 102, 255, 0.2) 50%, transparent 70%);
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 25px rgba(51, 102, 255, 0.5);
-            transform: scale(1.05);
-        }
-
-        .grid-cell.active {
-            background: radial-gradient(circle, rgba(51, 102, 255, 0.3) 0%, rgba(51, 102, 255, 0.15) 50%, transparent 70%);
-            border-color: var(--chata-blue);
-            box-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
-            transform: scale(1.02);
-            transition: all 0.8s ease;
-        }
         
         /* Simple zoom entrance effect */
         .page-content {
             opacity: 1;
             backdrop-filter: blur(0.5px);
-        }
-        
-        .navigation {
-            opacity: 0;
-            transform: translateY(-50px);
-            animation: slideDown 1s ease-out forwards;
-            position: relative;
-            z-index: 15;
         }
         
         .hero-section {
@@ -583,120 +438,6 @@
             padding: 0 0 0 0;
         }
 
-        /* Footer Styles */
-        .site-footer {
-            margin-top: 60px;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 40px 0 20px 0;
-            position: relative;
-            z-index: 10;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        .footer-brand {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .footer-logo {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #3366ff;
-            text-decoration: none;
-        }
-
-        .footer-description {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1rem;
-            line-height: 1.6;
-            max-width: 300px;
-        }
-
-        .footer-section h3 {
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            letter-spacing: 0.1em;
-        }
-
-        .footer-section a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.95rem;
-            display: block;
-            margin-bottom: 8px;
-            transition: color 0.3s ease;
-        }
-
-        .footer-section a:hover {
-            color: #3366ff;
-        }
-
-        .contact-info {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-
-        .contact-item i {
-            color: #3366ff;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            line-height: 1;
-            margin-top: 0.2em;
-        }
-
-        .contact-item a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .contact-item a:hover {
-            color: #3366ff;
-        }
-
-        .footer-bottom {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-        }
-
         /* Final CTA Section */
         .final-cta {
             margin-top: 100px;
@@ -774,31 +515,16 @@
                 gap: 2rem !important;
             }
         }
-    </style>
-</head>
-<body>
-    <div class="page-load-overlay hidden" id="pageLoadOverlay">
-        <div class="overlay-scene">
-            <div class="overlay-cube">
-                <div class="overlay-face overlay-face-front"></div>
-                <div class="overlay-face overlay-face-back"></div>
-                <div class="overlay-face overlay-face-right"></div>
-                <div class="overlay-face overlay-face-left"></div>
-                <div class="overlay-face overlay-face-top"></div>
-                <div class="overlay-face overlay-face-bottom"></div>
-            </div>
-        </div>
-    </div>
-    <!-- Interactive Grid Background -->
-    <div class="interactive-grid" id="interactiveGrid"></div>
-    
+{% endblock %}
+
+{% block navigation %}
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div class="flex items-center h-16">
                 <!-- Logo - Left aligned -->
                 <div class="absolute left-0">
-                    <a href="{{ url_for('home') }}" class="text-3xl font-bold logo-blue pl-4">
+                    <a href="{{ url_for('pages.home') }}" class="text-3xl font-bold logo-blue pl-4">
                         CHATA
                     </a>
                 </div>
@@ -806,7 +532,7 @@
                 <!-- Desktop Navigation - Centered -->
                 <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
                     <div class="flex items-center space-x-8">
-                        <a href="{{ url_for('home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                        <a href="{{ url_for('pages.home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
                         <a href="#features" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">FEATURES</a>
                         <a href="#pricing" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">PRICE</a>
                     </div>
@@ -816,13 +542,13 @@
                 <div class="hidden md:block absolute right-0">
                     <div class="flex items-center space-x-4 pr-4">
                         {% if user_logged_in %}
-                            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
-                            <a href="{{ url_for('logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
+                            <a href="{{ url_for('dashboard_bp.dashboard') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                            <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
                                 LOGOUT
                             </a>
                         {% else %}
-                        <a href="{{ url_for('login') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">LOGIN</a>
-                        <a href="{{ url_for('signup') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
+                        <a href="{{ url_for('auth.login') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">LOGIN</a>
+                        <a href="{{ url_for('auth.signup') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">
                             GET STARTED
                         </a>
                         {% endif %}
@@ -840,7 +566,9 @@
             </div>
         </div>
     </nav>
+{% endblock %}
 
+{% block content %}
     <!-- Hero Section -->
     <section class="relative min-h-screen flex items-center justify-center overflow-hidden hero-section">
   <!-- Background Elements -->
@@ -1103,7 +831,6 @@
                 <div class="conversation-slider" id="conversationSlider" style="display: flex; align-items: center; cursor: grab; user-select: none;">
                     <!-- Image 1 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 1 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Fitness Influencer</h3>
           </div>
@@ -1114,7 +841,6 @@
         
                     <!-- Image 2 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 2 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Piano Player</h3>
           </div>
@@ -1125,7 +851,6 @@
         
                     <!-- Image 3 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 3 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Rap Artist</h3>
           </div>
@@ -1136,7 +861,6 @@
         
                     <!-- Image 4 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 4 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Ski Enthusiast</h3>
           </div>
@@ -1147,7 +871,6 @@
         
                     <!-- Image 5 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 5 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Parkourist</h3>
       </div>
@@ -1158,7 +881,6 @@
                     
                     <!-- Image 6 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 6 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Dog Trainer</h3>
             </div>
@@ -1169,7 +891,6 @@
                     
                     <!-- Image 7 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 7 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Oil Painter</h3>
             </div>
@@ -1180,7 +901,6 @@
         
                     <!-- Image 8 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 8 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Book Writer</h3>
         </div>
@@ -1191,7 +911,6 @@
         
                     <!-- Image 9 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 9 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Plant Fanatic</h3>
             </div>
@@ -1202,7 +921,6 @@
         
                     <!-- Image 10 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 10 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Game Streamer</h3>
                 </div>
@@ -1213,7 +931,6 @@
                     
                     <!-- Image 11 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 11 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Makeup Vlogger</h3>
                 </div>
@@ -1225,7 +942,6 @@
                     <!-- Duplicate set for seamless loop -->
                     <!-- Image 1 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 1 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Fitness Influencer</h3>
                 </div>
@@ -1236,7 +952,6 @@
                     
                     <!-- Image 2 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 2 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Piano Player</h3>
             </div>
@@ -1247,7 +962,6 @@
                     
                     <!-- Image 3 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 3 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Rap Artist</h3>
         </div>
@@ -1258,7 +972,6 @@
                     
                     <!-- Image 4 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 4 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Ski Enthusiast</h3>
       </div>
@@ -1269,7 +982,6 @@
         
                     <!-- Image 5 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 5 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Parkourist</h3>
           </div>
@@ -1280,7 +992,6 @@
         
                     <!-- Image 6 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 6 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Dog Trainer</h3>
           </div>
@@ -1291,7 +1002,6 @@
         
                     <!-- Image 7 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 7 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Oil Painter</h3>
           </div>
@@ -1302,7 +1012,6 @@
                     
                     <!-- Image 8 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 8 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Book Writer</h3>
       </div>
@@ -1313,7 +1022,6 @@
                     
                     <!-- Image 9 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 9 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Plant Fanatic</h3>
       </div>
@@ -1324,7 +1032,6 @@
                     
                     <!-- Image 10 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 10 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Game Streamer</h3>
             </div>
@@ -1335,7 +1042,6 @@
                     
                     <!-- Image 11 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 11 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Makeup Vlogger</h3>
                         </div>
@@ -1347,7 +1053,6 @@
                     <!-- THIRD SET - Identical to first set for seamless infinite loop -->
                     <!-- Image 1 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 1 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Fitness Influencer</h3>
           </div>
@@ -1358,7 +1063,6 @@
         
                     <!-- Image 2 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 2 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Piano Player</h3>
           </div>
@@ -1369,7 +1073,6 @@
         
                     <!-- Image 3 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 3 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Rap Artist</h3>
           </div>
@@ -1380,7 +1083,6 @@
         
                     <!-- Image 4 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 4 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Ski Enthusiast</h3>
           </div>
@@ -1391,7 +1093,6 @@
         
                     <!-- Image 5 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 5 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Parkourist</h3>
       </div>
@@ -1402,7 +1103,6 @@
         
                     <!-- Image 6 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 6 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Dog Trainer</h3>
           </div>
@@ -1413,7 +1113,6 @@
         
                     <!-- Image 7 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 7 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Oil Painter</h3>
             </div>
@@ -1424,7 +1123,6 @@
         
                     <!-- Image 8 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 8 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Book Writer</h3>
               </div>
@@ -1435,7 +1133,6 @@
         
                     <!-- Image 9 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 9 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Plant Fanatic</h3>
           </div>
@@ -1446,7 +1143,6 @@
         
                     <!-- Image 10 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 10 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Game Streamer</h3>
                         </div>
@@ -1457,7 +1153,6 @@
         
                     <!-- Image 11 -->
                     <div style="flex: 0 0 800px; height: 800px; margin: 0 -200px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px;">
-                        <!-- Title for Image 11 -->
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; z-index: 102;">
                             <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Makeup Vlogger</h3>
                         </div>
@@ -1604,13 +1299,14 @@
                     <!-- CTA Button -->
                     <div style="text-align: center;">
                         {% if session.get('user_id') %}
-                        <form method="POST" action="{{ url_for('create_subscription_checkout') }}" style="display: inline-block;">
+                        <form method="POST" action="{{ url_for('payments.create_subscription_checkout') }}" style="display: inline-block;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block; border: none; cursor: pointer;">
                                 GET STARTED
                             </button>
                         </form>
                         {% else %}
-                        <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
+                        <a href="{{ url_for('auth.signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
                             GET STARTED
                         </a>
                         {% endif %}
@@ -1650,7 +1346,7 @@
                     
                     <!-- CTA Button -->
                     <div style="text-align: center;">
-                        <a href="{{ url_for('signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
+                        <a href="{{ url_for('auth.signup') }}" class="cta-button-large" style="margin-bottom: 1rem; display: inline-block;">
                             GET STARTED
                         </a>
                         
@@ -1686,47 +1382,36 @@
                     <!-- Testimonial 1 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
-            </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Beta user
-                            </p>
-          </div>
-        </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Beta user</p>
+                        </div>
+                    </div>
         
                     <!-- Testimonial 2 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-          </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "This saved me so much time replying to people, I actually got back to work on my launch."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Indie creator
-                            </p>
-            </div>
-        </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"This saved me so much time replying to people, I actually got back to work on my launch."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Indie creator</p>
+                        </div>
+                    </div>
         
                     <!-- Testimonial 3 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
@@ -1738,80 +1423,60 @@
                                         <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                     </span>
                                 </span>
-          </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I thought it would feel robotic but it somehow talks like... me? Wild."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Early tester
-                            </p>
-          </div>
-        </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I thought it would feel robotic but it somehow talks like... me? Wild."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Early tester</p>
+                        </div>
+                    </div>
         
                     <!-- Testimonial 4 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
-          </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Setup took maybe 10 minutes. Already had it answering 3 people while I was out."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Instagram seller
-                            </p>
-            </div>
-          </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Setup took maybe 10 minutes. Already had it answering 3 people while I was out."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Instagram seller</p>
+                        </div>
+                    </div>
         
                     <!-- Testimonial 5 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-        </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Artist
-                            </p>
-      </div>
-            </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Artist</p>
+                        </div>
+                    </div>
 
                     <!-- Testimonial 6 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
-          </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "It's not perfect but it's good enough that I don't have to live inside my inbox anymore."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Solo founder
-                            </p>
-        </div>
-            </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"It's not perfect but it's good enough that I don't have to live inside my inbox anymore."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Solo founder</p>
+                        </div>
+                    </div>
 
                     <!-- Testimonial 7 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
@@ -1823,375 +1488,177 @@
                                         <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                     </span>
                                 </span>
-              </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Wasn't sure it would fit my tone, but the presets actually helped a lot."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — First-time user
-                            </p>
-              </div>
-            </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Wasn't sure it would fit my tone, but the presets actually helped a lot."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— First-time user</p>
+                        </div>
+                    </div>
 
                     <!-- Testimonial 8 -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                                 <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-          </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "The moment someone said 'wait is this you?' I knew it worked."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Musician
-                            </p>
-        </div>
-      </div>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"The moment someone said 'wait is this you?' I knew it worked."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Musician</p>
+                        </div>
+                    </div>
 
                     <!-- Duplicate for infinite scroll (Set 2) -->
                     <!-- Testimonial 1 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
-      </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Beta user
-                            </p>
-      </div>
-      </div>
-
-                    <!-- Testimonial 2 (Set 2) -->
-                    <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
-                        <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
-                            <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-    </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "This saved me so much time replying to people, I actually got back to work on my launch."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Indie creator
-                            </p>
-    </div>
-            </div>
-
-                    <!-- Testimonial 3 (Set 2) -->
-                    <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
-                        <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
-                            <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="position: relative; display: inline-block;">
-                                    <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span>
-                                    <span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;">
-                                        <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                    </span>
-                                </span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I thought it would feel robotic but it somehow talks like... me? Wild."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Early tester
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Beta user</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 4 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Setup took maybe 10 minutes. Already had it answering 3 people while I was out."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Instagram seller
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"This saved me so much time replying to people, I actually got back to work on my launch."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Indie creator</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 5 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="position: relative; display: inline-block;"><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span><span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;"><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span></span></span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Artist
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I thought it would feel robotic but it somehow talks like... me? Wild."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Early tester</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 6 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "It's not perfect but it's good enough that I don't have to live inside my inbox anymore."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Solo founder
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Setup took maybe 10 minutes. Already had it answering 3 people while I was out."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Instagram seller</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 7 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="position: relative; display: inline-block;">
-                                    <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span>
-                                    <span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;">
-                                        <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                    </span>
-                                </span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Wasn't sure it would fit my tone, but the presets actually helped a lot."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — First-time user
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Artist</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 8 (Set 2) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "The moment someone said 'wait is this you?' I knew it worked."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Musician
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"It's not perfect but it's good enough that I don't have to live inside my inbox anymore."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Solo founder</p>
+                        </div>
+                    </div>
+                    <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
+                            <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="position: relative; display: inline-block;"><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span><span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;"><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span></span></span>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Wasn't sure it would fit my tone, but the presets actually helped a lot."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— First-time user</p>
+                        </div>
+                    </div>
+                    <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
+                            <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                            </div>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"The moment someone said 'wait is this you?' I knew it worked."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Musician</p>
                         </div>
                     </div>
 
                     <!-- Duplicate for infinite scroll (Set 3) -->
-                    <!-- Testimonial 1 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Beta user
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Honestly didn't expect it to sound that natural. I tested it on a few DMs and had to double-check it wasn't me."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Beta user</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 2 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "This saved me so much time replying to people, I actually got back to work on my launch."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Indie creator
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"This saved me so much time replying to people, I actually got back to work on my launch."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Indie creator</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 3 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="position: relative; display: inline-block;">
-                                    <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span>
-                                    <span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;">
-                                        <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                    </span>
-                                </span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="position: relative; display: inline-block;"><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span><span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;"><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span></span></span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I thought it would feel robotic but it somehow talks like... me? Wild."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Early tester
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I thought it would feel robotic but it somehow talks like... me? Wild."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Early tester</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 4 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Setup took maybe 10 minutes. Already had it answering 3 people while I was out."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Instagram seller
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Setup took maybe 10 minutes. Already had it answering 3 people while I was out."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Instagram seller</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 5 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Artist
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"I used to ignore half my DMs. Now I feel kinda guilty the bot replies faster than I do."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Artist</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 6 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold; -webkit-text-stroke: 1px #3366ff;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "It's not perfect but it's good enough that I don't have to live inside my inbox anymore."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Solo founder
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"It's not perfect but it's good enough that I don't have to live inside my inbox anymore."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Solo founder</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 7 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 4.5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="position: relative; display: inline-block;">
-                                    <span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span>
-                                    <span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;">
-                                        <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                    </span>
-                                </span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="position: relative; display: inline-block;"><span style="color: rgba(51, 102, 255, 0.3); font-size: 1.4rem; font-weight: bold;">★</span><span style="position: absolute; left: 0; top: 0; width: 50%; overflow: hidden;"><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span></span></span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "Wasn't sure it would fit my tone, but the presets actually helped a lot."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — First-time user
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"Wasn't sure it would fit my tone, but the presets actually helped a lot."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— First-time user</p>
                         </div>
                     </div>
-
-                    <!-- Testimonial 8 (Set 3) -->
                     <div style="flex: 0 0 600px; height: 280px; margin: 0 20px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
                         <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 30px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 45px; backdrop-filter: blur(10px);">
-                            <!-- Star Rating 5/5 -->
                             <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
-                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
+                                <span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span><span style="color: #3366ff; font-size: 1.4rem; font-weight: bold;">★</span>
                             </div>
-                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
-                                "The moment someone said 'wait is this you?' I knew it worked."
-                            </p>
-                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">
-                                — Musician
-                            </p>
+                            <p style="font-size: 1.1rem; color: #fff; font-weight: 400; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">"The moment someone said 'wait is this you?' I knew it worked."</p>
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; font-weight: 500;">— Musician</p>
                         </div>
                     </div>
 
@@ -2212,27 +1679,22 @@
             <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
             
             <div class="faq-container">
-                <!-- FAQ Item 1 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">Do I need to code anything to use this?</h3>
-        </div>
+                    </div>
                     <div class="faq-answer">
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">Nope. You just describe your bot's personality, connect your Instagram account, and go live. It's built for non-technical users.</p>
-            </div>
-              </div>
-
-                <!-- FAQ Item 2 -->
+                    </div>
+                </div>
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">What do I need to get started?</h3>
-              </div>
+                    </div>
                     <div class="faq-answer">
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">An Instagram Business account (very easy to switch), and a Facebook account (guarantees yours and our safety)!</p>
-            </div>
-          </div>
-
-                <!-- FAQ Item 3 -->
+                    </div>
+                </div>
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">Will this work on my Instagram account?</h3>
@@ -2241,8 +1703,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">It currently supports business accounts only, due to Meta's API rules. If you're using a creator or personal account, you can switch to business in your IG settings.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 4 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">Is this allowed by Instagram?</h3>
@@ -2251,8 +1711,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">Yes. We only use the official Instagram Messenger API, which is fully compliant with Meta's terms of service and privacy guidelines.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 5 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">How fast does the bot reply?</h3>
@@ -2261,8 +1719,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">Almost instantly, replies usually go out within 1–2 seconds of receiving a DM.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 6 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">What makes this different from other auto-reply tools?</h3>
@@ -2271,8 +1727,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">This bot doesn't just respond, it sounds like you. You set its personality, tone, and voice. It can even reference links or promotions you add.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 7 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">What if I don't know what tone to write?</h3>
@@ -2281,8 +1735,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">We provide ready-made tone presets (like chill, confident, playful) and full response templates to help you get started in minutes.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 8 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">How does the free trial work?</h3>
@@ -2291,8 +1743,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">You get 100 free replies with no upfront payment. When those run out, you can decide whether to continue, no auto-charges or surprises.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 9 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">What happens when I hit my monthly reply limit?</h3>
@@ -2301,8 +1751,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">You'll get a warning. You can then top up with +150 replies for €5, or wait until your next month resets.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 10 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">Can I cancel at any time?</h3>
@@ -2311,8 +1759,6 @@
                         <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin: 0 0 5px 0; padding: 0;">Yes, there are no commitments. Cancel or pause from your dashboard whenever you like.</p>
                     </div>
                 </div>
-
-                <!-- FAQ Item 11 -->
                 <div class="faq-item">
                     <div class="faq-question" onclick="toggleFAQ(this)">
                         <h3 style="font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0; cursor: pointer; padding: 20px 0; transition: color 0.3s ease;">Is my data secure?</h3>
@@ -2331,55 +1777,24 @@
         <div class="final-cta-content">
             <h2>Ready To save Time?</h2>
             <p>Join thousands of creators who are already automating their Instagram DMs with AI.</p>
-            <a href="{{ url_for('signup') }}" class="cta-button-large">START FREE NOW</a>
+            <a href="{{ url_for('auth.signup') }}" class="cta-button-large">START FREE NOW</a>
         </div>
     </section>
+{% endblock %}
 
-    <!-- Footer -->
-    <footer class="site-footer">
-    <div class="footer-content">
-            <!-- Brand Section -->
-      <div class="footer-brand">
-                <a href="{{ url_for('home') }}" class="footer-logo">CHATA</a>
-                <p class="footer-description">
-                    instagram ai engagement
-                </p>
-      </div>
+{% block extra_js %}
+<script>
+        // Show overlay on checkout/subscribe form submissions (page-specific)
+        (function() {
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (!overlay) return;
+            document.querySelectorAll('form[method="POST"]').forEach(function(f) {
+                if (f.action && (f.action.indexOf('checkout') !== -1 || f.action.indexOf('subscribe') !== -1)) {
+                    f.addEventListener('submit', function() { overlay.classList.remove('hidden'); });
+                }
+            });
+        })();
 
-            <!-- Legal Links Section -->
-            <div class="footer-section">
-                <h3>Legal</h3>
-                <a href="{{ url_for('privacy') }}">Privacy Policy</a>
-                <a href="{{ url_for('terms') }}">Terms of Service</a>
-                <a href="{{ url_for('data_deletion') }}">Data Deletion</a>
-      </div>
-
-            <!-- Contact Section -->
-            <div class="footer-section">
-                <h3>Contact</h3>
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <i class="fas fa-envelope"></i>
-                        <a href="mailto:chata.dmbot@gmail.com">chata.dmbot@gmail.com</a>
-      </div>
-                    <div class="contact-item">
-                        <i class="fas fa-phone"></i>
-                        <a href="tel:+37063204061">+37063204061</a>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fab fa-instagram"></i>
-                        <a href="https://instagram.com/chata.dmbot" target="_blank">chata.dmbot</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2025 CHATA (Tauras Nienius). All rights reserved.</p>
-    </div>
-  </footer>
-
-  <script>
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
@@ -2446,16 +1861,13 @@
         let lastX = 0;
         let lastTime = 0;
         let momentumAnimationId = null;
-        const friction = 0.95; // How quickly momentum decreases (0.95 = 5% reduction per frame)
-        const maxVelocity = 50; // Maximum momentum speed
+        const friction = 0.95;
+        const maxVelocity = 50;
         
-        // Calculate the width of one complete set (11 images with tighter spacing)
-        // Each image: 800px - 400px overlap = 400px effective width × 11 images = 4400px
-        // Now we have 3 sets total, so total width = 4400px × 3 = 13200px
         const oneSetWidth = 4400;
-        const totalWidth = oneSetWidth * 3; // 13200px
+        const totalWidth = oneSetWidth * 3;
         
-        // Start at the middle of the 2nd set (position -4400px) so there's content on both sides
+        // Start at the middle of the 2nd set
         slider.style.transform = `translateX(-${oneSetWidth}px)`;
 
         // Prevent default image dragging behavior
@@ -2463,7 +1875,7 @@
             img.addEventListener('dragstart', (e) => {
                 e.preventDefault();
             });
-            img.style.pointerEvents = 'none'; // Prevent image from capturing mouse events
+            img.style.pointerEvents = 'none';
         });
 
         // Function to handle momentum scrolling
@@ -2474,33 +1886,25 @@
             
             function animate() {
                 if (Math.abs(velocity) > 0.1) {
-                    // Apply velocity to position
                     const currentPosition = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
                     let newPosition = currentPosition + velocity;
                     
-                    // Apply infinite loop wrapping
                     newPosition = wrapPosition(newPosition);
                     
-                    // Update slider position
                     slider.style.transform = `translateX(${newPosition}px)`;
-                    updateImageEffects(); // Update scaling and opacity
+                    updateImageEffects();
                     
-                    // Apply friction to reduce velocity
                     velocity *= friction;
                     
-                    // Continue animation
                     momentumAnimationId = requestAnimationFrame(animate);
                 } else {
-                    // Stop when velocity is too low
                     velocity = 0;
                     momentumAnimationId = null;
                     
-                    // Resume auto-scroll after momentum stops
                     setTimeout(() => {
                         isUserInteracting = false;
-                        // Reset swipe indicator timer when auto-scroll resumes
                         resetSwipeIndicatorTimer();
-                    }, 2000); // 2 second delay before auto-scroll resumes
+                    }, 2000);
                 }
             }
             
@@ -2508,27 +1912,23 @@
         }
 
         // Auto-scroll animation for the carousel
-        let autoScrollSpeed = 1; // target pixels per frame
-        let currentAutoScrollSpeed = 0; // current speed (starts at 0)
+        let autoScrollSpeed = 1;
+        let currentAutoScrollSpeed = 0;
         let autoScrollAnimationId = null;
         let isUserInteracting = false;
-        const autoScrollAcceleration = 0.005; // how quickly it accelerates to full speed
+        const autoScrollAcceleration = 0.005;
 
         function animateAutoScroll() {
             if (!isUserInteracting && !momentumAnimationId) {
-                // Gradually accelerate to target speed
                 if (currentAutoScrollSpeed < autoScrollSpeed) {
                     currentAutoScrollSpeed = Math.min(currentAutoScrollSpeed + autoScrollAcceleration, autoScrollSpeed);
                 }
                 
-                // Get current position
                 const currentPosition = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
-                let newPosition = currentPosition + currentAutoScrollSpeed; // Move right (positive direction)
+                let newPosition = currentPosition + currentAutoScrollSpeed;
                 
-                // Apply infinite loop wrapping
                 newPosition = wrapPosition(newPosition);
                 
-                // Update slider position
                 slider.style.transform = `translateX(${newPosition}px)`;
                 updateImageEffects();
             }
@@ -2555,14 +1955,11 @@
         }
 
         function resetSwipeIndicatorTimer() {
-            // Clear any existing timers
             if (swipeIndicatorTimeout) clearTimeout(swipeIndicatorTimeout);
             if (swipeIndicatorShowTimeout) clearTimeout(swipeIndicatorShowTimeout);
             
-            // Hide immediately
             hideSwipeIndicator();
             
-            // Show again after 10 seconds of inactivity
             swipeIndicatorShowTimeout = setTimeout(() => {
                 if (!isUserInteracting && !isDown) {
                     showSwipeIndicator();
@@ -2570,7 +1967,6 @@
             }, 10000);
         }
 
-        // Show indicator after 5 seconds on page load
         swipeIndicatorTimeout = setTimeout(() => {
             showSwipeIndicator();
         }, 5000);
@@ -2582,113 +1978,88 @@
             sliderItems.forEach((item) => {
                 const rect = item.getBoundingClientRect();
                 const itemCenter = rect.left + rect.width / 2;
-                const distanceFromCenter = viewportCenter - itemCenter; // Keep sign for direction
+                const distanceFromCenter = viewportCenter - itemCenter;
                 
-                // Calculate scale and opacity based on distance (closer = bigger and brighter)
-                // Max distance to consider (beyond this, items are at minimum scale/opacity)
                 const maxDistance = 800;
                 const normalizedDistance = Math.min(Math.abs(distanceFromCenter) / maxDistance, 1);
                 
-                // Scale from 100% (center) to 75% (edges)
                 const scale = 1 - (normalizedDistance * 0.25);
-                
-                // Opacity from 100% (center) to 40% (edges)
                 const opacity = 1 - (normalizedDistance * 0.6);
                 
-                // 3D rotation effect with two zones - items rotate based on distance from center
-                // Positive distance = item is to the left of center (rotate left edge back)
-                // Negative distance = item is to the right of center (rotate right edge back)
                 const absDistance = Math.abs(distanceFromCenter);
                 
                 let rotationY;
                 if (absDistance <= 400) {
-                    // Zone 1: 0-400px from center, gradual 0° to 20°
                     rotationY = -(distanceFromCenter / 400) * 20;
                 } else if (absDistance <= 800) {
-                    // Zone 2: 400-800px from center, gradual 20° to 40°
-                    const zoneProgress = (absDistance - 400) / 400; // 0 to 1
-                    const zoneRotation = 20 + (zoneProgress * 20); // 20° to 40°
-                    rotationY = -(distanceFromCenter / absDistance) * zoneRotation; // Preserve direction
+                    const zoneProgress = (absDistance - 400) / 400;
+                    const zoneRotation = 20 + (zoneProgress * 20);
+                    rotationY = -(distanceFromCenter / absDistance) * zoneRotation;
                 } else {
-                    // Beyond 800px: stays at 40°
                     rotationY = -(distanceFromCenter / absDistance) * 40;
                 }
                 
                 const clampedRotation = Math.max(-40, Math.min(40, rotationY));
                 
-                // Z-depth effect - items farther from center move back slightly
-                const maxDepth = 150; // pixels (increased for more depth)
+                const maxDepth = 150;
                 const translateZ = -Math.abs(normalizedDistance) * maxDepth;
                 
-                // Apply combined transforms with 3D perspective
                 item.style.transform = `perspective(1000px) scale(${scale}) rotateY(${clampedRotation}deg) translateZ(${translateZ}px)`;
                 item.style.opacity = opacity;
                 item.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
-                item.style.backfaceVisibility = 'hidden'; // Fix 3D rendering artifacts
-                item.style.transformStyle = 'preserve-3d'; // Ensure proper 3D rendering
-                item.style.willChange = 'transform'; // Optimize GPU rendering
+                item.style.backfaceVisibility = 'hidden';
+                item.style.transformStyle = 'preserve-3d';
+                item.style.willChange = 'transform';
             });
         }
 
-        // Function to handle infinite loop - wraps position when out of bounds
+        // Function to handle infinite loop
         function wrapPosition(position) {
-            // If dragged too far right (beyond 2nd set), jump to equivalent position in 1st set
             if (position > 0) {
-                return position - oneSetWidth; // Jump to equivalent position in 1st set
+                return position - oneSetWidth;
             }
-            // If dragged too far left (beyond 1st set), jump to equivalent position in 3rd set
             if (position < -(oneSetWidth * 2)) {
-                return position + oneSetWidth; // Jump to equivalent position in 3rd set
+                return position + oneSetWidth;
             }
             return position;
         }
 
         slider.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Prevent default behavior
+            e.preventDefault();
             isDown = true;
-            isUserInteracting = true; // Pause auto-scroll
-            currentAutoScrollSpeed = 0; // Reset speed so it accelerates from 0 when resuming
+            isUserInteracting = true;
+            currentAutoScrollSpeed = 0;
             slider.style.cursor = 'grabbing';
             startX = e.pageX;
             scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
             
-            // Hide swipe indicator on interaction
             hideSwipeIndicator();
-            
-            // Reset timer for reappearing
             resetSwipeIndicatorTimer();
             
-            // Reset momentum variables
             velocity = 0;
             lastX = e.pageX;
             lastTime = Date.now();
             
-            // Stop any existing momentum animation
             if (momentumAnimationId) {
                 cancelAnimationFrame(momentumAnimationId);
                 momentumAnimationId = null;
             }
             
-            // Reset timer for reappearing
             resetSwipeIndicatorTimer();
         });
 
-        // Use document-level listeners to track mouse outside slider
         document.addEventListener('mouseup', () => {
             if (isDown) {
                 isDown = false;
                 slider.style.cursor = 'grab';
                 
-                // Start momentum animation if there's enough velocity
                 if (Math.abs(velocity) > 1) {
                     startMomentumAnimation();
-      } else {
-                    // Resume auto-scroll after a short delay if no momentum
+                } else {
                     setTimeout(() => {
                         isUserInteracting = false;
-                        // Reset swipe indicator timer when auto-scroll resumes
                         resetSwipeIndicatorTimer();
-                    }, 2000); // 2 second delay before auto-scroll resumes
+                    }, 2000);
                 }
             }
         });
@@ -2700,25 +2071,21 @@
             const x = e.pageX;
             const currentTime = Date.now();
             
-            // Calculate velocity for momentum
             if (lastTime > 0) {
                 const timeDelta = currentTime - lastTime;
                 const distanceDelta = x - lastX;
-                velocity = (distanceDelta / timeDelta) * 16; // Scale for 60fps
-                velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity)); // Clamp velocity
+                velocity = (distanceDelta / timeDelta) * 16;
+                velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
             }
             
-            // Update position
-            const walk = (x - startX) * 2; // Multiply by 2 for faster scrolling
+            const walk = (x - startX) * 2;
             let newPosition = scrollLeft + walk;
             
-            // Apply infinite loop wrapping
             newPosition = wrapPosition(newPosition);
             
             slider.style.transform = `translateX(${newPosition}px)`;
-            updateImageEffects(); // Update scaling and opacity
+            updateImageEffects();
             
-            // Update tracking variables
             lastX = x;
             lastTime = currentTime;
         });
@@ -2729,10 +2096,7 @@
             startX = e.touches[0].pageX;
             scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
             
-            // Hide swipe indicator on interaction
             hideSwipeIndicator();
-            
-            // Reset timer for reappearing
             resetSwipeIndicatorTimer();
         }, { passive: false });
 
@@ -2742,11 +2106,10 @@
             const walk = (x - startX) * 2;
             let newPosition = scrollLeft + walk;
             
-            // Apply infinite loop wrapping
             newPosition = wrapPosition(newPosition);
             
             slider.style.transform = `translateX(${newPosition}px)`;
-            updateImageEffects(); // Update scaling and opacity
+            updateImageEffects();
         }, { passive: false });
 
         // Initial update of effects on page load
@@ -2758,58 +2121,48 @@
         // Draggable Testimonials Carousel with Infinite Loop
         const testimonialsSlider = document.getElementById('testimonialsSlider');
         const testimonialsContainer = document.querySelector('.testimonials-container');
-        const testimonialsItems = testimonialsSlider.querySelectorAll('div[style*="flex: 0 0"]'); // Get all testimonial containers
+        const testimonialsItems = testimonialsSlider.querySelectorAll('div[style*="flex: 0 0"]');
         let isTestimonialsDown = false;
         let testimonialsStartX;
         let testimonialsScrollLeft;
         
-        // Momentum/inertia variables for testimonials
         let testimonialsVelocity = 0;
         let testimonialsLastX = 0;
         let testimonialsLastTime = 0;
         let testimonialsMomentumAnimationId = null;
-        const testimonialsFriction = 0.95; // How quickly momentum decreases
-        const testimonialsMaxVelocity = 50; // Maximum momentum speed
+        const testimonialsFriction = 0.95;
+        const testimonialsMaxVelocity = 50;
         
-        // Calculate the width of one complete set (8 testimonials with 640px each = 5120px)
-        const testimonialsOneSetWidth = 5120; // 8 testimonials × 640px (600px + 20px margin each side)
-        const testimonialsTotalWidth = testimonialsOneSetWidth * 3; // 15360px
+        const testimonialsOneSetWidth = 5120;
+        const testimonialsTotalWidth = testimonialsOneSetWidth * 3;
         
-        // Start at the middle of the 2nd set so there's content on both sides
         testimonialsSlider.style.transform = `translateX(-${testimonialsOneSetWidth}px)`;
 
-        // Auto-scroll animation for the testimonials carousel
-        let testimonialsAutoScrollSpeed = 1; // target pixels per frame
-        let testimonialsCurrentAutoScrollSpeed = 0; // current speed (starts at 0)
+        let testimonialsAutoScrollSpeed = 1;
+        let testimonialsCurrentAutoScrollSpeed = 0;
         let testimonialsAutoScrollAnimationId = null;
         let isTestimonialsUserInteracting = false;
-        const testimonialsAutoScrollAcceleration = 0.005; // how quickly it accelerates to full speed
+        const testimonialsAutoScrollAcceleration = 0.005;
 
         function animateTestimonialsAutoScroll() {
             if (!isTestimonialsUserInteracting && !testimonialsMomentumAnimationId) {
-                // Gradually accelerate to target speed
                 if (testimonialsCurrentAutoScrollSpeed < testimonialsAutoScrollSpeed) {
                     testimonialsCurrentAutoScrollSpeed = Math.min(testimonialsCurrentAutoScrollSpeed + testimonialsAutoScrollAcceleration, testimonialsAutoScrollSpeed);
                 }
                 
-                // Get current position
                 const currentPosition = testimonialsSlider.style.transform ? parseInt(testimonialsSlider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
-                let newPosition = currentPosition + testimonialsCurrentAutoScrollSpeed; // Move right (positive direction)
+                let newPosition = currentPosition + testimonialsCurrentAutoScrollSpeed;
                 
-                // Apply infinite loop wrapping
                 newPosition = wrapTestimonialsPosition(newPosition);
                 
-                // Update slider position
                 testimonialsSlider.style.transform = `translateX(${newPosition}px)`;
             }
             
             testimonialsAutoScrollAnimationId = requestAnimationFrame(animateTestimonialsAutoScroll);
         }
         
-        // Start auto-scroll for testimonials
         animateTestimonialsAutoScroll();
 
-        // Function to handle testimonials momentum scrolling
         function startTestimonialsMomentumAnimation() {
             if (testimonialsMomentumAnimationId) {
                 cancelAnimationFrame(testimonialsMomentumAnimationId);
@@ -2817,84 +2170,69 @@
             
             function animate() {
                 if (Math.abs(testimonialsVelocity) > 0.1) {
-                    // Apply velocity to position
                     const currentPosition = testimonialsSlider.style.transform ? parseInt(testimonialsSlider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
                     let newPosition = currentPosition + testimonialsVelocity;
                     
-                    // Apply infinite loop wrapping
                     newPosition = wrapTestimonialsPosition(newPosition);
                     
-                    // Update slider position
                     testimonialsSlider.style.transform = `translateX(${newPosition}px)`;
                     
-                    // Apply friction to reduce velocity
                     testimonialsVelocity *= testimonialsFriction;
                     
-                    // Continue animation
                     testimonialsMomentumAnimationId = requestAnimationFrame(animate);
                 } else {
-                    // Stop when velocity is too low
                     testimonialsVelocity = 0;
                     testimonialsMomentumAnimationId = null;
                     
-                    // Resume auto-scroll after momentum stops
-            setTimeout(() => {
+                    setTimeout(() => {
                         isTestimonialsUserInteracting = false;
-                    }, 2000); // 2 second delay before auto-scroll resumes
+                    }, 2000);
                 }
             }
             
             animate();
         }
 
-        // Function to handle infinite loop for testimonials - wraps position when out of bounds
         function wrapTestimonialsPosition(position) {
-            // If dragged too far right (beyond 2nd set), jump to equivalent position in 1st set
             if (position > 0) {
-                return position - testimonialsOneSetWidth; // Jump to equivalent position in 1st set
+                return position - testimonialsOneSetWidth;
             }
-            // If dragged too far left (beyond 1st set), jump to equivalent position in 3rd set
             if (position < -(testimonialsOneSetWidth * 2)) {
-                return position + testimonialsOneSetWidth; // Jump to equivalent position in 3rd set
+                return position + testimonialsOneSetWidth;
             }
             return position;
         }
 
         testimonialsSlider.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Prevent default behavior
+            e.preventDefault();
             isTestimonialsDown = true;
-            isTestimonialsUserInteracting = true; // Pause auto-scroll
-            testimonialsCurrentAutoScrollSpeed = 0; // Reset speed so it accelerates from 0 when resuming
+            isTestimonialsUserInteracting = true;
+            testimonialsCurrentAutoScrollSpeed = 0;
             testimonialsSlider.style.cursor = 'grabbing';
             testimonialsStartX = e.pageX;
             testimonialsScrollLeft = testimonialsSlider.style.transform ? parseInt(testimonialsSlider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
             
-            // Reset momentum variables
             testimonialsVelocity = 0;
             testimonialsLastX = e.pageX;
             testimonialsLastTime = Date.now();
             
-            // Stop any existing momentum animation
             if (testimonialsMomentumAnimationId) {
                 cancelAnimationFrame(testimonialsMomentumAnimationId);
                 testimonialsMomentumAnimationId = null;
             }
         });
 
-        // Use document-level listeners to track mouse outside testimonials slider
         document.addEventListener('mouseup', () => {
             if (isTestimonialsDown) {
                 isTestimonialsDown = false;
                 testimonialsSlider.style.cursor = 'grab';
                 
-                // Start momentum animation if there's enough velocity
                 if (Math.abs(testimonialsVelocity) > 1) {
                     startTestimonialsMomentumAnimation();
                 } else {
-                    // Resume auto-scroll after a short delay if no momentum
                     setTimeout(() => {
                         isTestimonialsUserInteracting = false;
-                    }, 2000); // 2 second delay before auto-scroll resumes
+                    }, 2000);
                 }
             }
         });
@@ -2906,24 +2244,20 @@
             const x = e.pageX;
             const currentTime = Date.now();
             
-            // Calculate velocity for momentum
             if (testimonialsLastTime > 0) {
                 const timeDelta = currentTime - testimonialsLastTime;
                 const distanceDelta = x - testimonialsLastX;
-                testimonialsVelocity = (distanceDelta / timeDelta) * 16; // Scale for 60fps
-                testimonialsVelocity = Math.max(-testimonialsMaxVelocity, Math.min(testimonialsMaxVelocity, testimonialsVelocity)); // Clamp velocity
+                testimonialsVelocity = (distanceDelta / timeDelta) * 16;
+                testimonialsVelocity = Math.max(-testimonialsMaxVelocity, Math.min(testimonialsMaxVelocity, testimonialsVelocity));
             }
             
-            // Update position
-            const walk = (x - testimonialsStartX) * 2; // Multiply by 2 for faster scrolling
+            const walk = (x - testimonialsStartX) * 2;
             let newPosition = testimonialsScrollLeft + walk;
             
-            // Apply infinite loop wrapping
             newPosition = wrapTestimonialsPosition(newPosition);
             
             testimonialsSlider.style.transform = `translateX(${newPosition}px)`;
             
-            // Update tracking variables
             testimonialsLastX = x;
             testimonialsLastTime = currentTime;
         });
@@ -2931,8 +2265,8 @@
         // Touch support for mobile testimonials
         testimonialsSlider.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            isTestimonialsUserInteracting = true; // Pause auto-scroll
-            testimonialsCurrentAutoScrollSpeed = 0; // Reset speed so it accelerates from 0 when resuming
+            isTestimonialsUserInteracting = true;
+            testimonialsCurrentAutoScrollSpeed = 0;
             testimonialsStartX = e.touches[0].pageX;
             testimonialsScrollLeft = testimonialsSlider.style.transform ? parseInt(testimonialsSlider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
         }, { passive: false });
@@ -2943,57 +2277,48 @@
             const walk = (x - testimonialsStartX) * 2;
             let newPosition = testimonialsScrollLeft + walk;
             
-            // Apply infinite loop wrapping
             newPosition = wrapTestimonialsPosition(newPosition);
             
             testimonialsSlider.style.transform = `translateX(${newPosition}px)`;
         }, { passive: false });
 
         testimonialsSlider.addEventListener('touchend', () => {
-            // Resume auto-scroll after touch interaction ends
             setTimeout(() => {
                 isTestimonialsUserInteracting = false;
-            }, 2000); // 2 second delay before auto-scroll resumes
+            }, 2000);
         });
 
         // Scroll-triggered transitions for CHATA to description
-        // Elements fade in when they come into view, then stay visible and scroll naturally
         window.addEventListener('scroll', function() {
             const scrollY = window.scrollY;
             const heroSection = document.querySelector('.hero-section');
             
-            // Hero section (CHATA logo) - always visible, just moves up with scroll
-            // No fade in/out, just natural scroll movement
-            const heroTranslateY = -scrollY * 0.3; // Move up naturally with scroll
+            const heroTranslateY = -scrollY * 0.3;
             
-            heroSection.style.opacity = 1; // Always visible
+            heroSection.style.opacity = 1;
             heroSection.style.transform = `translateY(${heroTranslateY}px)`;
             
-            // Smooth transitions for description sections
             const toolDesc = document.getElementById('tool-description');
             const resultQuestion = document.getElementById('result-question');
             const resultStats = document.getElementById('result-stats');
             
-            // First section: Tool description - fade in and stay visible
             if (toolDesc) {
                 const toolStart = 150;
-                const toolFadeEnd = 450; // Fade in over 300px
+                const toolFadeEnd = 450;
                 const toolScrollProgress = scrollY - toolStart;
                 
-                // Fade in when scrolling into view, then stay at opacity 1
                 let toolOpacity;
                 if (toolScrollProgress < 0) {
-                    toolOpacity = 0; // Not yet in view
+                    toolOpacity = 0;
                 } else if (toolScrollProgress < (toolFadeEnd - toolStart)) {
-                    toolOpacity = toolScrollProgress / (toolFadeEnd - toolStart); // Fade in
+                    toolOpacity = toolScrollProgress / (toolFadeEnd - toolStart);
                 } else {
-                    toolOpacity = 1; // Fully visible, stay visible
+                    toolOpacity = 1;
                 }
                 
                 toolDesc.style.opacity = Math.max(0, Math.min(1, toolOpacity));
-                toolDesc.style.transform = `translateY(0px)`; // No transform, scroll naturally
+                toolDesc.style.transform = `translateY(0px)`;
                 
-                // Animate words smoothly on fade in
                 const toolWords = toolDesc.querySelectorAll('.description-word');
                 toolWords.forEach((word, index) => {
                     const wordDelay = 0.1;
@@ -3006,26 +2331,23 @@
                 });
             }
             
-            // Second section: The result? question - fade in and stay visible
             if (resultQuestion) {
-                const questionStart = 500; // Appears earlier
-                const questionFadeEnd = 800; // Fade in over 300px
+                const questionStart = 500;
+                const questionFadeEnd = 800;
                 const questionScrollProgress = scrollY - questionStart;
                 
-                // Fade in when scrolling into view, then stay at opacity 1
                 let questionOpacity;
                 if (questionScrollProgress < 0) {
-                    questionOpacity = 0; // Not yet in view
+                    questionOpacity = 0;
                 } else if (questionScrollProgress < (questionFadeEnd - questionStart)) {
-                    questionOpacity = questionScrollProgress / (questionFadeEnd - questionStart); // Fade in
+                    questionOpacity = questionScrollProgress / (questionFadeEnd - questionStart);
                 } else {
-                    questionOpacity = 1; // Fully visible, stay visible
+                    questionOpacity = 1;
                 }
                 
                 resultQuestion.style.opacity = Math.max(0, Math.min(1, questionOpacity));
-                resultQuestion.style.transform = `translateY(0px)`; // No transform, scroll naturally
+                resultQuestion.style.transform = `translateY(0px)`;
                 
-                // Simple word animation on fade in
                 const questionWords = resultQuestion.querySelectorAll('.description-word');
                 questionWords.forEach((word, index) => {
                     const wordDelay = 0.1;
@@ -3035,26 +2357,23 @@
                 });
             }
             
-            // Third section: The statistics - fade in and stay visible
             if (resultStats) {
-                const statsStart = 800; // Appears earlier
-                const statsFadeEnd = 1100; // Fade in over 300px
+                const statsStart = 800;
+                const statsFadeEnd = 1100;
                 const statsScrollProgress = scrollY - statsStart;
                 
-                // Fade in when scrolling into view, then stay at opacity 1
                 let statsOpacity;
                 if (statsScrollProgress < 0) {
-                    statsOpacity = 0; // Not yet in view
+                    statsOpacity = 0;
                 } else if (statsScrollProgress < (statsFadeEnd - statsStart)) {
-                    statsOpacity = statsScrollProgress / (statsFadeEnd - statsStart); // Fade in
+                    statsOpacity = statsScrollProgress / (statsFadeEnd - statsStart);
                 } else {
-                    statsOpacity = 1; // Fully visible, stay visible
+                    statsOpacity = 1;
                 }
                 
                 resultStats.style.opacity = Math.max(0, Math.min(1, statsOpacity));
-                resultStats.style.transform = `translateY(0px)`; // No transform, scroll naturally
+                resultStats.style.transform = `translateY(0px)`;
                 
-                // Animate statistics with smooth stagger on fade in
                 const stats = resultStats.querySelectorAll('.stat-item');
                 stats.forEach((stat, index) => {
                     const statDelay = 0.1;
@@ -3069,203 +2388,12 @@
             
         });
 
-        // Interactive Grid Background with scroll following
-        function createInteractiveGrid() {
-            const grid = document.getElementById('interactiveGrid');
-            const gridSize = 50;
-            const cols = Math.ceil(window.innerWidth / gridSize);
-            const rows = Math.ceil(window.innerHeight * 6 / gridSize); // 6x height for extended page coverage
-            
-            // Clear existing grid
-            grid.innerHTML = '';
-            
-            // Create grid cells
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    cell.style.left = j * gridSize + 'px';
-                    cell.style.top = i * gridSize + 'px';
-                    grid.appendChild(cell);
-                }
-            }
-        }
-        
-        // Optimized scroll-based grid movement
-        let ticking = false;
-        let grid = null;
-        
-        function updateGridOnScroll() {
-            if (!ticking) {
-                requestAnimationFrame(function() {
-                    if (!grid) {
-                        grid = document.getElementById('interactiveGrid');
-                    }
-                    const scrollY = window.pageYOffset;
-                    
-                    // Grid moves up when scrolling down, but with reduced movement for smoother effect
-                    grid.style.transform = `translateY(-${scrollY * 0.60}px)`;
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        }
-        
-        // Initialize grid on load, hide loading overlay; also hide on pageshow (e.g. when user navigates back)
-        function hidePageLoadOverlay() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (overlay) overlay.classList.add('hidden');
-        }
-        window.addEventListener('load', function() {
-            hidePageLoadOverlay();
-            window.scrollTo(0, 0);
-            createInteractiveGrid();
-            grid = document.getElementById('interactiveGrid');
-        });
-        window.addEventListener('pageshow', hidePageLoadOverlay);
-        window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
-        (function() {
-            var overlay = document.getElementById('pageLoadOverlay');
-            if (!overlay) return;
-            document.querySelectorAll('form[method="POST"]').forEach(function(f) {
-                if (f.action && (f.action.indexOf('checkout') !== -1 || f.action.indexOf('subscribe') !== -1)) {
-                    f.addEventListener('submit', function() { overlay.classList.remove('hidden'); });
-                }
-            });
-            document.querySelectorAll('a[href]').forEach(function(a) {
-                var href = a.getAttribute('href');
-                if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-                try {
-                    var url = new URL(a.href, window.location.href);
-                    if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
-                        a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
-                    }
-                } catch (e) {}
-            });
-        })();
-        window.addEventListener('resize', createInteractiveGrid);
-        window.addEventListener('scroll', updateGridOnScroll, { passive: true });
-        
-        // Individual square timing system
-        let cellTimeouts = new Map(); // Track individual timeouts for each cell
-        
-        // High refresh rate mouse tracking
-        let mouseX = 0;
-        let mouseY = 0;
-        let animationFrameId = null;
-        
-        // Track mouse position with high frequency
-        document.addEventListener('mousemove', function(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-        
-        // Smooth grid lighting with requestAnimationFrame
-        function updateGridLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            cells.forEach(cell => {
-                const rect = cell.getBoundingClientRect();
-                
-                // Check if mouse is directly over this cell (exact square only)
-                const isMouseOver = mouseX >= rect.left && 
-                                  mouseX < rect.right && 
-                                  mouseY >= rect.top && 
-                                  mouseY < rect.bottom;
-                
-                if (isMouseOver) {
-                    // Clear any existing timeout for this cell
-                    if (cellTimeouts.has(cell)) {
-                        clearTimeout(cellTimeouts.get(cell));
-                        cellTimeouts.delete(cell);
-                    }
-                    
-                    // Activate only this exact square with solid illumination
-                    cell.style.background = `rgba(51, 102, 255, 0.15)`;
-                    cell.style.borderColor = `rgba(51, 102, 255, 0.6)`;
-                    cell.style.boxShadow = `0 0 20px rgba(51, 102, 255, 0.4)`;
-                    cell.style.transform = `scale(1.02)`;
-                    cell.classList.add('active');
-                    
-                    // Set individual timeout for this cell
-                    const timeoutId = setTimeout(() => {
-                        cell.style.background = '';
-                        cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                        cell.style.boxShadow = '';
-                        cell.style.transform = 'scale(1)';
-                        cell.classList.remove('active');
-                        cellTimeouts.delete(cell);
-                    }, 1500);
-                    
-                    cellTimeouts.set(cell, timeoutId);
-                }
-            });
-            
-            // Continue the animation loop
-            animationFrameId = requestAnimationFrame(updateGridLighting);
-        }
-        
-        // Start the high refresh rate animation
-        updateGridLighting();
-        
-        // Ambient grid lighting - random squares light up occasionally
-        function createAmbientLighting() {
-            const grid = document.getElementById('interactiveGrid');
-            const cells = grid.querySelectorAll('.grid-cell');
-            
-            function lightRandomSquare() {
-                if (cells.length === 0) return;
-                
-                // Pick a random cell
-                const randomCell = cells[Math.floor(Math.random() * cells.length)];
-                
-                // Random intensity (more visible)
-                const intensity = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
-                
-                // Random duration (1-3 seconds)
-                const duration = Math.random() * 2000 + 1000;
-                
-                // Light up the square with white orb and subtle border
-                randomCell.style.background = `rgba(255, 255, 255, ${intensity * 0.3})`;
-                randomCell.style.borderColor = `rgba(255, 255, 255, ${intensity * 0.4})`;
-                randomCell.style.boxShadow = `0 0 ${25 * intensity}px rgba(255, 255, 255, ${intensity * 0.6})`;
-                randomCell.style.transform = `scale(${1 + 0.1 * intensity})`;
-                randomCell.classList.add('active');
-                
-                // Fade out after duration
-            setTimeout(() => {
-                    randomCell.style.background = '';
-                    randomCell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
-                    randomCell.style.boxShadow = '';
-                    randomCell.style.transform = 'scale(1)';
-                    randomCell.classList.remove('active');
-                }, duration);
-            }
-            
-            // Light up a random square every 0.1-0.4 seconds (much more frequent)
-            function scheduleNextLight() {
-                const delay = Math.random() * 300 + 100; // 0.1-0.4 seconds
-            setTimeout(() => {
-                    lightRandomSquare();
-                    scheduleNextLight(); // Schedule the next one
-                }, delay);
-            }
-            
-            // Start the ambient lighting
-            scheduleNextLight();
-        }
-        
-        // Start ambient lighting after a short delay
-        setTimeout(createAmbientLighting, 1000);
-        
         // CHATA logo lighting effect - lights up grid squares as letters move
         function lightUpCHATAOnLoad() {
             const chataLetters = document.querySelectorAll('.chata-letter');
             const grid = document.getElementById('interactiveGrid');
             const cells = grid.querySelectorAll('.grid-cell');
             
-            // Track CHATA letters movement and light up grid squares
             function trackCHATAMovement() {
                 chataLetters.forEach(letter => {
                     const letterRect = letter.getBoundingClientRect();
@@ -3282,23 +2410,20 @@
                             Math.pow(letterCenterY - cellCenterY, 2)
                         );
                         
-                        if (distance < 150) { // Light up squares within 150px of each letter
+                        if (distance < 150) {
                             const intensity = Math.max(0, 1 - distance / 150);
                             
-                            // Clear any existing timeout for this cell
                             if (cellTimeouts.has(cell)) {
                                 clearTimeout(cellTimeouts.get(cell));
                                 cellTimeouts.delete(cell);
                             }
                             
-                            // Activate grid square
                             cell.style.background = `rgba(51, 102, 255, ${0.3 * intensity})`;
                             cell.style.borderColor = `rgba(51, 102, 255, ${0.8 * intensity})`;
                             cell.style.boxShadow = `0 0 ${20 * intensity}px rgba(51, 102, 255, ${0.6 * intensity})`;
                             cell.style.transform = `scale(${1 + 0.1 * intensity})`;
                             cell.classList.add('active');
                             
-                            // Set timeout to fade out after 1.5 seconds
                             const timeoutId = setTimeout(() => {
                                 cell.style.background = '';
                                 cell.style.borderColor = 'rgba(51, 102, 255, 0.1)';
@@ -3314,43 +2439,34 @@
                 });
             }
             
-            // Start tracking with a small delay to ensure grid is ready
             setTimeout(() => {
-                const chataTrackingInterval = setInterval(trackCHATAMovement, 67); // ~15fps
+                const chataTrackingInterval = setInterval(trackCHATAMovement, 67);
                 
-                // Store for cleanup
                 window.chataTrackingInterval = chataTrackingInterval;
             }, 50);
             
-            // Wait for CHATA letters to finish their entrance animation (1.2s duration)
             setTimeout(() => {
-                // Stop tracking movement
                 if (window.chataTrackingInterval) {
                     clearInterval(window.chataTrackingInterval);
                 }
                 
-                // Add glow class to all CHATA letters
                 chataLetters.forEach(letter => {
                     letter.classList.add('glow');
                 });
                 
-                // Final lighting of grid squares behind CHATA letters
                 trackCHATAMovement();
                 
-                // Fade out glow smoothly after 2 seconds, then never glow again
                 setTimeout(() => {
                     chataLetters.forEach(letter => {
-                        // Add fade class to smoothly transition to no glow
                         letter.classList.remove('glow');
                         letter.classList.add('glow-fade');
-                        // Remove fade class after transition completes
                         setTimeout(() => {
                             letter.classList.remove('glow-fade');
-                        }, 1500); // Match transition duration
+                        }, 1500);
                     });
                 }, 2000);
                 
-            }, 1200); // Wait for CHATA animation to complete (1.2s)
+            }, 1200);
         }
         
         // Initialize CHATA lighting on page load
@@ -3364,34 +2480,25 @@
             const questionText = element.querySelector('h3');
             
             if (answer.classList.contains('active')) {
-                // Close the answer
                 answer.style.maxHeight = '0px';
                 answer.style.padding = '0 0 0 0';
                 answer.classList.remove('active');
                 question.classList.remove('active');
                 questionText.style.color = '#fff';
             } else {
-                // Temporarily remove max-height to get the natural height
                 answer.style.maxHeight = 'none';
                 const naturalHeight = answer.scrollHeight;
                 
-                // Set max-height to 0 for smooth animation
                 answer.style.maxHeight = '0px';
                 answer.style.padding = '0 0 10px 0';
                 
-                // Force a reflow
                 answer.offsetHeight;
                 
-                // Animate to natural height
                 answer.style.maxHeight = naturalHeight + 'px';
                 answer.classList.add('active');
                 question.classList.add('active');
                 questionText.style.color = '#3366ff';
             }
         }
-        
-        // Simple CSS animation - no JavaScript needed!
-        
-  </script>
-</body>
-</html>
+</script>
+{% endblock %}
