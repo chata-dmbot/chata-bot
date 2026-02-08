@@ -31,6 +31,26 @@ def _get_pg_pool():
     return _pg_pool
 
 
+class _PooledConnection:
+    """Thin wrapper so conn.close() returns the connection to the pool
+    instead of actually closing it.  Delegates everything else to the
+    real psycopg2 connection."""
+
+    def __init__(self, real_conn, pool):
+        self._conn = real_conn
+        self._pool = pool
+
+    def close(self):
+        """Return connection to pool instead of closing it."""
+        try:
+            self._pool.putconn(self._conn)
+        except Exception:
+            self._conn.close()
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def get_db_connection():
     """Get database connection — uses pool for PostgreSQL, direct for SQLite."""
     database_url = os.environ.get('DATABASE_URL')
@@ -40,20 +60,11 @@ def get_db_connection():
         if pool:
             try:
                 conn = pool.getconn()
-                # Wrap .close() so callers still call conn.close() but it returns to pool
-                original_close = conn.close
-                def return_to_pool():
-                    try:
-                        pool.putconn(conn)
-                    except Exception:
-                        original_close()
-                conn.close = return_to_pool
-                return conn
+                return _PooledConnection(conn, pool)
             except Exception as e:
                 logger.error(f"PostgreSQL pool error: {e}")
                 return None
         else:
-            # Fallback: direct connection if pool failed to init
             try:
                 return psycopg2.connect(database_url)
             except Exception as e:
