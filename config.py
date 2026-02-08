@@ -40,17 +40,8 @@ class Config:
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-    # Optional: Instagram app secret (for webhook signature verification only). If set, used instead of FACEBOOK_APP_SECRET for X-Hub-Signature-256 so you can test without changing the Facebook secret.
+    # Instagram app secret: used for webhook X-Hub-Signature-256 verification. If set, used instead of FACEBOOK_APP_SECRET for the webhook (OAuth still uses FACEBOOK_APP_SECRET).
     INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET")
-    # Instagram webhook signature verification (X-Hub-Signature-256).
-    # Set to "true" = SKIP verification (insecure). Set to "false" = verify.
-    # We default to skip because verification fails in production (Render): our HMAC never matches Meta's.
-    # Research (see WEBHOOK_SIGNATURE_IMPLEMENTATION_NOTES.md): Meta typically sends uncompressed JSON;
-    # transparent gzip decompression by the proxy is unlikely. More likely the bytes we hash are not the exact
-    # bytes Meta signed (body consumed/rewritten elsewhere, or read after another layer decoded it). We use
-    # request.get_data(cache=True) as the single canonical raw body and do not parse before verify. If it still
-    # fails, reduce proxy layers in front of /webhook or verify at an edge that preserves raw bytes.
-    SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION = os.getenv("SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION", "true").lower() in ("true", "1", "yes")
     FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://getchata.com/auth/instagram/callback")
     
     # Email Configuration

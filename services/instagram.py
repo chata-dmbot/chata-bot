@@ -185,11 +185,9 @@ def get_instagram_connection_by_page_id(page_id, conn=None):
 
 
 def _verify_instagram_webhook_signature(raw_body, signature_header):
-    """Verify X-Hub-Signature-256 (HMAC SHA256 of raw body with app secret). Returns True if valid or header missing/empty.
-    Uses INSTAGRAM_APP_SECRET if set, otherwise FACEBOOK_APP_SECRET (so you can test Instagram secret without changing OAuth)."""
+    """Verify X-Hub-Signature-256 (HMAC-SHA256 of raw body with app secret). Uses INSTAGRAM_APP_SECRET if set, else FACEBOOK_APP_SECRET."""
     if not signature_header or not raw_body:
         return False
-    # Prefer Instagram app secret for webhook if set; else Facebook app secret. Strip env vars (trailing newline when pasted).
     secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
     if not secret:
         return False

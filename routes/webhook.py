@@ -5,9 +5,6 @@ from flask import Blueprint, request, jsonify
 import json
 import os
 import time
-import hmac
-import hashlib
-import base64
 import requests
 import stripe
 from config import Config
@@ -150,80 +147,16 @@ def webhook():
             return "Forbidden", 403
 
     elif request.method == "POST":
-        # Single canonical raw body for signature verification (Meta: hash exact bytes received; see research PDF).
-        # request.get_data(cache=True) reads once and caches; our middleware may have already read wsgi.input
-        # and replaced it with BytesIO(body), in which case get_data() returns the same bytes.
         raw_body = request.get_data(cache=True)
         sig_header = request.headers.get("X-Hub-Signature-256", "")
-        body_source = "middleware" if request.environ.get("chata.webhook_raw_body") is not None else "get_data"
-        content_encoding = request.headers.get("Content-Encoding", "") or "(none)"
-        # Safe diagnostic: no secrets logged; Content-Encoding helps spot proxy decompression (Facebook may send gzip, we must verify same bytes they signed)
-        logger.debug(f"Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source} Content-Encoding={content_encoding!r}")
-        if not raw_body:
-            logger.warning("Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
-        # Signature verification: see config.py SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION and
-        # WEBHOOK_SIGNATURE_IMPLEMENTATION_NOTES.md (single canonical raw body, no parse before verify).
-        if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
-            _sig_ok = True
-        else:
-            _webhook_secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip()
-            # #region agent log
-            _sig_ok = bool(_webhook_secret and _verify_instagram_webhook_signature(raw_body, sig_header))
-            if not _webhook_secret:
-                _sig_ok = None
-            try:
-                _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.cursor', 'debug.log')
-                with open(_dp, 'a', encoding='utf-8') as _f:
-                    _f.write(json.dumps({"hypothesisId": "H2", "message": "webhook_signature", "data": {"signature_verified": _sig_ok, "has_header": bool(sig_header)}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
-            except Exception:
-                pass
-            # #endregion
-            if _webhook_secret:
-                if not _sig_ok and raw_body:
-                    # Fallback 1: proxy/server may add or drop trailing newline; Meta signs exact bytes they send.
-                    body_stripped = raw_body.rstrip(b"\r\n")
-                    if body_stripped != raw_body and _verify_instagram_webhook_signature(body_stripped, sig_header):
-                        _sig_ok = True
-                        logger.info("Webhook signature verified using body.rstrip(\\r\\n) fallback (trailing newline difference)")
-                    if not _sig_ok and not raw_body.endswith(b"\n") and _verify_instagram_webhook_signature(raw_body + b"\n", sig_header):
-                        _sig_ok = True
-                        logger.info("Webhook signature verified using body+\\n fallback (Meta sends trailing newline)")
-                    if not _sig_ok:
-                        # Fallback 2: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
-                        try:
-                            body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
-                            compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
-                            if _verify_instagram_webhook_signature(compact_body, sig_header):
-                                _sig_ok = True
-                                logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
-                        except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
-                            pass
-                if not _sig_ok:
-                    _secret_str = _webhook_secret
-                    secret_len = len(_secret_str)
-                    _secret = _secret_str.encode("utf-8")
-                    _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
-                    _expected = hmac.new(_secret, raw_body, digestmod=hashlib.sha256).hexdigest()
-                    # Body fingerprint: SHA256 of raw body (what we're hashing)
-                    body_sha = hashlib.sha256(raw_body).hexdigest() if raw_body else ""
-                    # Safe secret hints: compare with Meta App secret (first 2 + last 4 chars only)
-                    secret_prefix = _secret_str[:2] if len(_secret_str) >= 2 else ""
-                    secret_suffix = _secret_str[-4:] if len(_secret_str) >= 4 else ""
-                    secret_source = "instagram" if Config.INSTAGRAM_APP_SECRET else "facebook"
-                    logger.error("Webhook signature verification failed")
-                    logger.error("Formula: HMAC-SHA256(raw_body, app_secret) == X-Hub-Signature-256 (raw body = bytes as received)")
-                    logger.error(f"secret_source={secret_source!r} secret_len={secret_len} | secret_prefix={secret_prefix!r} secret_suffix={secret_suffix!r}")
-                    logger.error(f"body_sha256_preview={body_sha[:16]}... (fingerprint of body we hashed)")
-                    logger.error(f"expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
-                    # Body diagnostics: if something upstream changed the body, we need to see what we actually received
-                    logger.error(f"body_len={len(raw_body)} content_encoding={request.headers.get('Content-Encoding', '(none)')!r}")
-                    logger.error(f"body_first_80_bytes_hex={raw_body[:80].hex()!r}")
-                    logger.error(f"body_last_20_bytes_hex={raw_body[-20:].hex()!r} (check for trailing \\n/\\r)")
-                    logger.error(f"received_sig_full={_received!r}")
-                    return "Forbidden", 403
-            else:
-                logger.warning("Neither INSTAGRAM_APP_SECRET nor FACEBOOK_APP_SECRET set - skipping webhook signature verification")
-        
+        _webhook_secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip()
+        if not _webhook_secret:
+            logger.warning("Neither INSTAGRAM_APP_SECRET nor FACEBOOK_APP_SECRET set - rejecting webhook")
+            return "Forbidden", 403
+        if not _verify_instagram_webhook_signature(raw_body, sig_header):
+            logger.error("Webhook signature verification failed")
+            return "Forbidden", 403
+
         logger.info("WEBHOOK RECEIVED POST REQUEST")
         logger.debug(f"Request headers: {dict(request.headers)}")
         logger.debug(f"Request remote address: {request.remote_addr}")
