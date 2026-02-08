@@ -193,6 +193,10 @@ def webhook():
                     logger.error(f"secret_len={secret_len} (expected 32) | secret_prefix={secret_prefix!r} secret_suffix={secret_suffix!r} (compare with Meta Chata app secret)")
                     logger.error(f"body_sha256_preview={body_sha[:16]}... (fingerprint of body we hashed)")
                     logger.error(f"expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
+                    # Body diagnostics: if something upstream changed the body, we need to see what we actually received
+                    logger.error(f"body_len={len(raw_body)} content_encoding={request.headers.get('Content-Encoding', '(none)')!r}")
+                    logger.error(f"body_first_80_bytes_hex={raw_body[:80].hex()!r}")
+                    logger.error(f"received_sig_full={_received!r}")
                     return "Forbidden", 403
             else:
                 logger.warning("FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
