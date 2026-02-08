@@ -40,6 +40,8 @@ class Config:
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
+    # Optional: Instagram app secret (for webhook signature verification only). If set, used instead of FACEBOOK_APP_SECRET for X-Hub-Signature-256 so you can test without changing the Facebook secret.
+    INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET")
     # Instagram webhook signature verification (X-Hub-Signature-256).
     # Set to "true" = SKIP verification (insecure). Set to "false" = verify.
     # We default to skip because verification fails in production (Render): our HMAC never matches Meta's.

@@ -166,9 +166,10 @@ def webhook():
         if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
             _sig_ok = True
         else:
+            _webhook_secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip()
             # #region agent log
-            _sig_ok = bool(Config.FACEBOOK_APP_SECRET and _verify_instagram_webhook_signature(raw_body, sig_header))
-            if not Config.FACEBOOK_APP_SECRET:
+            _sig_ok = bool(_webhook_secret and _verify_instagram_webhook_signature(raw_body, sig_header))
+            if not _webhook_secret:
                 _sig_ok = None
             try:
                 _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.cursor', 'debug.log')
@@ -177,7 +178,7 @@ def webhook():
             except Exception:
                 pass
             # #endregion
-            if Config.FACEBOOK_APP_SECRET:
+            if _webhook_secret:
                 if not _sig_ok and raw_body:
                     # Fallback 1: proxy/server may add or drop trailing newline; Meta signs exact bytes they send.
                     body_stripped = raw_body.rstrip(b"\r\n")
@@ -198,7 +199,7 @@ def webhook():
                         except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
                             pass
                 if not _sig_ok:
-                    _secret_str = (Config.FACEBOOK_APP_SECRET or "").strip()
+                    _secret_str = _webhook_secret
                     secret_len = len(_secret_str)
                     _secret = _secret_str.encode("utf-8")
                     _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
@@ -208,9 +209,10 @@ def webhook():
                     # Safe secret hints: compare with Meta App secret (first 2 + last 4 chars only)
                     secret_prefix = _secret_str[:2] if len(_secret_str) >= 2 else ""
                     secret_suffix = _secret_str[-4:] if len(_secret_str) >= 4 else ""
+                    secret_source = "instagram" if Config.INSTAGRAM_APP_SECRET else "facebook"
                     logger.error("Webhook signature verification failed")
-                    logger.error("Formula: HMAC-SHA256(raw_body, FACEBOOK_APP_SECRET) == X-Hub-Signature-256 (raw body = bytes as received)")
-                    logger.error(f"secret_len={secret_len} (expected 32) | secret_prefix={secret_prefix!r} secret_suffix={secret_suffix!r} (compare with Meta Chata app secret)")
+                    logger.error("Formula: HMAC-SHA256(raw_body, app_secret) == X-Hub-Signature-256 (raw body = bytes as received)")
+                    logger.error(f"secret_source={secret_source!r} secret_len={secret_len} | secret_prefix={secret_prefix!r} secret_suffix={secret_suffix!r}")
                     logger.error(f"body_sha256_preview={body_sha[:16]}... (fingerprint of body we hashed)")
                     logger.error(f"expected_sig_preview={_expected[:12]!r} received_sig_preview={_received[:12]!r}")
                     # Body diagnostics: if something upstream changed the body, we need to see what we actually received
@@ -220,7 +222,7 @@ def webhook():
                     logger.error(f"received_sig_full={_received!r}")
                     return "Forbidden", 403
             else:
-                logger.warning("FACEBOOK_APP_SECRET not set - skipping webhook signature verification")
+                logger.warning("Neither INSTAGRAM_APP_SECRET nor FACEBOOK_APP_SECRET set - skipping webhook signature verification")
         
         logger.info("WEBHOOK RECEIVED POST REQUEST")
         logger.debug(f"Request headers: {dict(request.headers)}")
