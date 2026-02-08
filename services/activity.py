@@ -5,15 +5,6 @@ from database import get_db_connection, get_param_placeholder
 from config import Config
 
 
-def normalize_max_tokens(value, floor=3000):
-    """Ensure max_tokens is at least the configured floor."""
-    try:
-        numeric = int(value)
-    except (TypeError, ValueError):
-        return floor
-    return max(numeric, floor)
-
-
 def get_client_settings(user_id, connection_id=None, conn=None):
     """
     Get bot settings for a specific client/connection.
@@ -104,8 +95,8 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             'instagram_url': row[32] or '',
             'avoid_topics': row[33] or '',
             'blocked_users': json.loads(row[34]) if row[34] else [],
-            'temperature': row[35] or 0.7,
-            'max_tokens': normalize_max_tokens(row[36]),
+            # temperature (row[35]) and max_tokens (row[36]) are no longer used —
+            # hardcoded in the AI module per model config.
             'auto_reply': bool(row[37]) if row[37] is not None else True
         }
     
@@ -146,8 +137,6 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         'instagram_url': '',
         'avoid_topics': '',
         'blocked_users': [],
-        'temperature': 0.7,
-        'max_tokens': 3000,
         'auto_reply': True
     }
 
@@ -223,11 +212,11 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
         samples_json = json.dumps(settings.get('conversation_samples', {}))
         faqs_json = json.dumps(settings.get('faqs', []))
         blocked_users_json = json.dumps(settings.get('blocked_users', []))
-        max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
     
         # Use different syntax for PostgreSQL vs SQLite
         is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
         
+        # temperature and max_tokens are no longer stored — hardcoded in AI module per model config.
         params = (user_id, connection_id, 
                   settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
                   settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
@@ -240,7 +229,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
                   links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-                  blocked_users_json, 0.7, max_tokens_value,
+                  blocked_users_json,
                   settings.get('auto_reply', True))
         
         cols = """(user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
@@ -248,14 +237,14 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
              confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
              backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
              conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
-             instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)"""
+             instagram_url, avoid_topics, blocked_users, is_active)"""
         
         vals = f"""VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"""
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"""
         
         if is_pg:
             cursor.execute(f"""
@@ -279,8 +268,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                 links = EXCLUDED.links, posts = EXCLUDED.posts,
                 conversation_samples = EXCLUDED.conversation_samples, faqs = EXCLUDED.faqs,
                 instagram_url = EXCLUDED.instagram_url, avoid_topics = EXCLUDED.avoid_topics,
-                blocked_users = EXCLUDED.blocked_users, temperature = EXCLUDED.temperature,
-                max_tokens = EXCLUDED.max_tokens, is_active = EXCLUDED.is_active,
+                blocked_users = EXCLUDED.blocked_users, is_active = EXCLUDED.is_active,
                 updated_at = CURRENT_TIMESTAMP
             """, params)
         else:

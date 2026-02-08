@@ -46,6 +46,14 @@ def signup():
             flash("Username must be 3-20 characters and contain only letters, numbers, underscores, or hyphens.", "error")
             return render_template("signup.html", form_username=username, form_email=email)
         
+        # Validate password strength (8+ characters, at least 1 number)
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template("signup.html", form_username=username, form_email=email)
+        if not any(c.isdigit() for c in password):
+            flash("Password must contain at least one number.", "error")
+            return render_template("signup.html", form_username=username, form_email=email)
+        
         # Check if username already exists (case-insensitive)
         existing_username = get_user_by_username(username)
         if existing_username:
@@ -120,6 +128,7 @@ def login():
 # ── forgot password ───────────────────────────────────────────────────────
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per 15 minutes")  # Rate limit: 5 forgot-password attempts per 15 minutes per IP
 def forgot_password():
     try:
         if request.method == "POST":
@@ -163,6 +172,7 @@ def forgot_password():
 # ── reset password ────────────────────────────────────────────────────────
 
 @auth_bp.route("/reset-password", methods=["GET", "POST"])
+@limiter.limit("10 per 15 minutes")  # Rate limit: 10 reset-password attempts per 15 minutes per IP
 def reset_password():
     token = request.args.get("token")
     
@@ -187,8 +197,12 @@ def reset_password():
             flash("Passwords do not match.", "error")
             return render_template("reset_password.html")
         
-        if len(password) < 6:
-            flash("Password must be at least 6 characters long.", "error")
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template("reset_password.html")
+        
+        if not any(c.isdigit() for c in password):
+            flash("Password must contain at least one number.", "error")
             return render_template("reset_password.html")
         
         # Update password

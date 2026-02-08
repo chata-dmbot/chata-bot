@@ -656,7 +656,8 @@ def delete_account():
         traceback.print_exc()
         conn.rollback()
         conn.close()
-        flash(f"Error deleting account: {str(e)}", "error")
+        logger.error(f"Error deleting account for user {session.get('user_id')}: {e}")
+        flash("An error occurred while deleting your account. Please try again or contact support.", "error")
         return redirect(url_for('dashboard_bp.account_settings'))
 
 
@@ -909,7 +910,7 @@ def debug_trigger_monthly_addition():
 # Disconnect Instagram
 # ---------------------------------------------------------------------------
 
-@dashboard_bp.route("/dashboard/disconnect-instagram/<int:connection_id>")
+@dashboard_bp.route("/dashboard/disconnect-instagram/<int:connection_id>", methods=["POST"])
 @login_required
 def disconnect_instagram(connection_id):
     user_id = session['user_id']

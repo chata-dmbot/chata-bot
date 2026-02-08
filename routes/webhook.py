@@ -260,20 +260,29 @@ def webhook():
                 entry_page_id = latest_event.get("page_id")
                 message_mid = latest_event.get("mid")
 
-                # Idempotency: skip if we already processed this message (Issue 4 - prevent double reply on retry)
+                # Idempotency: atomically claim this message mid using INSERT ... ON CONFLICT.
+                # This eliminates the TOCTOU race where two concurrent retries both pass a SELECT check.
                 if message_mid:
                     placeholder = get_param_placeholder()
                     try:
-                        cursor.execute(
-                            f"SELECT 1 FROM instagram_webhook_processed_mids WHERE mid = {placeholder}",
-                            (message_mid,)
-                        )
-                        if cursor.fetchone():
+                        is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                        if is_pg:
+                            cursor.execute(
+                                f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder}) ON CONFLICT (mid) DO NOTHING",
+                                (message_mid,)
+                            )
+                        else:
+                            cursor.execute(
+                                f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder})",
+                                (message_mid,)
+                            )
+                        webhook_conn.commit()
+                        if cursor.rowcount == 0:
+                            # Row already existed — another worker already claimed this mid
                             logger.info(f"Message mid={message_mid[:20]}... already processed, skipping (idempotent)")
                             continue
                     except Exception as e:
-                        logger.warning(f"Mid idempotency check failed: {e}")
-                        # PostgreSQL aborts the transaction on error; rollback so later queries work
+                        logger.warning(f"Mid idempotency claim failed: {e}")
                         try:
                             webhook_conn.rollback()
                         except Exception:
@@ -282,7 +291,6 @@ def webhook():
                         err_str = str(e).lower()
                         if "does not exist" in err_str or "relation" in err_str:
                             try:
-                                is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
                                 if is_pg:
                                     cursor.execute("""
                                         CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
@@ -455,27 +463,7 @@ def webhook():
 
                 if app_review_manual_send:
                     # App Review mode: do not send via API; user will click Send in Conversation History
-                    if message_mid:
-                        try:
-                            ph = get_param_placeholder()
-                            is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-                            if is_pg:
-                                cursor.execute(
-                                    f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({ph}) ON CONFLICT (mid) DO NOTHING",
-                                    (message_mid,)
-                                )
-                            else:
-                                cursor.execute(
-                                    f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({ph})",
-                                    (message_mid,)
-                                )
-                            webhook_conn.commit()
-                        except Exception as e:
-                            logger.warning(f"Failed to store processed mid: {e}")
-                            try:
-                                webhook_conn.rollback()
-                            except Exception:
-                                pass
+                    pass
                 else:
                     page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
                     url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
@@ -492,28 +480,7 @@ def webhook():
                         logger.error(f"Error sending reply: {r.text}")
                     else:
                         logger.info(f"Reply sent successfully to {sender_id}")
-                        # Mark message as processed for idempotency (Issue 4 - avoid double reply on retry)
-                        if message_mid:
-                            try:
-                                ph = get_param_placeholder()
-                                is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-                                if is_pg:
-                                    cursor.execute(
-                                        f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({ph}) ON CONFLICT (mid) DO NOTHING",
-                                        (message_mid,)
-                                    )
-                                else:
-                                    cursor.execute(
-                                        f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({ph})",
-                                        (message_mid,)
-                                    )
-                                webhook_conn.commit()
-                            except Exception as e:
-                                logger.warning(f"Failed to store processed mid: {e}")
-                                try:
-                                    webhook_conn.rollback()
-                                except Exception:
-                                    pass
+                        # Mid already claimed at the top of the loop (atomic idempotency).
                         # Increment reply count only for registered users and only on successful send
                         if instagram_connection and user_id:
                             increment_reply_count(user_id, webhook_conn)

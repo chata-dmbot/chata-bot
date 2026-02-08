@@ -206,44 +206,49 @@ def increment_reply_count(user_id, conn=None):
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Get current counts
+        # Atomic increment: try monthly first, then purchased.
+        # The WHERE clause ensures we only increment if there's capacity,
+        # preventing race conditions when multiple messages arrive simultaneously.
+        
+        # Try monthly replies first (atomic: only increments if sent < limit)
         cursor.execute(f"""
-            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
-            FROM users
+            UPDATE users
+            SET replies_sent_monthly = replies_sent_monthly + 1
             WHERE id = {placeholder}
+            AND replies_sent_monthly < replies_limit_monthly
         """, (user_id,))
         
-        result = cursor.fetchone()
-        if not result:
-            if should_close:
-                conn.close()
-            return False
-        
-        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = result
-        
-        # Use monthly replies first
-        if replies_sent_monthly < replies_limit_monthly:
+        if cursor.rowcount > 0:
+            conn.commit()
+            # Re-fetch for logging
             cursor.execute(f"""
-                UPDATE users
-                SET replies_sent_monthly = replies_sent_monthly + 1
-                WHERE id = {placeholder}
+                SELECT replies_sent_monthly, replies_limit_monthly FROM users WHERE id = {placeholder}
             """, (user_id,))
-            logger.info(f"Incremented monthly reply count for user {user_id} ({replies_sent_monthly + 1}/{replies_limit_monthly})")
-        # Then use purchased replies
-        elif replies_used_purchased < replies_purchased:
+            row = cursor.fetchone()
+            if row:
+                logger.info(f"Incremented monthly reply count for user {user_id} ({row[0]}/{row[1]})")
+        else:
+            # Try purchased replies (atomic: only increments if used < purchased)
             cursor.execute(f"""
                 UPDATE users
                 SET replies_used_purchased = replies_used_purchased + 1
                 WHERE id = {placeholder}
+                AND replies_used_purchased < replies_purchased
             """, (user_id,))
-            logger.info(f"Incremented purchased reply count for user {user_id} ({replies_used_purchased + 1}/{replies_purchased})")
-        else:
-            logger.warning(f"Attempted to increment reply count but user {user_id} has no remaining replies")
-            if should_close:
-                conn.close()
-            return False
-        
-        conn.commit()
+            
+            if cursor.rowcount > 0:
+                conn.commit()
+                cursor.execute(f"""
+                    SELECT replies_used_purchased, replies_purchased FROM users WHERE id = {placeholder}
+                """, (user_id,))
+                row = cursor.fetchone()
+                if row:
+                    logger.info(f"Incremented purchased reply count for user {user_id} ({row[0]}/{row[1]})")
+            else:
+                logger.warning(f"Attempted to increment reply count but user {user_id} has no remaining replies")
+                if should_close:
+                    conn.close()
+                return False
         
         # Check if we need to send usage warning emails
         # Re-fetch to get updated counts

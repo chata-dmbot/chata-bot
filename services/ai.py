@@ -108,13 +108,6 @@ DEFAULT_MODEL_CONFIG = {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def normalize_max_tokens(value, floor=3000):
-    """Ensure max_tokens is at least the configured floor."""
-    try:
-        numeric = int(value)
-    except (TypeError, ValueError):
-        return floor
-    return max(numeric, floor)
 
 # ---------------------------------------------------------------------------
 # Reply generation
@@ -130,8 +123,6 @@ def get_ai_reply(history):
 
         system_prompt = get_setting("bot_personality",
             "You are a helpful and friendly Instagram bot.")
-        temperature = float(get_setting("temperature", "0.7"))
-        max_tokens = normalize_max_tokens(get_setting("max_tokens", "3000"))
 
         messages = [{"role": "system", "content": system_prompt}]
         messages += history
@@ -143,13 +134,13 @@ def get_ai_reply(history):
             "model": model_name,
             "messages": messages,
         }
+        # temperature and max_tokens hardcoded per model config
         if model_config.get("supports_temperature", True):
-            completion_kwargs["temperature"] = temperature
+            completion_kwargs["temperature"] = 0.7
 
         token_param = model_config.get("token_param", "max_tokens")
+        max_tokens = model_config.get("max_completion_cap", 3000)
         if token_param == "max_completion_tokens":
-            if model_config.get("max_completion_cap"):
-                max_tokens = min(max_tokens, model_config["max_completion_cap"])
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens
@@ -221,11 +212,8 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                 # Pass connection to get_client_settings to avoid opening another one
                 settings = get_client_settings(user_id, connection_id, conn)
                 system_prompt = build_personality_prompt(settings, history=history, latest_message=latest_message)
-                temperature = settings['temperature']
-                max_tokens = normalize_max_tokens(settings.get('max_tokens', 3000))
                 logger.info(f"Using connection-specific settings for connection {connection_id}")
                 logger.debug(f"Prompt length: {len(system_prompt)} chars")
-                logger.debug(f"Temperature: {temperature}, Max tokens: {max_tokens}")
                 logger.debug(f"Latest message: {latest_message[:50]}...")
             else:
                 # Fallback to global settings
@@ -235,8 +223,6 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                     'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
                 }
                 system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
-                temperature = 0.7
-                max_tokens = 3000
         else:
             # Use global settings (for original Chata account)
             logger.warning("No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
@@ -245,8 +231,6 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                 'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
             }
             system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
-            temperature = 0.7
-            max_tokens = 3000
 
         # Since everything is now in the system prompt, we only send the system message
         messages = [{"role": "system", "content": system_prompt}]
@@ -258,13 +242,14 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
             "model": model_name,
             "messages": messages,
         }
+        # temperature and max_tokens are hardcoded per model config —
+        # gpt-5-nano does not support temperature and caps at 3000 tokens.
         if model_config.get("supports_temperature", True):
-            completion_kwargs["temperature"] = temperature
+            completion_kwargs["temperature"] = 0.7  # default; nano skips this
 
         token_param = model_config.get("token_param", "max_tokens")
+        max_tokens = model_config.get("max_completion_cap", 3000)
         if token_param == "max_completion_tokens":
-            if model_config.get("max_completion_cap"):
-                max_tokens = min(max_tokens, model_config["max_completion_cap"])
             completion_kwargs["max_completion_tokens"] = max_tokens
         else:
             completion_kwargs["max_tokens"] = max_tokens

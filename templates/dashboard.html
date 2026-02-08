@@ -714,7 +714,17 @@
         
         function confirmDisconnect() {
             if (disconnectConnectionId) {
-                window.location.href = "{{ url_for('dashboard_bp.disconnect_instagram', connection_id=0) }}".replace('0', disconnectConnectionId);
+                // Use a POST form submission with CSRF token instead of a GET link
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('dashboard_bp.disconnect_instagram', connection_id=0) }}".replace('0', disconnectConnectionId);
+                var csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = '{{ csrf_token() }}';
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
             }
         }
     </script>
