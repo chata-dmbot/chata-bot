@@ -177,6 +177,17 @@ def webhook():
                 pass
             # #endregion
             if Config.FACEBOOK_APP_SECRET:
+                if not _sig_ok and raw_body:
+                    # Fallback: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
+                    # Try verifying with compact JSON; Meta often sends compact payloads.
+                    try:
+                        body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
+                        compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
+                        if _verify_instagram_webhook_signature(compact_body, sig_header):
+                            _sig_ok = True
+                            logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
+                    except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+                        pass
                 if not _sig_ok:
                     _secret_str = (Config.FACEBOOK_APP_SECRET or "").strip()
                     secret_len = len(_secret_str)
