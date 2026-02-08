@@ -57,96 +57,6 @@ a {
     transform: scale(1.03);
 }
 
-/* --- Navigation --- */
-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 50;
-    backdrop-filter: blur(16px);
-    background: rgba(0, 0, 0, 0.35);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-    height: 72px;
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-
-.logo {
-    font-size: 1.75rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    color: var(--chata-blue);
-}
-
-.nav-links {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    font-size: 0.85rem;
-    letter-spacing: 0.18em;
-}
-
-.nav-links a {
-    position: relative;
-    padding: 0.25rem 0;
-    transition: color 0.3s ease;
-}
-
-.nav-links a::after {
-    content: "";
-    position: absolute;
-    bottom: -6px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: var(--chata-blue);
-    transition: width 0.3s ease;
-}
-
-.nav-links a:hover {
-    color: var(--chata-blue);
-}
-
-.nav-links a:hover::after {
-    width: 100%;
-}
-
-.nav-actions {
-    position: absolute;
-    right: 1.5rem;
-    display: flex;
-    gap: 1rem;
-    font-size: 0.85rem;
-    letter-spacing: 0.18em;
-}
-
-.nav-actions a {
-    padding: 0.4rem 0.6rem;
-    border-radius: 999px;
-}
-
-.nav-actions .logout {
-    background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(51, 102, 255, 0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.nav-actions .logout:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 32px rgba(51, 102, 255, 0.4);
-}
 
 /* --- Hero --- */
 .bot-settings-hero {
@@ -866,19 +776,36 @@ textarea {
 {% endblock %}
 
 {% block navigation %}
-<nav>
-    <div class="nav-container">
-        <a href="{{ url_for('pages.home') }}" class="logo">CHATA</a>
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard_bp.dashboard') }}">DASHBOARD</a>
-            <a href="{{ url_for('pages.home') }}">HOME</a>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 glass-nav navigation">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex items-center h-16">
+                <!-- Logo - Left aligned -->
+                <div class="absolute left-0">
+                    <a href="{{ url_for('pages.home') }}" class="text-3xl font-bold logo-blue pl-4">
+                        CHATA
+                    </a>
+                </div>
+      
+                <!-- Desktop Navigation - Centered -->
+                <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center space-x-8">
+                        <a href="{{ url_for('dashboard_bp.dashboard') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">DASHBOARD</a>
+                        <a href="{{ url_for('pages.home') }}" class="nav-item text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">HOME</a>
+                    </div>
+                </div>
+  
+                <!-- CTA Buttons - Right aligned -->
+                <div class="hidden md:block absolute right-0">
+                    <div class="flex items-center space-x-4 pr-4">
+                        <a href="{{ url_for('pages.support') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SUPPORT</a>
+                        <a href="{{ url_for('dashboard_bp.account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
+                        <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="nav-actions">
-            <a href="{{ url_for('dashboard_bp.account_settings') }}">SETTINGS</a>
-            <a href="{{ url_for('auth.logout') }}" class="logout">LOGOUT</a>
-        </div>
-    </div>
-</nav>
+    </nav>
 {% endblock %}
 
 {% block flash_messages %}{% endblock %}
@@ -1404,6 +1331,18 @@ textarea {
         if (modal) modal.classList.remove('show');
     };
 
+    /* --- Show overlay on Save Settings --- */
+    function setupFormOverlay() {
+        var form = document.getElementById('botSettingsForm');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+        });
+    }
+
     /* --- DOMContentLoaded setup --- */
     document.addEventListener('DOMContentLoaded', function () {
         attachAutoResize();
@@ -1411,6 +1350,7 @@ textarea {
         setupLinkControls();
         setupPostControls();
         setupFAQControls();
+        setupFormOverlay();
 
         // Attach auto-resize to follower message textareas
         document.querySelectorAll('.follower-message .message-input').forEach(function (field) {
