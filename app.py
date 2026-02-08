@@ -46,6 +46,12 @@ Config.check_secret_key()
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
+# Session cookie security — enforce HTTPS-only cookies in production
+is_production = bool(os.environ.get('DATABASE_URL'))  # Production uses PostgreSQL
+app.config['SESSION_COOKIE_SECURE'] = is_production     # HTTPS-only in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True              # No JavaScript access to session cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'            # CSRF protection for top-level navigations
+
 # ---------------------------------------------------------------------------
 # Extensions (defined in extensions.py to avoid circular imports)
 # ---------------------------------------------------------------------------

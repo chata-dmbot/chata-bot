@@ -23,7 +23,7 @@ def _get_pg_pool():
     if _pg_pool is None:
         database_url = os.environ.get('DATABASE_URL')
         if database_url:
-            _pg_pool = psycopg2.pool.SimpleConnectionPool(
+            _pg_pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=1,
                 maxconn=10,
                 dsn=database_url,

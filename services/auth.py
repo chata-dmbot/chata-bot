@@ -13,39 +13,44 @@ def create_reset_token(user_id):
     expires = datetime.now() + timedelta(hours=1)
     
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"""
-        INSERT INTO password_resets (user_id, token, expires_at)
-        VALUES ({placeholder}, {placeholder}, {placeholder})
-    """, (user_id, token, expires))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            INSERT INTO password_resets (user_id, token, expires_at)
+            VALUES ({placeholder}, {placeholder}, {placeholder})
+        """, (user_id, token, expires))
+        conn.commit()
+    finally:
+        conn.close()
     
     return token
 
 def verify_reset_token(token):
     """Verify a password reset token"""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"""
-        SELECT user_id FROM password_resets 
-        WHERE token = {placeholder} AND expires_at > {placeholder} AND used_at IS NULL
-    """, (token, datetime.now()))
-    result = cursor.fetchone()
-    conn.close()
-    
-    return result[0] if result else None
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            SELECT user_id FROM password_resets 
+            WHERE token = {placeholder} AND expires_at > {placeholder} AND used_at IS NULL
+        """, (token, datetime.now()))
+        result = cursor.fetchone()
+        return result[0] if result else None
+    finally:
+        conn.close()
 
 def mark_reset_token_used(token):
     """Mark a reset token as used"""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE token = {placeholder}", (token,))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE token = {placeholder}", (token,))
+        conn.commit()
+    finally:
+        conn.close()
 
 def login_required(f):
     @wraps(f)

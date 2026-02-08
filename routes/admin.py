@@ -1,7 +1,6 @@
 """Admin routes — admin dashboard, cleanup, system verification."""
 import logging
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session, render_template_string
-from flask import request as flask_request
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session
 import os
 import traceback
 import stripe
@@ -9,15 +8,13 @@ from config import Config
 
 logger = logging.getLogger("chata.routes.admin")
 from database import get_db_connection, get_param_placeholder
-from services.auth import login_required, admin_required
-from services.subscription import get_setting, set_setting
-from services.ai import normalize_max_tokens
+from services.auth import admin_required
 
 admin_bp = Blueprint('admin', __name__)
 
 
 @admin_bp.route("/payment-system-verification")
-@login_required
+@admin_required
 def payment_system_verification():
     """Comprehensive payment system verification and checkup"""
     from datetime import datetime
@@ -66,6 +63,7 @@ def payment_system_verification():
     db_checks = []
     db_ok = True
     
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -74,19 +72,9 @@ def payment_system_verification():
         is_postgres = Config.DATABASE_URL and ('postgres' in Config.DATABASE_URL.lower())
         
         if is_postgres:
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = 'users'
-                )
-            """)
+            cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')")
             users_exists = cursor.fetchone()[0]
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = 'subscriptions'
-                )
-            """)
+            cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'subscriptions')")
             subs_exists = cursor.fetchone()[0]
         else:
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
@@ -98,12 +86,8 @@ def payment_system_verification():
         db_checks.append(('✅' if subs_exists else '❌', 'Subscriptions Table', 'Exists' if subs_exists else 'Missing'))
         
         if users_exists:
-            # Check required columns in users table
             if is_postgres:
-                cursor.execute("""
-                    SELECT column_name FROM information_schema.columns 
-                    WHERE table_name = 'users'
-                """)
+                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'users'")
                 columns = [row[0] for row in cursor.fetchall()]
             else:
                 cursor.execute("PRAGMA table_info(users)")
@@ -115,11 +99,15 @@ def payment_system_verification():
                 db_checks.append(('✅' if exists else '❌', f'Users.{col}', 'Exists' if exists else 'Missing'))
                 if not exists:
                     db_ok = False
-        
-        conn.close()
     except Exception as e:
         db_checks.append(('❌', 'Database Connection', f'Error: {str(e)[:50]}'))
         db_ok = False
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
     
     checks['database_structure'] = {'checks': db_checks, 'all_ok': db_ok}
     
@@ -134,6 +122,7 @@ def payment_system_verification():
     reply_checks = []
     reply_ok = True
     
+    conn = None
     try:
         user_id = session['user_id']
         conn = get_db_connection()
@@ -160,17 +149,22 @@ def payment_system_verification():
         else:
             reply_checks.append(('❌', 'User Data', 'Not found'))
             reply_ok = False
-        
-        conn.close()
     except Exception as e:
         reply_checks.append(('❌', 'Reply Logic Check', f'Error: {str(e)[:50]}'))
         reply_ok = False
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
     
     checks['reply_logic'] = {'checks': reply_checks, 'all_ok': reply_ok}
     
     # 5. Subscription Status
     sub_checks = []
     
+    conn = None
     try:
         user_id = session['user_id']
         conn = get_db_connection()
@@ -209,10 +203,14 @@ def payment_system_verification():
                 sub_checks.append((status_icon, f'{plan.title()} ({status})', f'ID: {sub_id[:20]}...'))
         else:
             sub_checks.append(('ℹ️', 'Recent Subscriptions', 'None found'))
-        
-        conn.close()
     except Exception as e:
         sub_checks.append(('❌', 'Subscription Check', f'Error: {str(e)[:50]}'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
     
     checks['subscriptions'] = {'checks': sub_checks, 'all_ok': True}
     
@@ -372,18 +370,13 @@ def payment_system_verification():
     return html
 
 
-@admin_bp.route("/admin/test")
-@login_required
-def admin_test():
-    """Simple test route to verify admin routes work"""
-    return f"✅ Admin routes work! User ID: {session.get('user_id')}"
-
 
 @admin_bp.route("/admin/clean-all-users", methods=["POST"])
 @admin_required
 def clean_all_users():
     """Delete all users and related data - requires admin privileges."""
     
+    conn = None
     try:
         conn = get_db_connection()
         if not conn:
@@ -393,75 +386,20 @@ def clean_all_users():
         cursor = conn.cursor()
         
         # Delete in order to respect foreign key constraints
-        # Wrap each deletion in try/except to handle missing tables gracefully
-        
-        # Delete activity logs
-        try:
-            cursor.execute("DELETE FROM activity_logs")
-            logger.info(f"Deleted all activity logs")
-        except Exception as e:
-            logger.warning(f"Could not delete activity_logs: {e}")
-        
-        # Delete purchases
-        try:
-            cursor.execute("DELETE FROM purchases")
-            logger.info(f"Deleted all purchases")
-        except Exception as e:
-            logger.warning(f"Could not delete purchases: {e}")
-        
-        # Delete subscriptions
-        try:
-            cursor.execute("DELETE FROM subscriptions")
-            logger.info(f"Deleted all subscriptions")
-        except Exception as e:
-            logger.warning(f"Could not delete subscriptions: {e}")
-        
-        # Delete messages
-        try:
-            cursor.execute("DELETE FROM messages")
-            logger.info(f"Deleted all messages")
-        except Exception as e:
-            logger.warning(f"Could not delete messages: {e}")
-        
-        # Delete client settings
-        try:
-            cursor.execute("DELETE FROM client_settings")
-            logger.info(f"Deleted all client settings")
-        except Exception as e:
-            logger.warning(f"Could not delete client_settings: {e}")
-        
-        # Delete instagram connections
-        try:
-            cursor.execute("DELETE FROM instagram_connections")
-            logger.info(f"Deleted all Instagram connections")
-        except Exception as e:
-            logger.warning(f"Could not delete instagram_connections: {e}")
-        
-        # Delete password reset tokens (table name is password_resets, not password_reset_tokens)
-        try:
-            cursor.execute("DELETE FROM password_resets")
-            logger.info(f"Deleted all password reset tokens")
-        except Exception as e:
-            logger.warning(f"Could not delete password_resets: {e}")
-        
-        # Delete usage logs if they exist
-        try:
-            cursor.execute("DELETE FROM usage_logs")
-            logger.info(f"Deleted all usage logs")
-        except Exception as e:
-            logger.warning(f"Could not delete usage_logs: {e}")
+        for table in ['activity_logs', 'purchases', 'subscriptions', 'messages',
+                      'client_settings', 'instagram_connections', 'password_resets', 'usage_logs']:
+            try:
+                cursor.execute(f"DELETE FROM {table}")
+                logger.info(f"Deleted all {table}")
+            except Exception as e:
+                logger.warning(f"Could not delete {table}: {e}")
         
         # Finally, delete all users
-        try:
-            cursor.execute("DELETE FROM users")
-            deleted_count = cursor.rowcount
-            logger.info(f"Deleted {deleted_count} users")
-        except Exception as e:
-            logger.error(f"Could not delete users: {e}")
-            raise
+        cursor.execute("DELETE FROM users")
+        deleted_count = cursor.rowcount
+        logger.info(f"Deleted {deleted_count} users")
         
         conn.commit()
-        conn.close()
         
         flash(f"Successfully cleaned database. Deleted {deleted_count} users and all related data.", "success")
         return redirect(url_for('admin.admin_dashboard'))
@@ -469,8 +407,14 @@ def clean_all_users():
     except Exception as e:
         logger.error(f"Error cleaning database: {e}")
         logger.error(traceback.format_exc())
-        flash(f"Error cleaning database: {str(e)}", "error")
+        flash("Error cleaning database. Please check logs.", "error")
         return redirect(url_for('admin.admin_dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @admin_bp.route("/admin/chata-internal-dashboard-2024-secure")
@@ -485,6 +429,7 @@ def admin_dashboard():
     users_per_page = 10
     logs_per_page = 10
     
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -603,9 +548,7 @@ def admin_dashboard():
         # Calculate logs pagination
         total_logs_pages = (total_logs_to_show + logs_per_page - 1) // logs_per_page
         
-        conn.close()
-        
-        # Format data for template
+        # Format data for template (DB data already fetched, conn will be closed in finally)
         users = []
         for row in users_data:
             users.append({
@@ -687,94 +630,12 @@ def admin_dashboard():
     except Exception as e:
         logger.error(f"Admin dashboard error: {e}")
         logger.error(traceback.format_exc())
-        return f"Error loading admin dashboard: {str(e)}", 500
-
-
-@admin_bp.route("/admin/cleanup-for-production", methods=["POST"])
-@admin_required
-def cleanup_for_production():
-    """Cleanup route: Delete all subscriptions and reset all replies to zero - FOR PRODUCTION PREP"""
-    user_id = session['user_id']
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    try:
-        # 1. Delete all subscriptions
-        cursor.execute(f"DELETE FROM subscriptions")
-        subscriptions_deleted = cursor.rowcount
-        
-        # 2. Reset all replies to zero for all users
-        cursor.execute(f"""
-            UPDATE users 
-            SET replies_sent_monthly = 0,
-                replies_limit_monthly = 0,
-                replies_purchased = 0,
-                replies_used_purchased = 0
-        """)
-        users_updated = cursor.rowcount
-        
-        conn.commit()
-        
-        flash(f"✅ Cleanup complete! Deleted {subscriptions_deleted} subscriptions and reset replies for {users_updated} users.", "success")
-        logger.info(f"Production cleanup: Deleted {subscriptions_deleted} subscriptions, reset {users_updated} users")
-        
-    except Exception as e:
-        logger.error(f"Error during cleanup: {e}")
-        flash(f"Error during cleanup: {str(e)}", "error")
-        conn.rollback()
+        return "Error loading admin dashboard. Please check logs.", 500
     finally:
-        conn.close()
-    
-    return redirect(url_for('dashboard_bp.dashboard'))
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
-@admin_bp.route("/admin/prompt", methods=["GET", "POST"])
-@admin_required
-def admin_prompt():
-    message = None
-
-    if flask_request.method == "POST":
-        set_setting("bot_personality", flask_request.form.get("bot_personality", ""))
-        set_setting("temperature", flask_request.form.get("temperature", "0.7"))
-        max_tokens_input = normalize_max_tokens(flask_request.form.get("max_tokens", "3000"))
-        set_setting("max_tokens", str(max_tokens_input))
-        message = "Bot settings updated successfully!"
-
-    current_prompt = get_setting("bot_personality", "")
-    current_temperature = get_setting("temperature", "0.7")
-    current_max_tokens = str(normalize_max_tokens(get_setting("max_tokens", "3000")))
-
-    return render_template_string("""
-        <!doctype html>
-        <title>Edit Bot Settings</title>
-        <style>
-          body { background: #181e29; color: #fff; font-family: Arial, sans-serif; padding:40px; }
-          textarea, input[type=text], input[type=number] { width: 100%; background: #232b3d; color: #fff; border-radius: 10px; padding: 10px; border: 1px solid #444; font-size: 1.1em;}
-          input[type=submit] { background: #36f; color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-size: 1em; margin-top:10px; cursor:pointer;}
-          .message { margin-top:20px; color: #3fcf64; }
-          h2 { color: #3fcf64; }
-          label {font-size:1.1em;}
-          .field-group { margin-bottom: 24px;}
-        </style>
-        <h2>Edit Bot Settings</h2>
-        <form method="POST">
-          <div class="field-group">
-            <label for="bot_personality">Bot Personality:</label><br>
-            <textarea id="bot_personality" name="bot_personality" rows="4">{{current_prompt}}</textarea>
-          </div>
-          <div class="field-group">
-            <label for="temperature">Temperature (Creativity, 0=serious, 1=random):</label><br>
-            <input type="number" step="0.01" min="0" max="2" id="temperature" name="temperature" value="{{current_temperature}}">
-          </div>
-          <div class="field-group">
-            <label for="max_tokens">Max Tokens (Length of Reply):</label><br>
-            <input type="number" min="1" max="6000" id="max_tokens" name="max_tokens" value="{{current_max_tokens}}">
-          </div>
-          <input type="submit" value="Save Settings">
-        </form>
-        {% if message %}
-        <div class="message">{{ message }}</div>
-        {% endif %}
-    """, current_prompt=current_prompt, current_temperature=current_temperature, current_max_tokens=current_max_tokens, message=message)

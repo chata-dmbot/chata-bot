@@ -192,6 +192,7 @@ def reset_password():
             return render_template("reset_password.html")
         
         # Update password
+        conn = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -199,7 +200,6 @@ def reset_password():
             placeholder = get_param_placeholder()
             cursor.execute(f"UPDATE users SET password_hash = {placeholder} WHERE id = {placeholder}", (password_hash, user_id))
             conn.commit()
-            conn.close()
             
             # Mark token as used
             mark_reset_token_used(token)
@@ -208,6 +208,12 @@ def reset_password():
             return redirect(url_for('auth.login'))
         except Exception as e:
             flash("Error updating password. Please try again.", "error")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
     
     return render_template("reset_password.html")
 
@@ -479,8 +485,7 @@ def instagram_callback():
                 
                 if active_connection_other_user:
                     # This Instagram account is already connected to another email account
-                    flash(f"This Instagram account is already connected to another email account. Please disconnect it from the other account first.", "error")
-                    conn.close()
+                    flash("This Instagram account is already connected to another email account. Please disconnect it from the other account first.", "error")
                     return redirect(url_for('dashboard_bp.dashboard'))
                 
                 # Check if this user has already received the free trial (persistent flag that survives disconnection)

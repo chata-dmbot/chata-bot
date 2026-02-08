@@ -38,119 +38,113 @@ def dashboard():
     
     # Get user's Instagram connections
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"""
-        SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active, created_at 
-        FROM instagram_connections 
-        WHERE user_id = {placeholder} 
-        ORDER BY created_at DESC
-    """, (user_id,))
-    connections = cursor.fetchall()
+    if not conn:
+        flash("Database error. Please try again.", "error")
+        return redirect(url_for('auth.login'))
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active, created_at 
+            FROM instagram_connections 
+            WHERE user_id = {placeholder} 
+            ORDER BY created_at DESC
+        """, (user_id,))
+        connections = cursor.fetchall()
     
-    # Get user's reply counts, bot_paused status, and subscription data in a single query
-    # This combines 3 separate queries into 1 for better performance
-    cursor.execute(f"""
-        SELECT 
-            u.replies_sent_monthly, 
-            u.replies_limit_monthly, 
-            u.replies_purchased, 
-            u.replies_used_purchased, 
-            COALESCE(u.bot_paused, FALSE) as bot_paused,
-            (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan_type,
-            (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_status,
-            (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_subscription_id,
-            (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_plan_type,
-            (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_status,
-            (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_subscription_id
-        FROM users u
-        WHERE u.id = {placeholder}
-    """, (user_id,))
-    combined_data = cursor.fetchone()
-    
-    if combined_data:
-        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused, \
-        active_plan_type, active_status, active_subscription_id, \
-        canceled_plan_type, canceled_status, canceled_subscription_id = combined_data
+        # Get user's reply counts, bot_paused status, and subscription data in a single query
+        # This combines 3 separate queries into 1 for better performance
+        cursor.execute(f"""
+            SELECT 
+                u.replies_sent_monthly, 
+                u.replies_limit_monthly, 
+                u.replies_purchased, 
+                u.replies_used_purchased, 
+                COALESCE(u.bot_paused, FALSE) as bot_paused,
+                (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan_type,
+                (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_status,
+                (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_subscription_id,
+                (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_plan_type,
+                (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_status,
+                (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_subscription_id
+            FROM users u
+            WHERE u.id = {placeholder}
+        """, (user_id,))
+        combined_data = cursor.fetchone()
         
-        total_replies_used = replies_sent_monthly + replies_used_purchased
-        total_replies_available = replies_limit_monthly + replies_purchased
-        remaining_replies = max(0, total_replies_available - total_replies_used)
-        # Calculate minutes saved (3 minutes per reply)
-        MINUTES_PER_REPLY = 3
-        minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
-        
-        # Determine current plan based on subscription status
-        current_plan = None
-        subscription_status = None
-        
-        if active_plan_type is not None and active_status == 'active':
-            # User has an active subscription in DB - reconcile with Stripe (source of truth)
-            stripe_status = None
-            if active_subscription_id and Config.STRIPE_SECRET_KEY:
-                try:
-                    sub = stripe.Subscription.retrieve(active_subscription_id)
-                    stripe_status = sub.get('status') if isinstance(sub, dict) else getattr(sub, 'status', None)
-                    if stripe_status in ('canceled', 'unpaid', 'incomplete_expired'):
-                        # Stripe says canceled; sync DB so we don't show stale active plan
-                        sync_conn = get_db_connection()
-                        if sync_conn:
-                            try:
-                                sync_cursor = sync_conn.cursor()
-                                sync_ph = get_param_placeholder()
-                                sync_cursor.execute(f"""
-                                    UPDATE subscriptions SET status = {sync_ph}, updated_at = CURRENT_TIMESTAMP
-                                    WHERE stripe_subscription_id = {sync_ph}
-                                """, ('canceled', active_subscription_id))
-                                sync_conn.commit()
-                                logger.info(f"Dashboard: Reconciled subscription {active_subscription_id} with Stripe (status={stripe_status}), marked canceled in DB")
-                            except Exception as sync_e:
-                                logger.warning(f"Dashboard reconciliation update failed: {sync_e}")
-                            finally:
+        if combined_data:
+            replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused, \
+            active_plan_type, active_status, active_subscription_id, \
+            canceled_plan_type, canceled_status, canceled_subscription_id = combined_data
+            
+            total_replies_used = replies_sent_monthly + replies_used_purchased
+            total_replies_available = replies_limit_monthly + replies_purchased
+            remaining_replies = max(0, total_replies_available - total_replies_used)
+            MINUTES_PER_REPLY = 3
+            minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
+            
+            current_plan = None
+            subscription_status = None
+            
+            if active_plan_type is not None and active_status == 'active':
+                stripe_status = None
+                if active_subscription_id and Config.STRIPE_SECRET_KEY:
+                    try:
+                        sub = stripe.Subscription.retrieve(active_subscription_id)
+                        stripe_status = sub.get('status') if isinstance(sub, dict) else getattr(sub, 'status', None)
+                        if stripe_status in ('canceled', 'unpaid', 'incomplete_expired'):
+                            sync_conn = get_db_connection()
+                            if sync_conn:
                                 try:
-                                    sync_conn.close()
-                                except Exception:
-                                    pass
-                        subscription_status = 'canceled'
-                        current_plan = None
-                    else:
+                                    sync_cursor = sync_conn.cursor()
+                                    sync_ph = get_param_placeholder()
+                                    sync_cursor.execute(f"""
+                                        UPDATE subscriptions SET status = {sync_ph}, updated_at = CURRENT_TIMESTAMP
+                                        WHERE stripe_subscription_id = {sync_ph}
+                                    """, ('canceled', active_subscription_id))
+                                    sync_conn.commit()
+                                    logger.info(f"Dashboard: Reconciled subscription {active_subscription_id} with Stripe (status={stripe_status}), marked canceled in DB")
+                                except Exception as sync_e:
+                                    logger.warning(f"Dashboard reconciliation update failed: {sync_e}")
+                                finally:
+                                    try:
+                                        sync_conn.close()
+                                    except Exception:
+                                        pass
+                            subscription_status = 'canceled'
+                            current_plan = None
+                        else:
+                            current_plan = active_plan_type
+                            subscription_status = 'active'
+                            logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}' (Stripe status={stripe_status})")
+                    except Exception as stripe_e:
+                        logger.warning(f"Dashboard: Could not reconcile with Stripe: {stripe_e}")
                         current_plan = active_plan_type
                         subscription_status = 'active'
-                        logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}' (Stripe status={stripe_status})")
-                except Exception as stripe_e:
-                    # Stripe API error - don't break dashboard; trust DB
-                    logger.warning(f"Dashboard: Could not reconcile with Stripe: {stripe_e}")
+                else:
                     current_plan = active_plan_type
                     subscription_status = 'active'
                     logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
+            elif canceled_plan_type is not None and canceled_status == 'canceled':
+                subscription_status = 'canceled'
+                current_plan = None
+                logger.info(f"Dashboard: Found CANCELED subscription {canceled_subscription_id} - not showing as current plan")
             else:
-                current_plan = active_plan_type
-                subscription_status = 'active'
-                logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}'")
-        elif canceled_plan_type is not None and canceled_status == 'canceled':
-            # No active subscription - found a canceled one (for display purposes only)
-            subscription_status = 'canceled'
-            current_plan = None  # Don't show plan name if canceled
-            logger.info(f"Dashboard: Found CANCELED subscription {canceled_subscription_id} - not showing as current plan")
+                logger.info(f"Dashboard: No subscription found for user {user_id}")
         else:
-            logger.info(f"Dashboard: No subscription found for user {user_id}")
-    else:
-        replies_sent_monthly = 0
-        replies_limit_monthly = 0  # New users start with 0 replies
-        replies_purchased = 0
-        replies_used_purchased = 0
-        total_replies_used = 0
-        total_replies_available = 0
-        remaining_replies = 0
-        minutes_saved = 0
-        bot_paused = False
-        current_plan = None
-        subscription_status = None
-    
-    # Don't infer plan from replies_limit_monthly - only from subscription status
-    # This prevents showing "Starter" plan when user has old replies_limit_monthly but no subscription
-    
-    conn.close()
+            replies_sent_monthly = 0
+            replies_limit_monthly = 0
+            replies_purchased = 0
+            replies_used_purchased = 0
+            total_replies_used = 0
+            total_replies_available = 0
+            remaining_replies = 0
+            minutes_saved = 0
+            bot_paused = False
+            current_plan = None
+            subscription_status = None
+    finally:
+        conn.close()
     
     connections_list = []
     for conn_data in connections:
@@ -344,120 +338,120 @@ def bot_settings():
 
     # Open ONE connection and reuse it for all database operations
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"""
-        SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active 
-        FROM instagram_connections 
-        WHERE user_id = {placeholder} 
-        ORDER BY created_at DESC
-    """, (user_id,))
-    connections = cursor.fetchall()
-    
-    connections_list = []
-    for conn_data in connections:
-        connections_list.append({
-            'id': conn_data[0],
-            'instagram_user_id': conn_data[1],
-            'instagram_page_id': conn_data[2],
-            'instagram_username': conn_data[3],
-            'instagram_page_name': conn_data[4],
-            'is_active': conn_data[5]
-        })
-    
-    if not connections_list:
-        conn.close()
+    if not conn:
+        flash("Database error. Please try again.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active 
+            FROM instagram_connections 
+            WHERE user_id = {placeholder} 
+            ORDER BY created_at DESC
+        """, (user_id,))
+        connections = cursor.fetchall()
+        
+        connections_list = []
+        for conn_data in connections:
+            connections_list.append({
+                'id': conn_data[0],
+                'instagram_user_id': conn_data[1],
+                'instagram_page_id': conn_data[2],
+                'instagram_username': conn_data[3],
+                'instagram_page_name': conn_data[4],
+                'is_active': conn_data[5]
+            })
+        
+        if not connections_list:
+            if request.method == "POST":
+                flash("Please connect an Instagram account before configuring bot settings.", "warning")
+            return render_template(
+                "bot_settings.html",
+                settings=None,
+                connections=[],
+                selected_connection_id=None,
+                selected_connection=None,
+                conversation_templates=conversation_templates,
+            )
+
+        if connection_id is None:
+            connection_id = connections_list[0]['id']
+        
+        current_settings = get_client_settings(user_id, connection_id, conn)
+        selected_connection = next((c for c in connections_list if c['id'] == connection_id), None)
+
         if request.method == "POST":
-            flash("Please connect an Instagram account before configuring bot settings.", "warning")
-        return render_template(
-            "bot_settings.html",
-            settings=None,
-            connections=[],
-            selected_connection_id=None,
-            selected_connection=None,
-            conversation_templates=conversation_templates,
-        )
+            link_urls = request.form.getlist('link_urls[]')
+            link_titles = request.form.getlist('link_titles[]')
+            links = []
+            for index, url in enumerate(link_urls):
+                if url.strip():
+                    title = link_titles[index].strip() if index < len(link_titles) else ""
+                    links.append({'url': url.strip(), 'title': title})
 
-    if connection_id is None:
-        connection_id = connections_list[0]['id']
-    
-    # Reuse connection for get_client_settings
-    current_settings = get_client_settings(user_id, connection_id, conn)
-    selected_connection = next((c for c in connections_list if c['id'] == connection_id), None)
+            post_descriptions = request.form.getlist('post_descriptions[]')
+            posts = []
+            for desc in post_descriptions:
+                if desc.strip():
+                    posts.append({'description': desc.strip()})
 
-    if request.method == "POST":
-        link_urls = request.form.getlist('link_urls[]')
-        link_titles = request.form.getlist('link_titles[]')
-        links = []
-        for index, url in enumerate(link_urls):
-            if url.strip():
-                title = link_titles[index].strip() if index < len(link_titles) else ""
-                links.append({'url': url.strip(), 'title': title})
+            faq_questions = request.form.getlist('faq_questions[]')
+            faq_replies = request.form.getlist('faq_replies[]')
+            faqs = []
+            for i, question in enumerate(faq_questions):
+                question = question.strip()
+                reply = faq_replies[i].strip() if i < len(faq_replies) else ''
+                if question or reply:
+                    faqs.append({'question': question, 'reply': reply})
 
-        post_descriptions = request.form.getlist('post_descriptions[]')
-        posts = []
-        for desc in post_descriptions:
-            if desc.strip():
-                posts.append({'description': desc.strip()})
+            conversation_samples = {}
+            for example in conversation_templates:
+                for exchange in example.get('exchanges', []):
+                    reply_key = f"{example['key']}_{exchange['bot_reply_key']}"
+                    reply_value = request.form.get(f"sample_reply_{reply_key}", "")
+                    reply_value = reply_value.strip()
+                    if reply_value:
+                        conversation_samples[reply_key] = reply_value
+                    
+                    follower_key = f"{example['key']}_{exchange['bot_reply_key']}_follower"
+                    follower_value = request.form.get(f"follower_message_{follower_key}", "")
+                    follower_value = follower_value.strip()
+                    if follower_value:
+                        conversation_samples[follower_key] = follower_value
 
-        faq_questions = request.form.getlist('faq_questions[]')
-        faq_replies = request.form.getlist('faq_replies[]')
-        faqs = []
-        for i, question in enumerate(faq_questions):
-            question = question.strip()
-            reply = faq_replies[i].strip() if i < len(faq_replies) else ''
-            if question or reply:
-                faqs.append({'question': question, 'reply': reply})
+            settings = {
+                'bot_personality': request.form.get('bot_personality', '').strip(),
+                'bot_name': request.form.get('bot_name', '').strip(),
+                'bot_age': request.form.get('bot_age', '').strip(),
+                'bot_gender': request.form.get('bot_gender', '').strip(),
+                'bot_location': request.form.get('bot_location', '').strip(),
+                'bot_occupation': request.form.get('bot_occupation', '').strip(),
+                'links': links,
+                'posts': posts,
+                'faqs': faqs,
+                'conversation_samples': conversation_samples,
+                'instagram_url': request.form.get('instagram_url', '').strip(),
+                'avoid_topics': request.form.get('avoid_topics', '').strip(),
+                'blocked_users': [username.strip().lstrip('@').lower() for username in request.form.get('blocked_users', '').strip().split('\n') if username.strip()] if request.form.get('blocked_users') else []
+            }
 
-        conversation_samples = {}
-        for example in conversation_templates:
-            for exchange in example.get('exchanges', []):
-                reply_key = f"{example['key']}_{exchange['bot_reply_key']}"
-                reply_value = request.form.get(f"sample_reply_{reply_key}", "")
-                reply_value = reply_value.strip()
-                if reply_value:
-                    conversation_samples[reply_key] = reply_value
-                
-                # Also save follower messages if they were edited
-                follower_key = f"{example['key']}_{exchange['bot_reply_key']}_follower"
-                follower_value = request.form.get(f"follower_message_{follower_key}", "")
-                follower_value = follower_value.strip()
-                if follower_value:
-                    conversation_samples[follower_key] = follower_value
+            save_client_settings(user_id, settings, connection_id, conn)
+            log_activity(user_id, 'settings_updated', f'Bot settings updated for connection {connection_id}', conn)
+            flash("AI settings updated successfully!", "success")
+            return redirect(url_for('dashboard_bp.bot_settings', connection_id=connection_id))
 
-        settings = {
-            'bot_personality': request.form.get('bot_personality', '').strip(),
-            'bot_name': request.form.get('bot_name', '').strip(),
-            'bot_age': request.form.get('bot_age', '').strip(),
-            'bot_gender': request.form.get('bot_gender', '').strip(),
-            'bot_location': request.form.get('bot_location', '').strip(),
-            'bot_occupation': request.form.get('bot_occupation', '').strip(),
-            'links': links,
-            'posts': posts,
-            'faqs': faqs,
-            'conversation_samples': conversation_samples,
-            'instagram_url': request.form.get('instagram_url', '').strip(),
-            'avoid_topics': request.form.get('avoid_topics', '').strip(),
-            'blocked_users': [username.strip().lstrip('@').lower() for username in request.form.get('blocked_users', '').strip().split('\n') if username.strip()] if request.form.get('blocked_users') else []
-        }
+        if current_settings.get('conversation_samples') is None:
+            current_settings['conversation_samples'] = {}
 
-        # Reuse connection for save_client_settings and log_activity
-        save_client_settings(user_id, settings, connection_id, conn)
-        log_activity(user_id, 'settings_updated', f'Bot settings updated for connection {connection_id}', conn)
+    finally:
         conn.close()
-        flash("AI settings updated successfully!", "success")
-        return redirect(url_for('dashboard_bp.bot_settings', connection_id=connection_id))
 
-    if current_settings.get('conversation_samples') is None:
-        current_settings['conversation_samples'] = {}
-
-    # Close connection before rendering template
-    conn.close()
-
+    # render_template happens after DB connection is closed — data already fetched
     return render_template(
         "bot_settings.html",
-                         settings=current_settings, 
-                         connections=connections_list,
+        settings=current_settings, 
+        connections=connections_list,
         selected_connection_id=connection_id,
         selected_connection=selected_connection,
         conversation_templates=conversation_templates,
@@ -492,31 +486,32 @@ def account_settings():
         
         # Check if username is already taken by another user (case-insensitive)
         conn = get_db_connection()
-        cursor = conn.cursor()
-        placeholder = get_param_placeholder()
-        cursor.execute(f"""
-            SELECT id FROM users 
-            WHERE LOWER(username) = LOWER({placeholder}) AND id != {placeholder}
-        """, (username, user['id']))
-        existing_user = cursor.fetchone()
-        
-        if existing_user:
-            conn.close()
-            flash("This username is already taken. Please choose another.", "error")
+        try:
+            cursor = conn.cursor()
+            placeholder = get_param_placeholder()
+            cursor.execute(f"""
+                SELECT id FROM users 
+                WHERE LOWER(username) = LOWER({placeholder}) AND id != {placeholder}
+            """, (username, user['id']))
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                flash("This username is already taken. Please choose another.", "error")
+                return redirect(url_for('dashboard_bp.account_settings'))
+            
+            # Update username
+            cursor.execute(f"""
+                UPDATE users 
+                SET username = {placeholder}
+                WHERE id = {placeholder}
+            """, (username, user['id']))
+            
+            conn.commit()
+            
+            flash("Username updated successfully!", "success")
             return redirect(url_for('dashboard_bp.account_settings'))
-        
-        # Update username
-        cursor.execute(f"""
-            UPDATE users 
-            SET username = {placeholder}
-            WHERE id = {placeholder}
-        """, (username, user['id']))
-        
-        conn.commit()
-        conn.close()
-        
-        flash("Username updated successfully!", "success")
-        return redirect(url_for('dashboard_bp.account_settings'))
+        finally:
+            conn.close()
     
     return render_template("account_settings.html", user=user)
 
@@ -676,10 +671,13 @@ def toggle_bot_pause():
     user_id = session['user_id']
     
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    if not conn:
+        flash("Database error. Please try again.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
     
     try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
         # Get current pause status
         cursor.execute(f"""
             SELECT COALESCE(bot_paused, FALSE) FROM users WHERE id = {placeholder}
@@ -720,10 +718,13 @@ def debug_decrease_replies():
     user_id = session['user_id']
     
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    if not conn:
+        flash("Database error.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
     
     try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
         # Get current counts
         cursor.execute(f"""
             SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
@@ -745,12 +746,10 @@ def debug_decrease_replies():
         
         if remaining <= 0:
             flash("No remaining replies to decrease.", "warning")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         # Decrease by using one reply (increment sent count)
         if replies_sent_monthly < replies_limit_monthly:
-            # Use monthly reply
             cursor.execute(f"""
                 UPDATE users
                 SET replies_sent_monthly = replies_sent_monthly + 1
@@ -758,7 +757,6 @@ def debug_decrease_replies():
             """, (user_id,))
             flash("Decreased remaining replies by 1 (used monthly reply).", "success")
         elif replies_used_purchased < replies_purchased:
-            # Use purchased reply
             cursor.execute(f"""
                 UPDATE users
                 SET replies_used_purchased = replies_used_purchased + 1
@@ -767,7 +765,6 @@ def debug_decrease_replies():
             flash("Decreased remaining replies by 1 (used purchased reply).", "success")
         else:
             flash("Error: Could not decrease replies.", "error")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         conn.commit()
@@ -776,7 +773,10 @@ def debug_decrease_replies():
     except Exception as e:
         logger.error(f"Error decreasing replies: {e}")
         flash("Error decreasing replies. Please try again.", "error")
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     finally:
         conn.close()
     
@@ -792,10 +792,13 @@ def debug_set_replies_zero():
     user_id = session['user_id']
     
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    if not conn:
+        flash("Database error.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
     
     try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
         # Get current counts
         cursor.execute(f"""
             SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
@@ -825,7 +828,10 @@ def debug_set_replies_zero():
     except Exception as e:
         logger.error(f"Error setting replies to zero: {e}")
         flash("Error setting replies to zero. Please try again.", "error")
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     finally:
         conn.close()
     
@@ -841,10 +847,13 @@ def debug_trigger_monthly_addition():
     user_id = session['user_id']
     
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    if not conn:
+        flash("Database error.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
     
     try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
         # Check if user has an active subscription
         cursor.execute(f"""
             SELECT id, plan_type, status
@@ -857,7 +866,6 @@ def debug_trigger_monthly_addition():
         
         if not subscription:
             flash("You need an active subscription to trigger monthly addition.", "warning")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         plan_type = subscription[1]  # 'starter' or 'standard'
@@ -961,68 +969,67 @@ def usage_analytics():
     # Get usage statistics for the current month
     # Open connection once and reuse it for all operations
     conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    # Check and reset monthly counter if needed - reuse the same connection
-    check_user_reply_limit(user_id, conn)
-    
-    # Get user's reply counts - using the same connection
-    cursor.execute(f"""
-        SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
-        FROM users
-        WHERE id = {placeholder}
-    """, (user_id,))
-    reply_data = cursor.fetchone()
-    
-    if reply_data:
-        replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
-        # Ensure replies_limit_monthly is not None (should be 0 for new users)
-        if replies_limit_monthly is None:
-            replies_limit_monthly = 0
-        total_replies_used = replies_sent_monthly + replies_used_purchased
-        total_replies_available = replies_limit_monthly + replies_purchased
-        remaining_replies = max(0, total_replies_available - total_replies_used)
-        # Calculate minutes saved (3 minutes per reply)
-        MINUTES_PER_REPLY = 3
-        minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
-    else:
-        replies_sent_monthly = 0
-        replies_limit_monthly = 0  # New users start with 0 replies
-        replies_purchased = 0
-        replies_used_purchased = 0
-        total_replies_used = 0
-        total_replies_available = 0
-        remaining_replies = 0
-        minutes_saved = 0
-    
-    # Get recent activity
-    cursor.execute(f"""
-        SELECT action, details, created_at 
-        FROM activity_logs 
-        WHERE user_id = {placeholder} 
-        ORDER BY created_at DESC 
-        LIMIT 10
-    """, (user_id,))
-    activity_rows = cursor.fetchall()
-    
-    # Format datetime objects to strings for template
-    recent_activity = []
-    for row in activity_rows:
-        action, details, created_at = row
-        # Convert datetime to string format
-        if created_at:
-            if isinstance(created_at, str):
-                # Already a string, just truncate if needed
-                formatted_time = created_at[:16] if len(created_at) > 16 else created_at
-            else:
-                # It's a datetime object, format it
-                formatted_time = created_at.strftime('%Y-%m-%d %H:%M')
+    if not conn:
+        flash("Database error. Please try again.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Check and reset monthly counter if needed - reuse the same connection
+        check_user_reply_limit(user_id, conn)
+        
+        # Get user's reply counts
+        cursor.execute(f"""
+            SELECT replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased
+            FROM users
+            WHERE id = {placeholder}
+        """, (user_id,))
+        reply_data = cursor.fetchone()
+        
+        if reply_data:
+            replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased = reply_data
+            if replies_limit_monthly is None:
+                replies_limit_monthly = 0
+            total_replies_used = replies_sent_monthly + replies_used_purchased
+            total_replies_available = replies_limit_monthly + replies_purchased
+            remaining_replies = max(0, total_replies_available - total_replies_used)
+            MINUTES_PER_REPLY = 3
+            minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
         else:
-            formatted_time = ''
-        recent_activity.append((action, details, formatted_time))
-    
-    conn.close()
+            replies_sent_monthly = 0
+            replies_limit_monthly = 0
+            replies_purchased = 0
+            replies_used_purchased = 0
+            total_replies_used = 0
+            total_replies_available = 0
+            remaining_replies = 0
+            minutes_saved = 0
+        
+        # Get recent activity
+        cursor.execute(f"""
+            SELECT action, details, created_at 
+            FROM activity_logs 
+            WHERE user_id = {placeholder} 
+            ORDER BY created_at DESC 
+            LIMIT 10
+        """, (user_id,))
+        activity_rows = cursor.fetchall()
+        
+        recent_activity = []
+        for row in activity_rows:
+            action, details, created_at = row
+            if created_at:
+                if isinstance(created_at, str):
+                    formatted_time = created_at[:16] if len(created_at) > 16 else created_at
+                else:
+                    formatted_time = created_at.strftime('%Y-%m-%d %H:%M')
+            else:
+                formatted_time = ''
+            recent_activity.append((action, details, formatted_time))
+        
+    finally:
+        conn.close()
     
     return render_template("usage_analytics.html", 
                          replies_sent=replies_sent_monthly,

@@ -25,6 +25,7 @@ def create_subscription_checkout():
     user_id = session['user_id']
     user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
     
+    conn = None
     try:
         # Create or retrieve Stripe customer
         conn = get_db_connection()
@@ -61,6 +62,7 @@ def create_subscription_checkout():
                 logger.info(f"Created new Stripe customer: {customer_id}")
         
         conn.close()
+        conn = None  # Mark as closed so finally doesn't double-close
         
         # Create Checkout Session for subscription
         checkout_session = stripe.checkout.Session.create(
@@ -80,12 +82,18 @@ def create_subscription_checkout():
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error: {e}")
-        flash(f"❌ Payment error: {str(e)}", "error")
+        flash("❌ Payment error. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error creating subscription checkout: {e}")
         flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @payments_bp.route("/checkout/standard", methods=["POST"])
@@ -124,6 +132,7 @@ def create_standard_checkout():
     user_id = session['user_id']
     user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
     
+    conn = None
     try:
         # Create or retrieve Stripe customer
         conn = get_db_connection()
@@ -145,13 +154,10 @@ def create_standard_checkout():
             # Check if customer already exists in Stripe by email
             existing_customers = stripe.Customer.list(email=user_email, limit=1)
             if existing_customers.data:
-                # Use existing customer
                 customer_id = existing_customers.data[0].id
-                # Update metadata to ensure user_id is set
                 stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
                 logger.info(f"Found existing Stripe customer: {customer_id}")
             else:
-                # Create new Stripe customer
                 customer = stripe.Customer.create(
                     email=user_email,
                     metadata={'user_id': str(user_id)}
@@ -160,6 +166,7 @@ def create_standard_checkout():
                 logger.info(f"Created new Stripe customer: {customer_id}")
         
         conn.close()
+        conn = None
         
         # Create Checkout Session for Standard plan subscription
         checkout_session = stripe.checkout.Session.create(
@@ -179,12 +186,18 @@ def create_standard_checkout():
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error: {e}")
-        flash(f"Payment error: {str(e)}", "error")
+        flash("❌ Payment error. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error creating Standard plan checkout: {e}")
         flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @payments_bp.route("/checkout/addon", methods=["POST"])
@@ -198,6 +211,7 @@ def create_addon_checkout():
     user_id = session['user_id']
     user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
     
+    conn = None
     try:
         # Check if user has an active subscription (required for add-ons)
         conn = get_db_connection()
@@ -215,7 +229,6 @@ def create_addon_checkout():
         
         if not result or not result[0]:
             flash("❌ You need an active subscription to purchase add-ons.", "error")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         customer_id, subscription_status, plan_type = result
@@ -223,12 +236,10 @@ def create_addon_checkout():
         # Check if subscription is active
         if subscription_status != 'active':
             flash("❌ You need an active subscription to purchase add-ons. Please reactivate your subscription.", "error")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         # Check if customer exists in Stripe
         if not customer_id:
-            # Check if customer already exists in Stripe by email
             existing_customers = stripe.Customer.list(email=user_email, limit=1)
             if existing_customers.data:
                 customer_id = existing_customers.data[0].id
@@ -236,10 +247,10 @@ def create_addon_checkout():
                 logger.info(f"Found existing Stripe customer: {customer_id}")
             else:
                 flash("❌ Customer account not found. Please contact support.", "error")
-                conn.close()
                 return redirect(url_for('dashboard_bp.dashboard'))
         
         conn.close()
+        conn = None
         
         # Create Checkout Session for one-time payment
         checkout_session = stripe.checkout.Session.create(
@@ -259,12 +270,18 @@ def create_addon_checkout():
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error: {e}")
-        flash(f"Payment error: {str(e)}", "error")
+        flash("❌ Payment error. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error creating addon checkout: {e}")
         flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @payments_bp.route("/checkout/success")
@@ -316,19 +333,26 @@ def create_upgrade_checkout():
     user_id = session['user_id']
     
     # Check if user has active Starter plan
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    cursor.execute(f"""
-        SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
-        FROM subscriptions
-        WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'starter'
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (user_id,))
-    subscription = cursor.fetchone()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'starter'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription = cursor.fetchone()
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
     
     if not subscription:
         flash("❌ No active Starter plan found to upgrade.", "error")
@@ -337,13 +361,8 @@ def create_upgrade_checkout():
     subscription_id, customer_id, _, _ = subscription
     
     try:
-        # Update subscription in Stripe to Standard plan (we'll need Standard price ID)
-        # For now, create new checkout session for Standard plan
-        # Note: In production, you'd want to use Stripe's subscription update API
-        # This is a simplified version that creates a new subscription
         user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
         
-        # Get Standard plan price ID from config
         standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID
         if not standard_price_id:
             flash("❌ Standard plan not configured. Please contact support.", "error")
@@ -366,7 +385,7 @@ def create_upgrade_checkout():
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error during upgrade: {e}")
-        flash(f"❌ Upgrade error: {str(e)}", "error")
+        flash("❌ Upgrade error. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error during upgrade: {e}")
@@ -385,19 +404,26 @@ def create_downgrade_checkout():
     user_id = session['user_id']
     
     # Check if user has active Standard plan
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    cursor.execute(f"""
-        SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
-        FROM subscriptions
-        WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'standard'
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (user_id,))
-    subscription = cursor.fetchone()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        cursor.execute(f"""
+            SELECT stripe_subscription_id, stripe_customer_id, plan_type, status
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'standard'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        subscription = cursor.fetchone()
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
     
     if not subscription:
         flash("❌ No active Standard plan found to downgrade.", "error")
@@ -406,7 +432,6 @@ def create_downgrade_checkout():
     subscription_id, customer_id, _, _ = subscription
     
     try:
-        # Create checkout session for Starter plan
         user_email = session.get('email') or get_user_by_id(user_id).get('email', '')
         
         checkout_session = stripe.checkout.Session.create(
@@ -426,7 +451,7 @@ def create_downgrade_checkout():
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error during downgrade: {e}")
-        flash(f"❌ Downgrade error: {str(e)}", "error")
+        flash("❌ Downgrade error. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error during downgrade: {e}")
@@ -440,6 +465,7 @@ def cancel_subscription():
     """Cancel subscription - cancel at period end"""
     user_id = session['user_id']
     
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -457,12 +483,12 @@ def cancel_subscription():
         
         if not subscription:
             flash("❌ No active subscription found.", "error")
-            conn.close()
             return redirect(url_for('dashboard_bp.dashboard'))
         
         subscription_id, plan_type = subscription
         logger.info(f"Canceling subscription {subscription_id} (plan: {plan_type}) for user {user_id}")
         conn.close()
+        conn = None
         
         # Cancel subscription immediately in Stripe
         try:
@@ -497,17 +523,21 @@ def cancel_subscription():
                 logger.warning(f"Plan type changed from {plan_type} to {updated_plan_type} - this should not happen!")
         
         conn.commit()
-        conn.close()
         
         flash("Subscription canceled. You can still use your remaining replies, but cannot purchase add-ons.", "success")
-        
         return redirect(url_for('dashboard_bp.dashboard'))
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error canceling subscription: {e}")
-        flash(f"❌ Error canceling subscription: {str(e)}", "error")
+        flash("❌ Error canceling subscription. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     except Exception as e:
         logger.error(f"Error canceling subscription: {e}")
         flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass

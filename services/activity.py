@@ -28,33 +28,41 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         conn = get_db_connection()
         should_close = True
     
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    
-    if connection_id:
-        cursor.execute(f"""
-            SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
-                   personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
-                   main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
-                   culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
-                   blocked_users, temperature, max_tokens, is_active
-            FROM client_settings 
-            WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
-        """, (user_id, connection_id))
-    else:
-        cursor.execute(f"""
-            SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
-                   personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
-                   main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
-                   culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
-                   use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
-                   blocked_users, temperature, max_tokens, is_active
-            FROM client_settings 
-            WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
-        """, (user_id,))
-    
-    row = cursor.fetchone()
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        if connection_id:
+            cursor.execute(f"""
+                SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
+                       personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
+                       main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
+                       culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
+                       use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
+                       blocked_users, temperature, max_tokens, is_active
+                FROM client_settings 
+                WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
+            """, (user_id, connection_id))
+        else:
+            cursor.execute(f"""
+                SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
+                       personality_type, bot_values, tone_of_voice, habits_quirks, confidence_level, emotional_range,
+                       main_goal, fears_insecurities, what_drives_them, obstacles, backstory, family_relationships,
+                       culture_environment, hobbies_interests, reply_style, emoji_slang, conflict_handling, preferred_topics,
+                       use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
+                       blocked_users, temperature, max_tokens, is_active
+                FROM client_settings 
+                WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
+            """, (user_id,))
+        
+        row = cursor.fetchone()
+    except Exception:
+        if should_close:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        raise
     
     if should_close:
         conn.close()
@@ -159,15 +167,30 @@ def log_activity(user_id, action_type, description=None, conn=None):
         conn = get_db_connection()
         should_close = True
     
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        
+        # Get IP address safely — may not be available in webhook context
+        try:
+            ip_addr = request.remote_addr
+        except RuntimeError:
+            ip_addr = None
+        
+        cursor.execute(f"""
+            INSERT INTO activity_logs (user_id, action, details, ip_address)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+        """, (user_id, action_type, description, ip_addr))
+        
+        conn.commit()
+    except Exception:
+        if should_close:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        raise
     
-    cursor.execute(f"""
-        INSERT INTO activity_logs (user_id, action, details, ip_address)
-        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
-    """, (user_id, action_type, description, request.remote_addr))
-    
-    conn.commit()
     if should_close:
         conn.close()
 
@@ -190,103 +213,22 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
         conn = get_db_connection()
         should_close = True
     
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
     
-    # Prepare the data
-    links_json = json.dumps(settings.get('links', []))
-    posts_json = json.dumps(settings.get('posts', []))
-    samples_json = json.dumps(settings.get('conversation_samples', {}))
-    faqs_json = json.dumps(settings.get('faqs', []))
-    blocked_users_json = json.dumps(settings.get('blocked_users', []))
-    max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
+        # Prepare the data
+        links_json = json.dumps(settings.get('links', []))
+        posts_json = json.dumps(settings.get('posts', []))
+        samples_json = json.dumps(settings.get('conversation_samples', {}))
+        faqs_json = json.dumps(settings.get('faqs', []))
+        blocked_users_json = json.dumps(settings.get('blocked_users', []))
+        max_tokens_value = normalize_max_tokens(settings.get('max_tokens', 3000))
     
-    # Use different syntax for PostgreSQL vs SQLite
-    if Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")):
-            cursor.execute(f"""
-            INSERT INTO client_settings 
-            (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
-             bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
-             confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
-             backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
-             instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
-            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
-            bot_personality = EXCLUDED.bot_personality,
-            bot_name = EXCLUDED.bot_name,
-            bot_age = EXCLUDED.bot_age,
-            bot_gender = EXCLUDED.bot_gender,
-            bot_location = EXCLUDED.bot_location,
-            bot_occupation = EXCLUDED.bot_occupation,
-            bot_education = EXCLUDED.bot_education,
-            personality_type = EXCLUDED.personality_type,
-            bot_values = EXCLUDED.bot_values,
-            tone_of_voice = EXCLUDED.tone_of_voice,
-            habits_quirks = EXCLUDED.habits_quirks,
-            confidence_level = EXCLUDED.confidence_level,
-            emotional_range = EXCLUDED.emotional_range,
-            main_goal = EXCLUDED.main_goal,
-            fears_insecurities = EXCLUDED.fears_insecurities,
-            what_drives_them = EXCLUDED.what_drives_them,
-            obstacles = EXCLUDED.obstacles,
-            backstory = EXCLUDED.backstory,
-            family_relationships = EXCLUDED.family_relationships,
-            culture_environment = EXCLUDED.culture_environment,
-            hobbies_interests = EXCLUDED.hobbies_interests,
-            reply_style = EXCLUDED.reply_style,
-            emoji_slang = EXCLUDED.emoji_slang,
-            conflict_handling = EXCLUDED.conflict_handling,
-            preferred_topics = EXCLUDED.preferred_topics,
-            use_active_hours = EXCLUDED.use_active_hours,
-            active_start = EXCLUDED.active_start,
-            active_end = EXCLUDED.active_end,
-            links = EXCLUDED.links,
-            posts = EXCLUDED.posts,
-            conversation_samples = EXCLUDED.conversation_samples,
-            faqs = EXCLUDED.faqs,
-            instagram_url = EXCLUDED.instagram_url,
-            avoid_topics = EXCLUDED.avoid_topics,
-            blocked_users = EXCLUDED.blocked_users,
-            temperature = EXCLUDED.temperature,
-            max_tokens = EXCLUDED.max_tokens,
-            is_active = EXCLUDED.is_active,
-            updated_at = CURRENT_TIMESTAMP
-        """, (user_id, connection_id, 
-              settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
-              settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
-              settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
-              settings.get('tone_of_voice', ''), settings.get('habits_quirks', ''), settings.get('confidence_level', ''),
-              settings.get('emotional_range', ''), settings.get('main_goal', ''), settings.get('fears_insecurities', ''),
-              settings.get('what_drives_them', ''), settings.get('obstacles', ''), settings.get('backstory', ''),
-              settings.get('family_relationships', ''), settings.get('culture_environment', ''), settings.get('hobbies_interests', ''),
-              settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
-              settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
-              settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              blocked_users_json, 0.7, max_tokens_value,
-              settings.get('auto_reply', True)))
-    else:
-        cursor.execute(f"""
-                INSERT OR REPLACE INTO client_settings 
-                (user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
-                 bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
-                 confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
-                 backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
-                 conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
-                 instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
-                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            """, (user_id, connection_id, 
+        # Use different syntax for PostgreSQL vs SQLite
+        is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+        
+        params = (user_id, connection_id, 
                   settings.get('bot_personality', ''), settings.get('bot_name', ''), settings.get('bot_age', ''),
                   settings.get('bot_gender', ''), settings.get('bot_location', ''), settings.get('bot_occupation', ''),
                   settings.get('bot_education', ''), settings.get('personality_type', ''), settings.get('bot_values', ''),
@@ -297,10 +239,64 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                   settings.get('reply_style', ''), settings.get('emoji_slang', ''), settings.get('conflict_handling', ''),
                   settings.get('preferred_topics', ''), settings.get('use_active_hours', False), 
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'), 
-              links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
-              blocked_users_json, 0.7, max_tokens_value,
-                  settings.get('auto_reply', True)))
+                  links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
+                  blocked_users_json, 0.7, max_tokens_value,
+                  settings.get('auto_reply', True))
+        
+        cols = """(user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location, 
+             bot_occupation, bot_education, personality_type, bot_values, tone_of_voice, habits_quirks, 
+             confidence_level, emotional_range, main_goal, fears_insecurities, what_drives_them, obstacles,
+             backstory, family_relationships, culture_environment, hobbies_interests, reply_style, emoji_slang,
+             conflict_handling, preferred_topics, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
+             instagram_url, avoid_topics, blocked_users, temperature, max_tokens, is_active)"""
+        
+        vals = f"""VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"""
+        
+        if is_pg:
+            cursor.execute(f"""
+                INSERT INTO client_settings {cols}
+                {vals}
+                ON CONFLICT (user_id, instagram_connection_id) DO UPDATE SET
+                bot_personality = EXCLUDED.bot_personality, bot_name = EXCLUDED.bot_name,
+                bot_age = EXCLUDED.bot_age, bot_gender = EXCLUDED.bot_gender,
+                bot_location = EXCLUDED.bot_location, bot_occupation = EXCLUDED.bot_occupation,
+                bot_education = EXCLUDED.bot_education, personality_type = EXCLUDED.personality_type,
+                bot_values = EXCLUDED.bot_values, tone_of_voice = EXCLUDED.tone_of_voice,
+                habits_quirks = EXCLUDED.habits_quirks, confidence_level = EXCLUDED.confidence_level,
+                emotional_range = EXCLUDED.emotional_range, main_goal = EXCLUDED.main_goal,
+                fears_insecurities = EXCLUDED.fears_insecurities, what_drives_them = EXCLUDED.what_drives_them,
+                obstacles = EXCLUDED.obstacles, backstory = EXCLUDED.backstory,
+                family_relationships = EXCLUDED.family_relationships, culture_environment = EXCLUDED.culture_environment,
+                hobbies_interests = EXCLUDED.hobbies_interests, reply_style = EXCLUDED.reply_style,
+                emoji_slang = EXCLUDED.emoji_slang, conflict_handling = EXCLUDED.conflict_handling,
+                preferred_topics = EXCLUDED.preferred_topics, use_active_hours = EXCLUDED.use_active_hours,
+                active_start = EXCLUDED.active_start, active_end = EXCLUDED.active_end,
+                links = EXCLUDED.links, posts = EXCLUDED.posts,
+                conversation_samples = EXCLUDED.conversation_samples, faqs = EXCLUDED.faqs,
+                instagram_url = EXCLUDED.instagram_url, avoid_topics = EXCLUDED.avoid_topics,
+                blocked_users = EXCLUDED.blocked_users, temperature = EXCLUDED.temperature,
+                max_tokens = EXCLUDED.max_tokens, is_active = EXCLUDED.is_active,
+                updated_at = CURRENT_TIMESTAMP
+            """, params)
+        else:
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO client_settings {cols}
+                {vals}
+            """, params)
     
-    conn.commit()
+        conn.commit()
+    except Exception:
+        if should_close:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        raise
+    
     if should_close:
         conn.close()
