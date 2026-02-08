@@ -1,5 +1,6 @@
 """Webhook routes — Instagram and Stripe webhooks."""
 import logging
+import threading
 from flask import Blueprint, request, jsonify
 import json
 import os
@@ -241,257 +242,292 @@ def webhook():
             logger.info("No processable messages (echo-only or no text). Skipping DB.")
             return "EVENT_RECEIVED", 200
         
-        # Open ONE database connection for the entire webhook processing (Issue 1: no full table scan or connection log)
-        webhook_conn = get_db_connection()
-        if not webhook_conn:
-            logger.error("Could not connect to database")
-            return "Internal Server Error", 500
-        
-        try:
-            cursor = webhook_conn.cursor()
-
-            for sender_id, events in incoming_by_sender.items():
-                events.sort(key=lambda item: item.get("timestamp", 0))
-                combined_preview = " | ".join(evt["text"] for evt in events)
-                logger.info(f"Aggregated {len(events)} incoming message(s) from {sender_id}: {combined_preview}")
-
-                latest_event = events[-1]
-                recipient_id = latest_event.get("recipient_id")
-                entry_page_id = latest_event.get("page_id")
-                message_mid = latest_event.get("mid")
-
-                # Idempotency: atomically claim this message mid using INSERT ... ON CONFLICT.
-                # This eliminates the TOCTOU race where two concurrent retries both pass a SELECT check.
-                if message_mid:
-                    placeholder = get_param_placeholder()
-                    try:
-                        is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-                        if is_pg:
-                            cursor.execute(
-                                f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder}) ON CONFLICT (mid) DO NOTHING",
-                                (message_mid,)
-                            )
-                        else:
-                            cursor.execute(
-                                f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder})",
-                                (message_mid,)
-                            )
-                        webhook_conn.commit()
-                        if cursor.rowcount == 0:
-                            # Row already existed — another worker already claimed this mid
-                            logger.info(f"Message mid={message_mid[:20]}... already processed, skipping (idempotent)")
-                            continue
-                    except Exception as e:
-                        logger.warning(f"Mid idempotency claim failed: {e}")
-                        try:
-                            webhook_conn.rollback()
-                        except Exception:
-                            pass
-                        # If table is missing, create it so future requests have idempotency
-                        err_str = str(e).lower()
-                        if "does not exist" in err_str or "relation" in err_str:
-                            try:
-                                if is_pg:
-                                    cursor.execute("""
-                                        CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
-                                            mid VARCHAR(512) PRIMARY KEY,
-                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                                        )
-                                    """)
-                                else:
-                                    cursor.execute("""
-                                        CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
-                                            mid TEXT PRIMARY KEY,
-                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                                        )
-                                    """)
-                                webhook_conn.commit()
-                                logger.info("Created instagram_webhook_processed_mids table (was missing)")
-                            except Exception as e2:
-                                logger.warning(f"Could not create instagram_webhook_processed_mids table: {e2}")
-                                try:
-                                    webhook_conn.rollback()
-                                except Exception:
-                                    pass
-                        # Proceed without mid idempotency for this request
-
-                logger.info(f"Message batch targeted Instagram account: {recipient_id}")
-                logger.info(f"Page ID from entry: {entry_page_id}")
-
-                instagram_connection = None
-                if recipient_id:
-                    logger.debug(f"Looking for Instagram connection with user ID: {recipient_id}")
-                    instagram_connection = get_instagram_connection_by_id(recipient_id, webhook_conn)
-                    if instagram_connection:
-                        logger.info("Found connection by Instagram User ID!")
-                    else:
-                        logger.warning(f"No connection found with Instagram User ID: {recipient_id}")
-
-                if not instagram_connection and entry_page_id:
-                    logger.debug(f"Trying to find connection by page ID: {entry_page_id}")
-                    instagram_connection = get_instagram_connection_by_page_id(entry_page_id, webhook_conn)
-                    if instagram_connection:
-                        logger.info("Found connection by Page ID!")
-                    else:
-                        logger.warning(f"No connection found with Page ID: {entry_page_id}")
-
-                if not instagram_connection:
-                    logger.warning(f"No Instagram connection found for account {recipient_id} or page {entry_page_id}")
-                    logger.info("This might be the original Chata account or an unregistered account")
-                    if recipient_id == Config.INSTAGRAM_USER_ID:
-                        logger.info("This is the original Chata account - using hardcoded settings")
-                        access_token = Config.ACCESS_TOKEN
-                        instagram_user_id = Config.INSTAGRAM_USER_ID
-                        connection_id = None
-                        user_id = None  # No user_id for original Chata account
-                    else:
-                        logger.error(f"Unknown Instagram account {recipient_id} - skipping message batch")
-                        continue
-                else:
-                    # #region agent log
-                    _safe = {k: instagram_connection[k] for k in ('id', 'user_id', 'instagram_user_id', 'instagram_page_id', 'is_active') if k in instagram_connection}
-                    logger.info(f"Found Instagram connection: {_safe}")
-                    try:
-                        _dp = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.cursor', 'debug.log')
-                        with open(_dp, 'a', encoding='utf-8') as _f:
-                            _f.write(json.dumps({"hypothesisId": "H1", "message": "connection_logged_safe", "data": {"connection_id": instagram_connection.get('id'), "instagram_user_id": instagram_connection.get('instagram_user_id'), "token_in_log": False}, "timestamp": int(time.time() * 1000), "sessionId": "debug-session"}) + "\n")
-                    except Exception:
-                        pass
-                    # #endregion
-                    access_token = instagram_connection['page_access_token']
-                    instagram_user_id = instagram_connection['instagram_user_id']
-                    connection_id = instagram_connection['id']
-                    user_id = instagram_connection['user_id']
-
-                handler_start = time.time()
-                
-                # Check if bot is paused (only for registered users) - using shared connection
-                if instagram_connection and user_id:
-                    placeholder_check = get_param_placeholder()
-                    try:
-                        cursor.execute(f"""
-                            SELECT COALESCE(bot_paused, FALSE) FROM users WHERE id = {placeholder_check}
-                        """, (user_id,))
-                        pause_result = cursor.fetchone()
-                        if pause_result and pause_result[0]:
-                            logger.info(f"Bot is paused for user {user_id}. Skipping reply.")
-                            total_duration = time.time() - handler_start
-                            logger.info(f"Total webhook handling time for {sender_id}: {total_duration:.2f}s")
-                            continue
-                    except Exception as e:
-                        logger.warning(f"Error checking bot pause status: {e}")
-                
-                for event in events:
-                    save_message(sender_id, event["text"], "", webhook_conn, instagram_connection_id=connection_id)
-                logger.info(f"Saved {len(events)} user message(s) for {sender_id}")
-
-                # Ensure sender username is stored for Conversation History (e.g. professional accounts)
-                if instagram_connection and connection_id and access_token:
-                    try:
-                        ph = get_param_placeholder()
-                        cursor.execute(
-                            f"SELECT username FROM conversation_senders WHERE instagram_connection_id = {ph} AND instagram_user_id = {ph}",
-                            (connection_id, str(sender_id))
-                        )
-                        row = cursor.fetchone()
-                        if not row or not row[0]:
-                            url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
-                            r = requests.get(url, timeout=5)
-                            if r.status_code == 200:
-                                data = r.json()
-                                uname = (data.get("username") or "").strip().lower()
-                                if uname:
-                                    upsert_conversation_sender_username(connection_id, sender_id, uname, webhook_conn)
-                    except Exception as e:
-                        logger.warning(f"Error fetching/saving sender username for conversation list: {e}")
-
-                # Check reply limit before generating response (only for registered users)
-                if instagram_connection and user_id:
-                    has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id, webhook_conn)
-                    if not has_limit:
-                        logger.warning(f"User {user_id} has reached reply limit ({total_used}/{total_available}). Skipping reply.")
-                        total_duration = time.time() - handler_start
-                        logger.info(f"Total webhook handling time for {sender_id}: {total_duration:.2f}s")
-                        continue
-                    else:
-                        logger.info(f"User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
-
-                # Check if sender is blocked (only for registered users)
-                if instagram_connection and user_id and connection_id:
-                    try:
-                        # Get blocked users from settings
-                        client_settings = get_client_settings(user_id, connection_id, webhook_conn)
-                        blocked_users = client_settings.get('blocked_users', [])
-                        
-                        if blocked_users:
-                            # Get sender's username from Instagram API
-                            try:
-                                url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
-                                response = requests.get(url, timeout=5)
-                                if response.status_code == 200:
-                                    sender_data = response.json()
-                                    sender_username = sender_data.get('username', '').lower() if sender_data.get('username') else None
-                                    
-                                    if sender_username and sender_username in blocked_users:
-                                        logger.info(f"Sender {sender_username} is in blocked users list. Skipping reply.")
-                                        total_duration = time.time() - handler_start
-                                        logger.info(f"Total webhook handling time for {sender_id}: {total_duration:.2f}s")
-                                        continue
-                                    else:
-                                        logger.debug(f"Sender {sender_username} is not blocked. Proceeding with reply.")
-                                    if sender_username:
-                                        upsert_conversation_sender_username(connection_id, sender_id, sender_username, webhook_conn)
-                                else:
-                                    logger.warning(f"Could not fetch sender username (status {response.status_code}), proceeding anyway")
-                            except Exception as e:
-                                logger.warning(f"Error checking if sender is blocked: {e}. Proceeding with reply.")
-                    except Exception as e:
-                        logger.warning(f"Error getting client settings for blocked users check: {e}. Proceeding with reply.")
-
-                history = get_last_messages(sender_id, 35, webhook_conn, instagram_connection_id=connection_id)
-                logger.info(f"History for {sender_id}: {len(history)} messages")
-
-                ai_start = time.time()
-                reply_text = get_ai_reply_with_connection(history, connection_id, webhook_conn)
-                ai_duration = time.time() - ai_start
-                logger.info(f"AI reply generation time: {ai_duration:.2f}s")
-                logger.info(f"AI generated reply: {reply_text[:50]}...")
-
-                app_review_manual_send = getattr(Config, 'APP_REVIEW_MANUAL_SEND', False)
-                save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id, sent_via_api=not app_review_manual_send)
-                logger.info(f"Saved bot response for {sender_id}" + (" (pending approval in Conversation History)" if app_review_manual_send else ""))
-
-                if app_review_manual_send:
-                    # App Review mode: do not send via API; user will click Send in Conversation History
-                    pass
-                else:
-                    page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
-                    url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
-                    payload = {
-                        "recipient": {"id": sender_id},
-                        "message": {"text": reply_text}
-                    }
-
-                    send_start = time.time()
-                    r = requests.post(url, json=payload, timeout=45)
-                    send_duration = time.time() - send_start
-                    logger.info(f"Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
-                    if r.status_code != 200:
-                        logger.error(f"Error sending reply: {r.text}")
-                    else:
-                        logger.info(f"Reply sent successfully to {sender_id}")
-                        # Mid already claimed at the top of the loop (atomic idempotency).
-                        # Increment reply count only for registered users and only on successful send
-                        if instagram_connection and user_id:
-                            increment_reply_count(user_id, webhook_conn)
-                    
-                total_duration = time.time() - handler_start
-                logger.info(f"Total webhook handling time for {sender_id}: {total_duration:.2f}s")
-
-        finally:
-            # Close the shared connection at the end
-            if webhook_conn:
-                webhook_conn.close()
-                logger.debug("Closed webhook database connection")
+        # ── Respond to Instagram immediately, process messages in background ──
+        # Instagram expects a 200 within 20 seconds.  The heavy work (DB lookups,
+        # OpenAI call, sending the reply) can take 5-15 s, so we offload it to a
+        # daemon thread and return right away.  The idempotency claim (P1-8) inside
+        # _process_incoming_messages guards against duplicate processing if Instagram
+        # retries before the thread finishes.
+        thread = threading.Thread(
+            target=_process_incoming_messages,
+            args=(incoming_by_sender,),
+            daemon=True,
+            name="webhook-processor",
+        )
+        thread.start()
+        logger.info(f"Dispatched {len(incoming_by_sender)} sender batch(es) to background thread")
 
         return "EVENT_RECEIVED", 200
+
+
+# ---------------------------------------------------------------------------
+# Background webhook processing (runs in a daemon thread)
+# ---------------------------------------------------------------------------
+
+def _process_incoming_messages(incoming_by_sender):
+    """
+    Process incoming Instagram messages in a background thread.
+    
+    This function is the *exact same logic* that used to run synchronously inside
+    the webhook POST handler.  It opens its own DB connection, processes each
+    sender's messages (idempotency check, AI reply, send via API), and closes
+    the connection when done.
+    
+    Runs outside of a Flask request context — only uses module-level imports
+    (Config, database helpers, service functions, logger).
+    """
+    process_start = time.time()
+    
+    # Open ONE database connection for the entire processing
+    webhook_conn = get_db_connection()
+    if not webhook_conn:
+        logger.error("[bg] Could not connect to database — messages will be retried by Instagram")
+        return
+    
+    try:
+        cursor = webhook_conn.cursor()
+
+        for sender_id, events in incoming_by_sender.items():
+            events.sort(key=lambda item: item.get("timestamp", 0))
+            combined_preview = " | ".join(evt["text"] for evt in events)
+            logger.info(f"[bg] Aggregated {len(events)} incoming message(s) from {sender_id}: {combined_preview}")
+
+            latest_event = events[-1]
+            recipient_id = latest_event.get("recipient_id")
+            entry_page_id = latest_event.get("page_id")
+            message_mid = latest_event.get("mid")
+
+            # Idempotency: atomically claim this message mid using INSERT ... ON CONFLICT.
+            # This eliminates the TOCTOU race where two concurrent retries both pass a SELECT check.
+            if message_mid:
+                placeholder = get_param_placeholder()
+                try:
+                    is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                    if is_pg:
+                        cursor.execute(
+                            f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder}) ON CONFLICT (mid) DO NOTHING",
+                            (message_mid,)
+                        )
+                    else:
+                        cursor.execute(
+                            f"INSERT OR IGNORE INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder})",
+                            (message_mid,)
+                        )
+                    webhook_conn.commit()
+                    if cursor.rowcount == 0:
+                        # Row already existed — another worker already claimed this mid
+                        logger.info(f"[bg] Message mid={message_mid[:20]}... already processed, skipping (idempotent)")
+                        continue
+                except Exception as e:
+                    logger.warning(f"[bg] Mid idempotency claim failed: {e}")
+                    try:
+                        webhook_conn.rollback()
+                    except Exception:
+                        pass
+                    # If table is missing, create it so future requests have idempotency
+                    err_str = str(e).lower()
+                    if "does not exist" in err_str or "relation" in err_str:
+                        try:
+                            if is_pg:
+                                cursor.execute("""
+                                    CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+                                        mid VARCHAR(512) PRIMARY KEY,
+                                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                    )
+                                """)
+                            else:
+                                cursor.execute("""
+                                    CREATE TABLE IF NOT EXISTS instagram_webhook_processed_mids (
+                                        mid TEXT PRIMARY KEY,
+                                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                    )
+                                """)
+                            webhook_conn.commit()
+                            logger.info("[bg] Created instagram_webhook_processed_mids table (was missing)")
+                        except Exception as e2:
+                            logger.warning(f"[bg] Could not create instagram_webhook_processed_mids table: {e2}")
+                            try:
+                                webhook_conn.rollback()
+                            except Exception:
+                                pass
+                    # Proceed without mid idempotency for this request
+
+            logger.info(f"[bg] Message batch targeted Instagram account: {recipient_id}")
+            logger.info(f"[bg] Page ID from entry: {entry_page_id}")
+
+            instagram_connection = None
+            if recipient_id:
+                logger.debug(f"[bg] Looking for Instagram connection with user ID: {recipient_id}")
+                instagram_connection = get_instagram_connection_by_id(recipient_id, webhook_conn)
+                if instagram_connection:
+                    logger.info("[bg] Found connection by Instagram User ID!")
+                else:
+                    logger.warning(f"[bg] No connection found with Instagram User ID: {recipient_id}")
+
+            if not instagram_connection and entry_page_id:
+                logger.debug(f"[bg] Trying to find connection by page ID: {entry_page_id}")
+                instagram_connection = get_instagram_connection_by_page_id(entry_page_id, webhook_conn)
+                if instagram_connection:
+                    logger.info("[bg] Found connection by Page ID!")
+                else:
+                    logger.warning(f"[bg] No connection found with Page ID: {entry_page_id}")
+
+            if not instagram_connection:
+                logger.warning(f"[bg] No Instagram connection found for account {recipient_id} or page {entry_page_id}")
+                logger.info("[bg] This might be the original Chata account or an unregistered account")
+                if recipient_id == Config.INSTAGRAM_USER_ID:
+                    logger.info("[bg] This is the original Chata account - using hardcoded settings")
+                    access_token = Config.ACCESS_TOKEN
+                    instagram_user_id = Config.INSTAGRAM_USER_ID
+                    connection_id = None
+                    user_id = None  # No user_id for original Chata account
+                else:
+                    logger.error(f"[bg] Unknown Instagram account {recipient_id} - skipping message batch")
+                    continue
+            else:
+                _safe = {k: instagram_connection[k] for k in ('id', 'user_id', 'instagram_user_id', 'instagram_page_id', 'is_active') if k in instagram_connection}
+                logger.info(f"[bg] Found Instagram connection: {_safe}")
+                access_token = instagram_connection['page_access_token']
+                instagram_user_id = instagram_connection['instagram_user_id']
+                connection_id = instagram_connection['id']
+                user_id = instagram_connection['user_id']
+
+            handler_start = time.time()
+            
+            # Check if bot is paused (only for registered users)
+            if instagram_connection and user_id:
+                placeholder_check = get_param_placeholder()
+                try:
+                    cursor.execute(f"""
+                        SELECT COALESCE(bot_paused, FALSE) FROM users WHERE id = {placeholder_check}
+                    """, (user_id,))
+                    pause_result = cursor.fetchone()
+                    if pause_result and pause_result[0]:
+                        logger.info(f"[bg] Bot is paused for user {user_id}. Skipping reply.")
+                        total_duration = time.time() - handler_start
+                        logger.info(f"[bg] Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                        continue
+                except Exception as e:
+                    logger.warning(f"[bg] Error checking bot pause status: {e}")
+            
+            for event in events:
+                save_message(sender_id, event["text"], "", webhook_conn, instagram_connection_id=connection_id)
+            logger.info(f"[bg] Saved {len(events)} user message(s) for {sender_id}")
+
+            # Ensure sender username is stored for Conversation History (e.g. professional accounts)
+            if instagram_connection and connection_id and access_token:
+                try:
+                    ph = get_param_placeholder()
+                    cursor.execute(
+                        f"SELECT username FROM conversation_senders WHERE instagram_connection_id = {ph} AND instagram_user_id = {ph}",
+                        (connection_id, str(sender_id))
+                    )
+                    row = cursor.fetchone()
+                    if not row or not row[0]:
+                        url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
+                        r = requests.get(url, timeout=5)
+                        if r.status_code == 200:
+                            api_data = r.json()
+                            uname = (api_data.get("username") or "").strip().lower()
+                            if uname:
+                                upsert_conversation_sender_username(connection_id, sender_id, uname, webhook_conn)
+                except Exception as e:
+                    logger.warning(f"[bg] Error fetching/saving sender username for conversation list: {e}")
+
+            # Check reply limit before generating response (only for registered users)
+            if instagram_connection and user_id:
+                has_limit, remaining, total_used, total_available = check_user_reply_limit(user_id, webhook_conn)
+                if not has_limit:
+                    logger.warning(f"[bg] User {user_id} has reached reply limit ({total_used}/{total_available}). Skipping reply.")
+                    total_duration = time.time() - handler_start
+                    logger.info(f"[bg] Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                    continue
+                else:
+                    logger.info(f"[bg] User {user_id} has {remaining} replies remaining ({total_used}/{total_available})")
+
+            # Check if sender is blocked (only for registered users)
+            if instagram_connection and user_id and connection_id:
+                try:
+                    # Get blocked users from settings
+                    client_settings = get_client_settings(user_id, connection_id, webhook_conn)
+                    blocked_users = client_settings.get('blocked_users', [])
+                    
+                    if blocked_users:
+                        # Get sender's username from Instagram API
+                        try:
+                            url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=username&access_token={access_token}"
+                            response = requests.get(url, timeout=5)
+                            if response.status_code == 200:
+                                sender_data = response.json()
+                                sender_username = sender_data.get('username', '').lower() if sender_data.get('username') else None
+                                
+                                if sender_username and sender_username in blocked_users:
+                                    logger.info(f"[bg] Sender {sender_username} is in blocked users list. Skipping reply.")
+                                    total_duration = time.time() - handler_start
+                                    logger.info(f"[bg] Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+                                    continue
+                                else:
+                                    logger.debug(f"[bg] Sender {sender_username} is not blocked. Proceeding with reply.")
+                                if sender_username:
+                                    upsert_conversation_sender_username(connection_id, sender_id, sender_username, webhook_conn)
+                            else:
+                                logger.warning(f"[bg] Could not fetch sender username (status {response.status_code}), proceeding anyway")
+                        except Exception as e:
+                            logger.warning(f"[bg] Error checking if sender is blocked: {e}. Proceeding with reply.")
+                except Exception as e:
+                    logger.warning(f"[bg] Error getting client settings for blocked users check: {e}. Proceeding with reply.")
+
+            history = get_last_messages(sender_id, 35, webhook_conn, instagram_connection_id=connection_id)
+            logger.info(f"[bg] History for {sender_id}: {len(history)} messages")
+
+            ai_start = time.time()
+            reply_text = get_ai_reply_with_connection(history, connection_id, webhook_conn)
+            ai_duration = time.time() - ai_start
+            logger.info(f"[bg] AI reply generation time: {ai_duration:.2f}s")
+            logger.info(f"[bg] AI generated reply: {reply_text[:50]}...")
+
+            app_review_manual_send = getattr(Config, 'APP_REVIEW_MANUAL_SEND', False)
+            save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id, sent_via_api=not app_review_manual_send)
+            logger.info(f"[bg] Saved bot response for {sender_id}" + (" (pending approval in Conversation History)" if app_review_manual_send else ""))
+
+            if app_review_manual_send:
+                # App Review mode: do not send via API; user will click Send in Conversation History
+                pass
+            else:
+                page_id_for_send = instagram_connection['instagram_page_id'] if instagram_connection else Config.INSTAGRAM_USER_ID
+                url = f"https://graph.facebook.com/v18.0/{page_id_for_send}/messages?access_token={access_token}"
+                payload = {
+                    "recipient": {"id": sender_id},
+                    "message": {"text": reply_text}
+                }
+
+                send_start = time.time()
+                r = requests.post(url, json=payload, timeout=45)
+                send_duration = time.time() - send_start
+                logger.info(f"[bg] Sent reply to {sender_id} via {instagram_user_id}: {r.status_code} (send time {send_duration:.2f}s)")
+                if r.status_code != 200:
+                    logger.error(f"[bg] Error sending reply: {r.text}")
+                else:
+                    logger.info(f"[bg] Reply sent successfully to {sender_id}")
+                    # Mid already claimed at the top of the loop (atomic idempotency).
+                    # Increment reply count only for registered users and only on successful send
+                    if instagram_connection and user_id:
+                        increment_reply_count(user_id, webhook_conn)
+                
+            total_duration = time.time() - handler_start
+            logger.info(f"[bg] Total webhook handling time for {sender_id}: {total_duration:.2f}s")
+
+    except Exception as e:
+        # Catch-all: errors in background threads are silent unless we log them
+        logger.error(f"[bg] Unhandled error processing webhook messages: {e}", exc_info=True)
+    finally:
+        # Close the shared connection at the end
+        if webhook_conn:
+            try:
+                webhook_conn.close()
+            except Exception:
+                pass
+            logger.debug("[bg] Closed webhook database connection")
+    
+    total_process_time = time.time() - process_start
+    logger.info(f"[bg] Background webhook processing completed in {total_process_time:.2f}s")
