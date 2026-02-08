@@ -196,7 +196,5 @@ def _verify_instagram_webhook_signature(raw_body, signature_header):
     if not signature_header.startswith(prefix):
         return False
     received = signature_header[len(prefix):].strip()
-    expected = base64.b64encode(
-        hmac.new(secret, raw_body, digestmod=hashlib.sha256).digest()
-    ).decode("utf-8")
+    expected = hmac.new(secret, raw_body, digestmod=hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, received)

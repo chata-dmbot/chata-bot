@@ -182,7 +182,7 @@ def webhook():
                     secret_len = len(_secret_str)
                     _secret = _secret_str.encode("utf-8")
                     _received = sig_header[len("sha256="):].strip() if sig_header.startswith("sha256=") else ""
-                    _expected = base64.b64encode(hmac.new(_secret, raw_body, digestmod=hashlib.sha256).digest()).decode("utf-8")
+                    _expected = hmac.new(_secret, raw_body, digestmod=hashlib.sha256).hexdigest()
                     # Body fingerprint: SHA256 of raw body (what we're hashing)
                     body_sha = hashlib.sha256(raw_body).hexdigest() if raw_body else ""
                     # Safe secret hints: compare with Meta App secret (first 2 + last 4 chars only)
