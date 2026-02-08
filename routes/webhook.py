@@ -34,8 +34,8 @@ def stripe_webhook():
     sig_header = request.headers.get('Stripe-Signature')
     
     if not Config.STRIPE_WEBHOOK_SECRET:
-        logger.warning("STRIPE_WEBHOOK_SECRET not set. Webhook verification skipped.")
-        return jsonify({'status': 'webhook_secret_not_set'}), 200
+        logger.warning("STRIPE_WEBHOOK_SECRET not set. Rejecting Stripe webhook.")
+        return jsonify({'error': 'webhook not configured'}), 503
     
     try:
         event = stripe.Webhook.construct_event(

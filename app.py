@@ -13,7 +13,7 @@ import stripe  # type: ignore[reportMissingImports]
 
 from config import Config
 from database import get_db_connection, get_param_placeholder, init_database
-from health import health_check, get_system_info
+from health import health_check
 
 # ---------------------------------------------------------------------------
 # Load environment variables
@@ -116,9 +116,7 @@ def health():
 
 @app.route("/health/detailed")
 def health_detailed():
-    data = health_check()
-    data["system"] = get_system_info()
-    return jsonify(data)
+    return jsonify(health_check())
 
 
 @app.route("/ping")
@@ -128,12 +126,7 @@ def ping():
 
 @app.route("/webhook/test")
 def webhook_test():
-    return jsonify({
-        "status": "webhook_url_accessible",
-        "url": f"{Config.BASE_URL}/webhook",
-        "verify_token_set": bool(Config.VERIFY_TOKEN),
-        "timestamp": datetime.utcnow().isoformat(),
-    })
+    return jsonify({"status": "ok", "timestamp": datetime.utcnow().isoformat()})
 
 
 # ---------------------------------------------------------------------------

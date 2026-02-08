@@ -8,6 +8,7 @@ import json
 import stripe  # type: ignore[reportMissingImports]
 from config import Config
 from database import get_db_connection, get_param_placeholder
+from extensions import csrf
 from services.auth import login_required
 from services.users import get_user_by_id
 from services.messaging import get_conversation_list, get_messages_for_conversation, get_conversation_message_count
@@ -231,8 +232,14 @@ def api_conversation_messages(connection_id, instagram_user_id):
         )
         if not cursor.fetchone():
             return jsonify({"error": "Connection not found"}), 404
-        limit = min(int(request.args.get("limit", 10)), 50)
-        offset = int(request.args.get("offset", 0))
+        try:
+            limit = min(max(1, int(request.args.get("limit", 10))), 50)
+        except (ValueError, TypeError):
+            limit = 10
+        try:
+            offset = max(0, min(int(request.args.get("offset", 0)), 1000))
+        except (ValueError, TypeError):
+            offset = 0
         messages = get_messages_for_conversation(connection_id, instagram_user_id, limit=limit, offset=offset, conn=conn)
         total = get_conversation_message_count(connection_id, instagram_user_id, conn=conn)
         return jsonify({"messages": messages, "total": total})
@@ -240,9 +247,9 @@ def api_conversation_messages(connection_id, instagram_user_id):
         conn.close()
 
 
-# TODO: csrf.exempt — exempt this endpoint when registering the blueprint in app.py
 @dashboard_bp.route("/api/conversation-history/<int:connection_id>/<instagram_user_id>/send-pending", methods=["POST"])
 @login_required
+@csrf.exempt
 def api_send_pending_reply(connection_id, instagram_user_id):
     """Send a pending bot reply (App Review manual-send mode). Request body: {"message_id": 123}."""
     user_id = session["user_id"]
