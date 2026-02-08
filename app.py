@@ -8,9 +8,7 @@ import io
 import logging
 from datetime import datetime
 from flask import Flask, request, redirect, url_for, flash, session, jsonify
-from flask_limiter import Limiter  # type: ignore[reportMissingImports]
-from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
-from flask_wtf.csrf import CSRFProtect  # type: ignore[reportMissingImports]
+from extensions import limiter, csrf
 import stripe  # type: ignore[reportMissingImports]
 
 from config import Config
@@ -49,16 +47,10 @@ app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
 # ---------------------------------------------------------------------------
-# Extensions
+# Extensions (defined in extensions.py to avoid circular imports)
 # ---------------------------------------------------------------------------
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["400 per day", "100 per hour"],
-    storage_uri="memory://",
-)
-
-csrf = CSRFProtect(app)
+limiter.init_app(app)
+csrf.init_app(app)
 
 # ---------------------------------------------------------------------------
 # Stripe
@@ -179,9 +171,8 @@ app.register_blueprint(pages_bp)
 csrf.exempt(webhook_bp)
 
 # ---------------------------------------------------------------------------
-# Make limiter and csrf available for blueprint imports
+# Extensions are in extensions.py — blueprints import from there directly.
 # ---------------------------------------------------------------------------
-# (Blueprints that need `limiter` or `csrf` import them: `from app import limiter, csrf`)
 
 
 # ---------------------------------------------------------------------------

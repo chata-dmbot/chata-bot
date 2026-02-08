@@ -19,14 +19,7 @@ from services.instagram import discover_instagram_user_id
 
 auth_bp = Blueprint('auth', __name__)
 
-# ---------------------------------------------------------------------------
-# Lazy import: the Limiter instance lives in app.py and is bound to the app.
-# We import it lazily so blueprints don't create circular imports at
-# module-load time.  Flask-Limiter decorators work on blueprints the same
-# way they work on the app object — they just need a reference to the
-# Limiter instance.
-# ---------------------------------------------------------------------------
-from app import limiter  # noqa: E402
+from extensions import limiter
 
 
 # ── signup ────────────────────────────────────────────────────────────────
