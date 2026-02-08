@@ -177,27 +177,27 @@ def webhook():
             except Exception:
                 pass
             # #endregion
-                if Config.FACEBOOK_APP_SECRET:
-                    if not _sig_ok and raw_body:
-                        # Fallback 1: proxy/server may add or drop trailing newline; Meta signs exact bytes they send.
-                        body_stripped = raw_body.rstrip(b"\r\n")
-                        if body_stripped != raw_body and _verify_instagram_webhook_signature(body_stripped, sig_header):
-                            _sig_ok = True
-                            logger.info("Webhook signature verified using body.rstrip(\\r\\n) fallback (trailing newline difference)")
-                        if not _sig_ok and not raw_body.endswith(b"\n") and _verify_instagram_webhook_signature(raw_body + b"\n", sig_header):
-                            _sig_ok = True
-                            logger.info("Webhook signature verified using body+\\n fallback (Meta sends trailing newline)")
-                        if not _sig_ok:
-                            # Fallback 2: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
-                            try:
-                                body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
-                                compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
-                                if _verify_instagram_webhook_signature(compact_body, sig_header):
-                                    _sig_ok = True
-                                    logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
-                            except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
-                                pass
+            if Config.FACEBOOK_APP_SECRET:
+                if not _sig_ok and raw_body:
+                    # Fallback 1: proxy/server may add or drop trailing newline; Meta signs exact bytes they send.
+                    body_stripped = raw_body.rstrip(b"\r\n")
+                    if body_stripped != raw_body and _verify_instagram_webhook_signature(body_stripped, sig_header):
+                        _sig_ok = True
+                        logger.info("Webhook signature verified using body.rstrip(\\r\\n) fallback (trailing newline difference)")
+                    if not _sig_ok and not raw_body.endswith(b"\n") and _verify_instagram_webhook_signature(raw_body + b"\n", sig_header):
+                        _sig_ok = True
+                        logger.info("Webhook signature verified using body+\\n fallback (Meta sends trailing newline)")
                     if not _sig_ok:
+                        # Fallback 2: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
+                        try:
+                            body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
+                            compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
+                            if _verify_instagram_webhook_signature(compact_body, sig_header):
+                                _sig_ok = True
+                                logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
+                        except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+                            pass
+                if not _sig_ok:
                     _secret_str = (Config.FACEBOOK_APP_SECRET or "").strip()
                     secret_len = len(_secret_str)
                     _secret = _secret_str.encode("utf-8")
