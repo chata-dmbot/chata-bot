@@ -442,7 +442,19 @@
     </nav>
 {% endblock %}
 
-{% block flash_messages %}
+{% block flash_messages %}{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="dashboard-hero">
+        <div>
+            <h1>Dashboard</h1>
+            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
+            <p>Here you can manage your assistant settings and your own settings</p>
+        </div>
+    </section>
+
+    <!-- Flash Messages (below hero) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="dashboard-content" style="z-index: 20; position: relative;">
@@ -454,17 +466,6 @@
             </div>
         {% endif %}
     {% endwith %}
-{% endblock %}
-
-{% block content %}
-    <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div>
-            <h1>Dashboard</h1>
-            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
-            <p>Here you can manage your assistant settings and your own settings</p>
-        </div>
-    </section>
 
     <!-- Content -->
     <main class="dashboard-content">
