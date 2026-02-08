@@ -40,7 +40,14 @@ class Config:
     # Facebook OAuth Configuration
     FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
     FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-    # Instagram webhook signature: default is skip so app works; set to "false" to enable verification when ready
+    # Instagram webhook signature verification (X-Hub-Signature-256).
+    # Set to "true" = SKIP verification (insecure: anyone who knows the URL can POST). Set to "false" = verify.
+    # We default to skip because verification currently fails in production (Render): our HMAC never matches Meta's.
+    # Cause: we fixed encoding (Meta sends hex; we now use hexdigest()). Secret matches Meta. Body we receive is
+    # valid JSON and looks correct, but bytes we hash != bytes Meta signed. Likely the proxy (Render) decompresses
+    # gzip request bodies before our app sees them, so we hash decompressed bytes while Meta signed compressed.
+    # We added compact-JSON fallback (no effect). To re-enable verification: set this env to "false", then either
+    # ensure the platform passes raw body (no decompression) for POST /webhook, or get Meta's exact body format.
     SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION = os.getenv("SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION", "true").lower() in ("true", "1", "yes")
     FACEBOOK_REDIRECT_URI = os.getenv("FACEBOOK_REDIRECT_URI", "https://getchata.com/auth/instagram/callback")
     

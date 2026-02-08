@@ -161,7 +161,8 @@ def webhook():
         logger.debug(f"Webhook signature check: body_len={len(raw_body) if raw_body else 0} has_sig={bool(sig_header)} body_source={body_source} Content-Encoding={content_encoding!r}")
         if not raw_body:
             logger.warning("Webhook raw body is empty - signature will fail (body may have been read elsewhere)")
-        # Signature verification off by default; set SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION=false to enable
+        # Signature verification: see config.py SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION (currently skipped
+        # in prod because body bytes we receive likely differ from Meta's e.g. proxy decompression).
         if Config.SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION:
             _sig_ok = True
         else:
