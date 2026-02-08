@@ -119,7 +119,8 @@ def get_ai_reply(history):
 
     openai.api_key = Config.OPENAI_API_KEY
     try:
-        client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
+        timeout = getattr(Config, "OPENAI_TIMEOUT", 60)
+        client = openai.OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
 
         system_prompt = get_setting("bot_personality",
             "You are a helpful and friendly Instagram bot.")
@@ -188,7 +189,8 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
         should_close = True
     
     try:
-        client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
+        timeout = getattr(Config, "OPENAI_TIMEOUT", 60)
+        client = openai.OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
 
         # Extract latest message from follower
         latest_message = ""

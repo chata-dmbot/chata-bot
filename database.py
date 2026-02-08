@@ -23,9 +23,10 @@ def _get_pg_pool():
     if _pg_pool is None:
         database_url = os.environ.get('DATABASE_URL')
         if database_url:
+            size = getattr(Config, 'DATABASE_POOL_SIZE', 10)
             _pg_pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=1,
-                maxconn=10,
+                maxconn=size,
                 dsn=database_url,
             )
     return _pg_pool

@@ -145,15 +145,18 @@ if init_database():
 else:
     logger.error("Database initialization failed - some features may not work")
 
-logger.info("Running database migration...")
-from update_schema import migrate_client_settings
-try:
-    if migrate_client_settings():
-        logger.info("Migration completed successfully")
-    else:
-        logger.warning("Migration had issues but continuing...")
-except Exception as e:
-    logger.warning(f"Migration error (continuing anyway): {e}")
+if Config.RUN_MIGRATIONS_ON_STARTUP:
+    logger.info("Running database migration...")
+    from update_schema import migrate_client_settings
+    try:
+        if migrate_client_settings():
+            logger.info("Migration completed successfully")
+        else:
+            logger.warning("Migration had issues but continuing...")
+    except Exception as e:
+        logger.warning(f"Migration error (continuing anyway): {e}")
+else:
+    logger.info("Skipping migration on startup (RUN_MIGRATIONS_ON_STARTUP=false)")
 
 
 # ---------------------------------------------------------------------------

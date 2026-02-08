@@ -19,9 +19,15 @@ class Config:
     # Database Configuration
     DATABASE_URL = os.getenv("DATABASE_URL")
     DB_FILE = "chata.db"  # Fallback for local development
+    # PostgreSQL connection pool size (per process). Increase under heavy webhook load. Clamped 1–50.
+    _pool_size = int(os.getenv("DATABASE_POOL_SIZE", "10"))
+    DATABASE_POOL_SIZE = max(1, min(50, _pool_size))
+    # Run update_schema migration on app startup. Set to "false" to speed startup and run migrations via release command.
+    RUN_MIGRATIONS_ON_STARTUP = os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").lower() not in ("false", "0", "no")
     
     # OpenAI Configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OPENAI_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "60"))  # seconds per request; prevents hung connections
     
     # Meta/Instagram Configuration
     VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "chata_verify_token")
@@ -68,6 +74,8 @@ class Config:
     ADDON_REPLIES = 150          # replies per add-on purchase
     REPLY_WARNING_THRESHOLD = 50  # warn user when remaining replies fall to this
     
+    # Rate limiting: RATE_LIMIT_STORAGE_URI (default memory://). Set to redis://... in production for shared limits across workers.
+    RATE_LIMIT_STORAGE_URI = os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
     # Production Settings
     PORT = int(os.environ.get("PORT", 5000))
     

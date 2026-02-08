@@ -10,6 +10,7 @@ import stripe
 from config import Config
 
 logger = logging.getLogger("chata.routes.webhook")
+from extensions import limiter
 from database import get_db_connection, get_param_placeholder
 from services.instagram import get_instagram_connection_by_id, get_instagram_connection_by_page_id, upsert_conversation_sender_username, _verify_instagram_webhook_signature
 from services.messaging import save_message, get_last_messages
@@ -131,8 +132,9 @@ def stripe_webhook():
     return jsonify({'status': 'success'}), 200
 
 
-# NOTE: @csrf.exempt and @limiter.limit("150 per minute") must be applied to webhook during blueprint registration
+# NOTE: @csrf.exempt is applied to webhook_bp in app.py
 @webhook_bp.route("/webhook", methods=["GET", "POST"])
+@limiter.limit("150 per minute")
 def webhook():
     if request.method == "GET":
         mode = request.args.get("hub.mode")
@@ -211,7 +213,7 @@ def webhook():
         thread = threading.Thread(
             target=_process_incoming_messages,
             args=(incoming_by_sender,),
-            daemon=True,
+            daemon=False,
             name="webhook-processor",
         )
         thread.start()
