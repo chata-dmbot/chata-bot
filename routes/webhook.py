@@ -177,19 +177,27 @@ def webhook():
             except Exception:
                 pass
             # #endregion
-            if Config.FACEBOOK_APP_SECRET:
-                if not _sig_ok and raw_body:
-                    # Fallback: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
-                    # Try verifying with compact JSON; Meta often sends compact payloads.
-                    try:
-                        body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
-                        compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
-                        if _verify_instagram_webhook_signature(compact_body, sig_header):
+                if Config.FACEBOOK_APP_SECRET:
+                    if not _sig_ok and raw_body:
+                        # Fallback 1: proxy/server may add or drop trailing newline; Meta signs exact bytes they send.
+                        body_stripped = raw_body.rstrip(b"\r\n")
+                        if body_stripped != raw_body and _verify_instagram_webhook_signature(body_stripped, sig_header):
                             _sig_ok = True
-                            logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
-                    except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
-                        pass
-                if not _sig_ok:
+                            logger.info("Webhook signature verified using body.rstrip(\\r\\n) fallback (trailing newline difference)")
+                        if not _sig_ok and not raw_body.endswith(b"\n") and _verify_instagram_webhook_signature(raw_body + b"\n", sig_header):
+                            _sig_ok = True
+                            logger.info("Webhook signature verified using body+\\n fallback (Meta sends trailing newline)")
+                        if not _sig_ok:
+                            # Fallback 2: proxy/WSGI may have re-serialized JSON (different whitespace/key order).
+                            try:
+                                body_str = raw_body.decode("utf-8") if isinstance(raw_body, bytes) else raw_body
+                                compact_body = json.dumps(json.loads(body_str), separators=(",", ":")).encode("utf-8")
+                                if _verify_instagram_webhook_signature(compact_body, sig_header):
+                                    _sig_ok = True
+                                    logger.info("Webhook signature verified using compact JSON fallback (raw body bytes differed from Meta's)")
+                            except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+                                pass
+                    if not _sig_ok:
                     _secret_str = (Config.FACEBOOK_APP_SECRET or "").strip()
                     secret_len = len(_secret_str)
                     _secret = _secret_str.encode("utf-8")
@@ -208,6 +216,7 @@ def webhook():
                     # Body diagnostics: if something upstream changed the body, we need to see what we actually received
                     logger.error(f"body_len={len(raw_body)} content_encoding={request.headers.get('Content-Encoding', '(none)')!r}")
                     logger.error(f"body_first_80_bytes_hex={raw_body[:80].hex()!r}")
+                    logger.error(f"body_last_20_bytes_hex={raw_body[-20:].hex()!r} (check for trailing \\n/\\r)")
                     logger.error(f"received_sig_full={_received!r}")
                     return "Forbidden", 403
             else:

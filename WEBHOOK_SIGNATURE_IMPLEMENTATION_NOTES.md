@@ -27,8 +27,10 @@ Based on research (see PDF: *Fixing Meta Instagram Webhook Signature Verificatio
 3. **Order of operations**  
    We never call `request.get_json()` or any body parsing before signature verification. Verification runs first, then we parse JSON for processing.
 
-4. **Fallback**  
-   If raw-body verification fails, we try once with **compact JSON** (no spaces, same key order) in case something re-serialized the body; research suggests this is not Meta’s normal behavior, so this is a best-effort fallback.
+4. **Fallbacks** (if raw verification fails)  
+   - **Trailing newline**: try `body.rstrip(b"\r\n")` and `body + b"\n"` (proxy/server may add or drop a trailing newline).  
+   - **Compact JSON**: try `json.dumps(json.loads(body), separators=(",", ":"))` in case something re-serialized the body.  
+   On failure we log `body_last_20_bytes_hex` to inspect the tail (e.g. `0a` = `\n`).
 
 5. **Skip flag**  
    `SKIP_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION` (default `true`) skips verification so the bot works in production when verification still fails. Set to `false` to enable verification once the byte source is correct.
