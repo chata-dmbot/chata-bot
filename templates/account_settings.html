@@ -462,7 +462,7 @@
         <p>If you want your data to be reviewed by us before deletion, please send us an email regarding data deletion instead.</p>
         <div class="delete-modal-actions">
             <button class="btn-cancel" id="cancel-delete">Cancel</button>
-            <form method="POST" action="{{ url_for('dashboard_bp.delete_account') }}" style="display: inline;">
+            <form method="POST" action="{{ url_for('dashboard_bp.delete_account') }}" id="delete-account-form" style="display: inline;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-danger" id="confirm-delete">
                     <i class="fas fa-trash"></i> Delete Account
@@ -497,6 +497,15 @@
             if (e.target === deleteModal) {
                 deleteModal.classList.remove('show');
             }
+        });
+    }
+
+    // Show loading overlay when delete account form is submitted
+    var deleteForm = document.getElementById('delete-account-form');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function() {
+            var overlay = document.getElementById('pageLoadOverlay');
+            if (overlay) overlay.classList.remove('hidden');
         });
     }
 </script>

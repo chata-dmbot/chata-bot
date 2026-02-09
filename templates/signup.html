@@ -330,12 +330,14 @@
         }
     }
 
-    // Double-submit prevention: disable Create Account button after first click
+    // Double-submit prevention + show loading overlay on Create Account
     (function() {
         var form = document.getElementById('signup-form');
         var btn = document.getElementById('signup-submit');
+        var overlay = document.getElementById('pageLoadOverlay');
         if (form && btn) {
             form.addEventListener('submit', function() {
+                if (overlay) overlay.classList.remove('hidden');
                 btn.disabled = true;
                 btn.textContent = 'Creating...';
             });

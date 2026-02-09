@@ -714,6 +714,8 @@
         
         function confirmDisconnect() {
             if (disconnectConnectionId) {
+                var overlay = document.getElementById('pageLoadOverlay');
+                if (overlay) overlay.classList.remove('hidden');
                 // Use a POST form submission with CSRF token instead of a GET link
                 var form = document.createElement('form');
                 form.method = 'POST';
