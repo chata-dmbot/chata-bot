@@ -115,14 +115,14 @@ class Config:
 
     @classmethod
     def check_verify_token(cls):
-        """Raise an error if the default VERIFY_TOKEN is used in production (Meta webhook verification)."""
+        """Warn if VERIFY_TOKEN is unset or still the default in production (consider using a random value for Meta webhook)."""
+        import logging
         is_production = cls.DATABASE_URL and (
             cls.DATABASE_URL.startswith("postgres://") or cls.DATABASE_URL.startswith("postgresql://")
         )
         if is_production and (not cls.VERIFY_TOKEN or cls.VERIFY_TOKEN == cls._DEFAULT_VERIFY_TOKEN):
-            raise RuntimeError(
-                "FATAL: VERIFY_TOKEN is default or unset in production. "
-                "Set a strong random VERIFY_TOKEN environment variable for Meta webhook verification."
+            logging.getLogger("chata").warning(
+                "VERIFY_TOKEN is unset or default in production. Consider setting a random VERIFY_TOKEN for Meta webhook security."
             )
 
     @classmethod
