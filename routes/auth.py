@@ -146,7 +146,7 @@ def forgot_password():
                 # Create reset token and send email
                 try:
                     reset_token = create_reset_token(user['id'])
-                    logger.debug(f"Reset token created: {reset_token[:10]}...")
+                    logger.debug("Reset token created for user")
                     send_reset_email(email, reset_token)
                     logger.info(f"Email sent successfully to {email}")
                     flash("If an account with that email exists, we've sent a password reset link. Please check your spam folder if you don't see it.", "success")
@@ -450,7 +450,7 @@ def instagram_callback():
         page_access_token = page_token_data.get('access_token')
         if page_name is None:
             page_name = page_token_data.get('name')
-        logger.info(f"Got Page Access Token: {page_access_token[:20]}... (page_name={page_name})")
+        logger.info(f"Got Page Access Token for page_name={page_name}")
         
         # Now get Instagram account details using the Page Access Token
         profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
@@ -460,7 +460,7 @@ def instagram_callback():
         }
         
         logger.debug(f"Getting Instagram profile from: {profile_url}")
-        logger.debug(f"Using Page Access Token: {page_access_token[:20]}...")
+        logger.debug("Using Page Access Token for profile request")
         
         profile_response = http_requests.get(profile_url, params=profile_params)
         logger.debug(f"Profile response status: {profile_response.status_code}")

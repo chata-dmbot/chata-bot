@@ -374,23 +374,5 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
             conn.close()
         return False
 
-# ---- SQLite settings helpers ----
-
-def get_setting(key, default=None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"SELECT value FROM settings WHERE key = {placeholder}", (key,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return row[0]
-    return default
-
-def set_setting(key, value):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    placeholder = get_param_placeholder()
-    cursor.execute(f"UPDATE settings SET value = {placeholder} WHERE key = {placeholder}", (value, key))
-    conn.commit()
-    conn.close()
+# ---- Global settings (delegated to services.settings) ----
+from services.settings import get_setting, set_setting  # noqa: F401 - re-export for callers

@@ -1,5 +1,6 @@
 """Dashboard routes — user dashboard, settings, conversation history."""
 import logging
+import time
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session, jsonify
 
 logger = logging.getLogger("chata.routes.dashboard")
@@ -7,7 +8,7 @@ import requests
 import json
 import stripe  # type: ignore[reportMissingImports]
 from config import Config
-from database import get_db_connection, get_param_placeholder
+from database import get_db_connection, get_param_placeholder, is_postgres
 from extensions import csrf
 from services.auth import login_required
 from services.users import get_user_by_id
@@ -17,6 +18,10 @@ from services.activity import log_activity, get_client_settings, save_client_set
 from services.email import send_account_deletion_confirmation_email
 
 dashboard_bp = Blueprint('dashboard_bp', __name__)
+
+# Throttle Stripe reconciliation: avoid calling Stripe on every dashboard load (cache 5 min)
+_STRIPE_STATUS_CACHE_TTL = 300  # seconds
+_stripe_status_cache = {}  # (user_id, sub_id) -> (stripe_status, cached_at)
 
 
 # ---------------------------------------------------------------------------
@@ -90,38 +95,46 @@ def dashboard():
             if active_plan_type is not None and active_status == 'active':
                 stripe_status = None
                 if active_subscription_id and Config.STRIPE_SECRET_KEY:
-                    try:
-                        sub = stripe.Subscription.retrieve(active_subscription_id)
-                        stripe_status = sub.get('status') if isinstance(sub, dict) else getattr(sub, 'status', None)
-                        if stripe_status in ('canceled', 'unpaid', 'incomplete_expired'):
-                            sync_conn = get_db_connection()
-                            if sync_conn:
+                    cache_key = (user_id, active_subscription_id)
+                    now = time.time()
+                    if cache_key in _stripe_status_cache:
+                        cached_status, cached_at = _stripe_status_cache[cache_key]
+                        if now - cached_at < _STRIPE_STATUS_CACHE_TTL:
+                            stripe_status = cached_status
+                    if stripe_status is None:
+                        try:
+                            sub = stripe.Subscription.retrieve(active_subscription_id)
+                            stripe_status = sub.get('status') if isinstance(sub, dict) else getattr(sub, 'status', None)
+                            _stripe_status_cache[cache_key] = (stripe_status, now)
+                        except Exception as stripe_e:
+                            logger.warning(f"Dashboard: Could not reconcile with Stripe: {stripe_e}")
+                            stripe_status = None
+                    if stripe_status is not None and stripe_status in ('canceled', 'unpaid', 'incomplete_expired'):
+                        sync_conn = get_db_connection()
+                        if sync_conn:
+                            try:
+                                sync_cursor = sync_conn.cursor()
+                                sync_ph = get_param_placeholder()
+                                sync_cursor.execute(f"""
+                                    UPDATE subscriptions SET status = {sync_ph}, updated_at = CURRENT_TIMESTAMP
+                                    WHERE stripe_subscription_id = {sync_ph}
+                                """, ('canceled', active_subscription_id))
+                                sync_conn.commit()
+                                logger.info(f"Dashboard: Reconciled subscription {active_subscription_id} with Stripe (status={stripe_status}), marked canceled in DB")
+                            except Exception as sync_e:
+                                logger.warning(f"Dashboard reconciliation update failed: {sync_e}")
+                            finally:
                                 try:
-                                    sync_cursor = sync_conn.cursor()
-                                    sync_ph = get_param_placeholder()
-                                    sync_cursor.execute(f"""
-                                        UPDATE subscriptions SET status = {sync_ph}, updated_at = CURRENT_TIMESTAMP
-                                        WHERE stripe_subscription_id = {sync_ph}
-                                    """, ('canceled', active_subscription_id))
-                                    sync_conn.commit()
-                                    logger.info(f"Dashboard: Reconciled subscription {active_subscription_id} with Stripe (status={stripe_status}), marked canceled in DB")
-                                except Exception as sync_e:
-                                    logger.warning(f"Dashboard reconciliation update failed: {sync_e}")
-                                finally:
-                                    try:
-                                        sync_conn.close()
-                                    except Exception:
-                                        pass
-                            subscription_status = 'canceled'
-                            current_plan = None
-                        else:
-                            current_plan = active_plan_type
-                            subscription_status = 'active'
-                            logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}' (Stripe status={stripe_status})")
-                    except Exception as stripe_e:
-                        logger.warning(f"Dashboard: Could not reconcile with Stripe: {stripe_e}")
+                                    sync_conn.close()
+                                except Exception:
+                                    pass
+                        subscription_status = 'canceled'
+                        current_plan = None
+                    else:
                         current_plan = active_plan_type
                         subscription_status = 'active'
+                        if stripe_status is not None:
+                            logger.info(f"Dashboard: Found ACTIVE subscription {active_subscription_id} with plan_type '{active_plan_type}' (Stripe status={stripe_status})")
                 else:
                     current_plan = active_plan_type
                     subscription_status = 'active'
@@ -270,7 +283,7 @@ def api_send_pending_reply(connection_id, instagram_user_id):
         if not cursor.fetchone():
             return jsonify({"error": "Connection not found"}), 404
         # PostgreSQL: sent_via_api is BOOLEAN (FALSE). SQLite: INTEGER (0).
-        is_pg = bool(Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://")))
+        is_pg = is_postgres()
         pending_cond = "sent_via_api = FALSE" if is_pg else "(sent_via_api = 0 OR sent_via_api = FALSE)"
         cursor.execute(
             f"SELECT bot_response FROM messages WHERE id = {placeholder} AND instagram_connection_id = {placeholder} AND instagram_user_id = {placeholder} AND {pending_cond}",
@@ -328,8 +341,7 @@ def api_send_pending_reply(connection_id, instagram_user_id):
 @dashboard_bp.route("/dashboard/bot-settings", methods=["GET", "POST"])
 @login_required
 def bot_settings():
-    # Late import to avoid circular dependency (CONVERSATION_EXAMPLES lives in app.py)
-    from app import CONVERSATION_EXAMPLES
+    from services.ai import CONVERSATION_EXAMPLES
 
     user_id = session['user_id']
     connection_id = request.args.get('connection_id', type=int)
@@ -627,7 +639,7 @@ def delete_account():
         
         # Delete password reset tokens
         try:
-            cursor.execute(f"DELETE FROM password_resets WHERE email = {placeholder}", (user_email,))
+            cursor.execute(f"DELETE FROM password_resets WHERE user_id = {placeholder}", (user_id,))
             conn.commit()
         except Exception as e:
             logger.warning(f"Could not delete password_resets: {e}")

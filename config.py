@@ -30,7 +30,8 @@ class Config:
     OPENAI_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "60"))  # seconds per request; prevents hung connections
     
     # Meta/Instagram Configuration
-    VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "chata_verify_token")
+    _DEFAULT_VERIFY_TOKEN = "chata_verify_token"
+    VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", _DEFAULT_VERIFY_TOKEN)
     ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
     INSTAGRAM_USER_ID = os.getenv("INSTAGRAM_USER_ID")
     
@@ -110,4 +111,29 @@ class Config:
             raise RuntimeError(
                 "FATAL: SECRET_KEY is still the default placeholder. "
                 "Set a strong SECRET_KEY environment variable before running in production."
+            )
+
+    @classmethod
+    def check_verify_token(cls):
+        """Raise an error if the default VERIFY_TOKEN is used in production (Meta webhook verification)."""
+        is_production = cls.DATABASE_URL and (
+            cls.DATABASE_URL.startswith("postgres://") or cls.DATABASE_URL.startswith("postgresql://")
+        )
+        if is_production and (not cls.VERIFY_TOKEN or cls.VERIFY_TOKEN == cls._DEFAULT_VERIFY_TOKEN):
+            raise RuntimeError(
+                "FATAL: VERIFY_TOKEN is default or unset in production. "
+                "Set a strong random VERIFY_TOKEN environment variable for Meta webhook verification."
+            )
+
+    @classmethod
+    def check_production_database(cls):
+        """When ENV=production, require DATABASE_URL to be set and PostgreSQL (no SQLite in production)."""
+        if os.getenv("ENV", "").lower() != "production":
+            return
+        if not cls.DATABASE_URL or not (
+            cls.DATABASE_URL.startswith("postgres://") or cls.DATABASE_URL.startswith("postgresql://")
+        ):
+            raise RuntimeError(
+                "FATAL: ENV=production requires DATABASE_URL to be a PostgreSQL URL. "
+                "SQLite is not supported in production."
             )

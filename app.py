@@ -39,6 +39,8 @@ except ValueError as e:
 
 # Refuse to start in production with the default secret key
 Config.check_secret_key()
+Config.check_verify_token()
+Config.check_production_database()
 
 # ---------------------------------------------------------------------------
 # Create Flask app
@@ -175,20 +177,6 @@ csrf.exempt(webhook_bp)
 # ---------------------------------------------------------------------------
 # Extensions are in extensions.py — blueprints import from there directly.
 # ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Backward-compatibility re-exports
-# ---------------------------------------------------------------------------
-# Some service modules do a late `from app import ...` to avoid circular deps.
-# Keep thin wrappers here so those imports resolve.
-from services.subscription import get_setting, set_setting          # noqa: F401
-from services.activity import log_activity, get_client_settings, save_client_settings  # noqa: F401
-from services.ai import (                                           # noqa: F401
-    CONVERSATION_EXAMPLES, CONVERSATION_TEMPLATES, ALL_CONVERSATION_PROMPTS,
-    MODEL_CONFIG, DEFAULT_MODEL_CONFIG,
-)
-from services.users import get_user_by_id                           # noqa: F401
 
 
 # ---------------------------------------------------------------------------

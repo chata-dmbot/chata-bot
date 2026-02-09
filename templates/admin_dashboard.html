@@ -119,8 +119,10 @@ h2 {
 <div style="margin-bottom: 2rem; padding: 1rem; background: rgba(255, 0, 0, 0.1); border: 1px solid rgba(255, 0, 0, 0.3); border-radius: 8px;">
     <h3 style="color: #ff4444; margin-bottom: 0.5rem;"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
     <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">Delete all users and related data. This action cannot be undone!</p>
-    <form method="POST" action="{{ url_for('admin.clean_all_users') }}" onsubmit="return confirm('⚠️ Are you absolutely sure? This will delete ALL users, subscriptions, connections, messages, and all related data. This cannot be undone!');">
+    <form method="POST" action="{{ url_for('admin.clean_all_users') }}" id="clean-all-form" onsubmit="return document.getElementById('confirm-clean-input').value === 'DELETE ALL' && confirm('⚠️ Are you absolutely sure? This will delete ALL users and data. This cannot be undone!');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label style="display: block; margin-bottom: 0.5rem;">Type <strong>DELETE ALL</strong> to confirm:</label>
+        <input type="text" id="confirm-clean-input" name="confirm" placeholder="DELETE ALL" autocomplete="off" style="margin-bottom: 0.75rem; padding: 0.5rem; width: 100%; max-width: 20rem; border-radius: 4px;">
         <button type="submit" style="background: #ff4444; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
             <i class="fas fa-trash-alt"></i> Clean All Users & Data
         </button>

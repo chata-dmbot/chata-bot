@@ -15,6 +15,15 @@ logger = logging.getLogger("chata.database")
 # PostgreSQL connection pool (initialised lazily on first use)
 # ---------------------------------------------------------------------------
 _pg_pool = None
+_CONNECT_TIMEOUT_SECONDS = int(os.environ.get("DATABASE_CONNECT_TIMEOUT", "10"))
+
+
+def _pg_dsn_with_timeout(database_url):
+    """Add connect_timeout to PostgreSQL DSN so we fail fast under load or network issues."""
+    if not database_url or "connect_timeout=" in database_url:
+        return database_url
+    sep = "&" if "?" in database_url else "?"
+    return f"{database_url}{sep}connect_timeout={_CONNECT_TIMEOUT_SECONDS}"
 
 
 def _get_pg_pool():
@@ -24,10 +33,11 @@ def _get_pg_pool():
         database_url = os.environ.get('DATABASE_URL')
         if database_url:
             size = getattr(Config, 'DATABASE_POOL_SIZE', 10)
+            dsn = _pg_dsn_with_timeout(database_url)
             _pg_pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=1,
                 maxconn=size,
-                dsn=database_url,
+                dsn=dsn,
             )
     return _pg_pool
 
@@ -67,20 +77,24 @@ def get_db_connection():
                 return None
         else:
             try:
-                return psycopg2.connect(database_url)
+                return psycopg2.connect(_pg_dsn_with_timeout(database_url))
             except Exception as e:
                 logger.error(f"PostgreSQL connection error: {e}")
                 return None
     else:
         return sqlite3.connect(Config.DB_FILE)
 
+def is_postgres():
+    """True if DATABASE_URL is set and points to PostgreSQL (centralized dialect check)."""
+    database_url = os.environ.get('DATABASE_URL') or getattr(Config, 'DATABASE_URL', None)
+    return bool(database_url and (
+        database_url.startswith('postgres://') or database_url.startswith('postgresql://')
+    ))
+
+
 def get_param_placeholder():
-    """Get the correct parameter placeholder for the current database"""
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
-        return '%s'  # PostgreSQL uses %s
-    else:
-        return '?'   # SQLite uses ?
+    """Get the correct parameter placeholder for the current database."""
+    return '%s' if is_postgres() else '?'
 
 def init_database():
     """Initialize database tables"""
@@ -98,10 +112,7 @@ def init_database():
     try:
         cursor = conn.cursor()
         
-        # Check if we're using PostgreSQL or SQLite
-        is_postgres = bool(database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')))
-        
-        if is_postgres:
+        if is_postgres():
             logger.info("Using PostgreSQL database")
             _create_postgres_tables(cursor)
         else:
@@ -109,12 +120,12 @@ def init_database():
             _create_sqlite_tables(cursor)
         
         # Insert default settings
-        _insert_default_settings(cursor, is_postgres)
+        _insert_default_settings(cursor, is_postgres())
         
         # Set existing users without subscriptions to 0 replies ONLY if they never received free trial
         # This preserves free trial replies that users earned
         try:
-            if is_postgres:
+            if is_postgres():
                 cursor.execute("""
                     UPDATE users 
                     SET replies_limit_monthly = 0 

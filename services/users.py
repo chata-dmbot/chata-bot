@@ -1,9 +1,17 @@
 """User service — CRUD operations for user accounts."""
 import logging
 import os
+import sqlite3
 from werkzeug.security import generate_password_hash
 from database import get_db_connection, get_param_placeholder
 from config import Config
+
+try:
+    import psycopg2
+    _PG_INTEGRITY = (psycopg2.IntegrityError,)
+except ImportError:
+    _PG_INTEGRITY = ()
+_INTEGRITY_ERRORS = (sqlite3.IntegrityError,) + _PG_INTEGRITY
 
 logger = logging.getLogger("chata.services.users")
 
@@ -162,6 +170,9 @@ def create_user(username, email, password):
             
         conn.commit()
         return user_id
+    except _INTEGRITY_ERRORS:
+        # Concurrent signup race: another request inserted same username/email first
+        raise ValueError("username_taken")
     except Exception:
         raise
     finally:

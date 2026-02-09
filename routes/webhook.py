@@ -11,7 +11,7 @@ from config import Config
 
 logger = logging.getLogger("chata.routes.webhook")
 from extensions import limiter
-from database import get_db_connection, get_param_placeholder
+from database import get_db_connection, get_param_placeholder, is_postgres
 from services.instagram import get_instagram_connection_by_id, get_instagram_connection_by_page_id, upsert_conversation_sender_username, _verify_instagram_webhook_signature
 from services.messaging import save_message, get_last_messages
 from services.subscription import check_user_reply_limit, increment_reply_count
@@ -25,9 +25,13 @@ from services.stripe_handlers import (
 
 webhook_bp = Blueprint('webhook', __name__)
 
+# Cap concurrent Instagram webhook processors to avoid exhausting DB/connections (Meta will retry)
+_WEBHOOK_PROCESSOR_SEMAPHORE = threading.Semaphore(int(os.environ.get("WEBHOOK_PROCESSOR_CONCURRENCY", "20")))
+
 
 # NOTE: @csrf.exempt must be applied to stripe_webhook during blueprint registration
 @webhook_bp.route("/webhook/stripe", methods=["POST"])
+@limiter.limit("200 per minute")
 def stripe_webhook():
     """Handle Stripe webhook events"""
     payload = request.data
@@ -49,26 +53,34 @@ def stripe_webhook():
         return jsonify({'status': 'invalid_signature'}), 400
     
     event_id = event.get('id')
+    # Insert-first idempotency: claim the event before running handlers so retries never run handlers twice
     if event_id:
-        # Idempotency: skip if we already processed this event (handles retries and out-of-order delivery)
         conn = get_db_connection()
         if conn:
             try:
                 cursor = conn.cursor()
                 placeholder = get_param_placeholder()
-                cursor.execute(f"SELECT 1 FROM stripe_webhook_events WHERE event_id = {placeholder}", (event_id,))
-                if cursor.fetchone():
-                    conn.close()
+                if is_postgres():
+                    cursor.execute(f"INSERT INTO stripe_webhook_events (event_id) VALUES ({placeholder}) ON CONFLICT (event_id) DO NOTHING", (event_id,))
+                else:
+                    cursor.execute(f"INSERT OR IGNORE INTO stripe_webhook_events (event_id) VALUES ({placeholder})", (event_id,))
+                conn.commit()
+                if cursor.rowcount == 0:
                     logger.info(f"Webhook event {event_id} already processed, skipping (idempotent)")
                     return jsonify({'status': 'success', 'idempotent': True}), 200
             except Exception as e:
-                logger.warning(f"Idempotency check failed: {e}")
+                logger.warning(f"Idempotency insert failed: {e}")
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                return jsonify({'error': 'internal error'}), 500
             finally:
                 try:
                     conn.close()
                 except Exception:
                     pass
-    
+
     # Handle the event
     logger.info(f"Received Stripe webhook: {event['type']}")
     logger.info(f"Event ID: {event.get('id', 'unknown')}")
@@ -106,29 +118,7 @@ def stripe_webhook():
     else:
         logger.warning(f"Unhandled webhook event type: {event['type']}")
     
-    # Mark event as processed for idempotency (so retries are skipped)
-    if event_id:
-        conn = get_db_connection()
-        if conn:
-            try:
-                cursor = conn.cursor()
-                placeholder = get_param_placeholder()
-                is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-                if is_postgres:
-                    cursor.execute(f"INSERT INTO stripe_webhook_events (event_id) VALUES ({placeholder}) ON CONFLICT (event_id) DO NOTHING", (event_id,))
-                else:
-                    cursor.execute(f"INSERT OR IGNORE INTO stripe_webhook_events (event_id) VALUES ({placeholder})", (event_id,))
-                conn.commit()
-            except Exception as e:
-                logger.warning(f"Failed to store webhook event id: {e}")
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-    
     logger.info(f"Webhook processing completed for {event['type']}")
-    
     return jsonify({'status': 'success'}), 200
 
 
@@ -140,12 +130,12 @@ def webhook():
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
-        logger.debug(f"Webhook GET request - mode: {mode}, token: {token[:10] if token else 'None'}...")
+        logger.debug(f"Webhook GET request - mode: {mode}, token present: {bool(token)}")
         if mode == "subscribe" and token == Config.VERIFY_TOKEN:
             logger.info("WEBHOOK VERIFIED!")
             return challenge, 200
         else:
-            logger.error(f"Webhook verification failed - mode: {mode}, token match: {token == Config.VERIFY_TOKEN}")
+            logger.error("Webhook verification failed - invalid mode or verify token")
             return "Forbidden", 403
 
     elif request.method == "POST":
@@ -173,7 +163,7 @@ def webhook():
             logger.error(f"Error parsing JSON: {e}")
             return "Bad Request", 400
         
-        logger.debug(f"Request data: {data}")
+        logger.debug("Webhook POST body received (payload not logged)")
         
         # Build list of processable messages (non-echo, with text) before opening DB.
         # Echo-only or empty payloads return 200 without opening DB (Issue 2).
@@ -192,7 +182,7 @@ def webhook():
                         continue
                     sender_id = event['sender']['id']
                     recipient_id = event.get('recipient', {}).get('id')
-                    logger.info(f"Received a message from {sender_id}: {message_text}")
+                    logger.info(f"Received a message from {sender_id} (length={len(message_text)})")
                     incoming_by_sender.setdefault(sender_id, []).append({
                         "text": message_text,
                         "timestamp": event.get('timestamp', 0),
@@ -229,17 +219,19 @@ def webhook():
 def _process_incoming_messages(incoming_by_sender):
     """
     Process incoming Instagram messages in a background thread.
-    
-    This function is the *exact same logic* that used to run synchronously inside
-    the webhook POST handler.  It opens its own DB connection, processes each
-    sender's messages (idempotency check, AI reply, send via API), and closes
-    the connection when done.
-    
-    Runs outside of a Flask request context — only uses module-level imports
-    (Config, database helpers, service functions, logger).
+    Concurrency is capped by _WEBHOOK_PROCESSOR_SEMAPHORE so we don't exhaust DB connections.
     """
     process_start = time.time()
-    
+    _WEBHOOK_PROCESSOR_SEMAPHORE.acquire()
+    try:
+        _process_incoming_messages_impl(incoming_by_sender)
+    finally:
+        _WEBHOOK_PROCESSOR_SEMAPHORE.release()
+    logger.info(f"[bg] Background webhook processing completed in {time.time() - process_start:.2f}s")
+
+
+def _process_incoming_messages_impl(incoming_by_sender):
+    """Actual webhook processing (called with semaphore held)."""
     # Open ONE database connection for the entire processing
     webhook_conn = get_db_connection()
     if not webhook_conn:
@@ -264,7 +256,7 @@ def _process_incoming_messages(incoming_by_sender):
             if message_mid:
                 placeholder = get_param_placeholder()
                 try:
-                    is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+                    is_pg = is_postgres()
                     if is_pg:
                         cursor.execute(
                             f"INSERT INTO instagram_webhook_processed_mids (mid) VALUES ({placeholder}) ON CONFLICT (mid) DO NOTHING",
@@ -446,7 +438,7 @@ def _process_incoming_messages(incoming_by_sender):
             reply_text = get_ai_reply_with_connection(history, connection_id, webhook_conn)
             ai_duration = time.time() - ai_start
             logger.info(f"[bg] AI reply generation time: {ai_duration:.2f}s")
-            logger.info(f"[bg] AI generated reply: {reply_text[:50]}...")
+            logger.info(f"[bg] AI generated reply (length={len(reply_text)})")
 
             app_review_manual_send = getattr(Config, 'APP_REVIEW_MANUAL_SEND', False)
             save_message(sender_id, "", reply_text, webhook_conn, instagram_connection_id=connection_id, sent_via_api=not app_review_manual_send)
@@ -490,6 +482,3 @@ def _process_incoming_messages(incoming_by_sender):
             except Exception:
                 pass
             logger.debug("[bg] Closed webhook database connection")
-    
-    total_process_time = time.time() - process_start
-    logger.info(f"[bg] Background webhook processing completed in {total_process_time:.2f}s")

@@ -4,15 +4,15 @@ import os
 import stripe
 from datetime import datetime, timedelta
 from config import Config
-from database import get_db_connection, get_param_placeholder
+from database import get_db_connection, get_param_placeholder, is_postgres
 from services.subscription import add_purchased_replies
 
 logger = logging.getLogger("chata.services.stripe_handlers")
 
 
 def log_activity(user_id, action_type, description=None, conn=None):
-    """Proxy to app.log_activity – late import to avoid circular dependency."""
-    from app import log_activity as _log
+    """Proxy to activity.log_activity for use in stripe_handlers."""
+    from services.activity import log_activity as _log
     return _log(user_id, action_type, description, conn)
 
 
@@ -304,9 +304,7 @@ def handle_subscription_created(subscription):
                 return
             
             # Check if using PostgreSQL
-            is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
-            
-            if is_postgres:
+            if is_postgres():
                 cursor.execute(f"""
                     INSERT INTO subscriptions 
                     (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id, 
@@ -399,10 +397,8 @@ def handle_subscription_updated(subscription):
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
         
-            is_postgres = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
             cancel_at_period_end = subscription.get('cancel_at_period_end', False) if isinstance(subscription, dict) else getattr(subscription, 'cancel_at_period_end', False)
-            
-            cancel_value = cancel_at_period_end if is_postgres else (1 if cancel_at_period_end else 0)
+            cancel_value = cancel_at_period_end if is_postgres() else (1 if cancel_at_period_end else 0)
             
             cursor.execute(f"""
                 SELECT status, plan_type, stripe_price_id FROM subscriptions WHERE stripe_subscription_id = {placeholder}

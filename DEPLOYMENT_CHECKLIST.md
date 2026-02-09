@@ -15,7 +15,7 @@
 - [ ] Connection pooling implemented
 
 ### ✅ API Security
-- [ ] Rate limiting implemented
+- [ ] Rate limiting implemented (set `RATE_LIMIT_STORAGE_URI=redis://...` in production for shared limits across workers)
 - [ ] Input validation added
 - [ ] CORS properly configured
 - [ ] HTTPS enforced
@@ -52,8 +52,11 @@
 ```bash
 # Set up environment variables in Render
 SECRET_KEY=your-production-secret-key
+VERIFY_TOKEN=your-random-meta-webhook-verify-token  # Required in production; do not use default
 DATABASE_URL=postgresql://...
 OPENAI_API_KEY=sk-...
+# Rate limiting: use Redis so limits are shared across all Gunicorn workers (default memory:// is per-process)
+RATE_LIMIT_STORAGE_URI=redis://localhost:6379
 # ... all other variables
 ```
 

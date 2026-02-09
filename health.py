@@ -2,19 +2,28 @@
 Health check and monitoring utilities
 """
 import os
-import time
 from datetime import datetime
 from database import get_db_connection
 from config import Config
 
+
+def _is_production():
+    """True when running in production (PostgreSQL in use)."""
+    url = os.environ.get("DATABASE_URL") or getattr(Config, "DATABASE_URL", None)
+    return bool(url and (url.startswith("postgres://") or url.startswith("postgresql://")))
+
+
 def health_check():
-    """Comprehensive health check for the application"""
+    """Comprehensive health check for the application.
+    In production, checks return only 'healthy' or 'unhealthy' (no env var names or exception details).
+    """
     health_status = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "checks": {}
     }
-    
+    production = _is_production()
+
     # Check database connection
     try:
         conn = get_db_connection()
@@ -28,9 +37,9 @@ def health_check():
             health_status["checks"]["database"] = "unhealthy"
             health_status["status"] = "unhealthy"
     except Exception as e:
-        health_status["checks"]["database"] = f"unhealthy: {str(e)}"
+        health_status["checks"]["database"] = "unhealthy" if production else f"unhealthy: {str(e)}"
         health_status["status"] = "unhealthy"
-    
+
     # Check environment variables
     required_vars = [
         'OPENAI_API_KEY',
@@ -39,32 +48,26 @@ def health_check():
         'FACEBOOK_APP_ID',
         'FACEBOOK_APP_SECRET'
     ]
-    
-    missing_vars = []
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
-    
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
-        health_status["checks"]["environment"] = f"unhealthy: missing {', '.join(missing_vars)}"
+        health_status["checks"]["environment"] = "unhealthy" if production else f"unhealthy: missing {', '.join(missing_vars)}"
         health_status["status"] = "unhealthy"
     else:
         health_status["checks"]["environment"] = "healthy"
-    
+
     # Check OpenAI API (basic connectivity)
     try:
         import openai
         openai.api_key = Config.OPENAI_API_KEY
-        # Simple test - just check if API key is valid format
-        if Config.OPENAI_API_KEY.startswith('sk-'):
+        if Config.OPENAI_API_KEY and Config.OPENAI_API_KEY.startswith('sk-'):
             health_status["checks"]["openai"] = "healthy"
         else:
-            health_status["checks"]["openai"] = "unhealthy: invalid API key format"
+            health_status["checks"]["openai"] = "unhealthy" if production else "unhealthy: invalid API key format"
             health_status["status"] = "unhealthy"
     except Exception as e:
-        health_status["checks"]["openai"] = f"unhealthy: {str(e)}"
+        health_status["checks"]["openai"] = "unhealthy" if production else f"unhealthy: {str(e)}"
         health_status["status"] = "unhealthy"
-    
+
     return health_status
 
 def get_system_info():

@@ -1,7 +1,7 @@
 """Activity and client settings service."""
 import json
 from flask import request
-from database import get_db_connection, get_param_placeholder
+from database import get_db_connection, get_param_placeholder, is_postgres
 from config import Config
 
 
@@ -214,7 +214,7 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
         blocked_users_json = json.dumps(settings.get('blocked_users', []))
     
         # Use different syntax for PostgreSQL vs SQLite
-        is_pg = Config.DATABASE_URL and (Config.DATABASE_URL.startswith("postgres://") or Config.DATABASE_URL.startswith("postgresql://"))
+        is_pg = is_postgres()
         
         # temperature and max_tokens are no longer stored — hardcoded in AI module per model config.
         params = (user_id, connection_id, 

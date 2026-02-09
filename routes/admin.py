@@ -7,7 +7,7 @@ import stripe
 from config import Config
 
 logger = logging.getLogger("chata.routes.admin")
-from database import get_db_connection, get_param_placeholder
+from database import get_db_connection, get_param_placeholder, is_postgres
 from services.auth import admin_required
 
 admin_bp = Blueprint('admin', __name__)
@@ -69,9 +69,7 @@ def payment_system_verification():
         cursor = conn.cursor()
         
         # Check if tables exist
-        is_postgres = Config.DATABASE_URL and ('postgres' in Config.DATABASE_URL.lower())
-        
-        if is_postgres:
+        if is_postgres():
             cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')")
             users_exists = cursor.fetchone()[0]
             cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'subscriptions')")
@@ -86,7 +84,7 @@ def payment_system_verification():
         db_checks.append(('✅' if subs_exists else '❌', 'Subscriptions Table', 'Exists' if subs_exists else 'Missing'))
         
         if users_exists:
-            if is_postgres:
+            if is_postgres():
                 cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'users'")
                 columns = [row[0] for row in cursor.fetchall()]
             else:
@@ -371,11 +369,17 @@ def payment_system_verification():
 
 
 
+CONFIRM_CLEAN_ALL_TEXT = "DELETE ALL"
+
+
 @admin_bp.route("/admin/clean-all-users", methods=["POST"])
 @admin_required
 def clean_all_users():
-    """Delete all users and related data - requires admin privileges."""
-    
+    """Delete all users and related data - requires admin privileges and typing DELETE ALL to confirm."""
+    if request.form.get("confirm") != CONFIRM_CLEAN_ALL_TEXT:
+        flash("To delete all users you must type DELETE ALL in the confirmation box.", "error")
+        return redirect(url_for('admin.admin_dashboard'))
+
     conn = None
     try:
         conn = get_db_connection()
@@ -435,10 +439,6 @@ def admin_dashboard():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         
-        # Check if using PostgreSQL
-        database_url = os.environ.get('DATABASE_URL')
-        is_postgres = bool(database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')))
-        
         # Get total users count
         cursor.execute("SELECT COUNT(*) FROM users")
         total_users = cursor.fetchone()[0]
@@ -455,7 +455,7 @@ def admin_dashboard():
         total_users_to_show = min(50, total_users)
         users_offset = (users_page - 1) * users_per_page
         
-        if is_postgres:
+        if is_postgres():
             cursor.execute("""
                 SELECT 
                     id, username, email, 
@@ -527,7 +527,7 @@ def admin_dashboard():
         total_logs_to_show = min(50, total_logs)
         logs_offset = (logs_page - 1) * logs_per_page
         
-        if is_postgres:
+        if is_postgres():
             cursor.execute("""
                 SELECT 
                     id, user_id, action, details, ip_address, created_at

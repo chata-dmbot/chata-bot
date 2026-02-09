@@ -114,8 +114,7 @@ DEFAULT_MODEL_CONFIG = {
 # ---------------------------------------------------------------------------
 
 def get_ai_reply(history):
-    # Lazy import to avoid circular dependency while get_setting lives in app
-    from app import get_setting
+    from services.settings import get_setting
 
     openai.api_key = Config.OPENAI_API_KEY
     try:
@@ -179,8 +178,7 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
         connection_id: Optional connection ID
         conn: Optional database connection to reuse. If None, opens and closes its own connection.
     """
-    # Lazy import to avoid circular dependency while get_client_settings lives in app
-    from app import get_client_settings
+    from services.activity import get_client_settings
 
     openai.api_key = Config.OPENAI_API_KEY
     should_close = False
