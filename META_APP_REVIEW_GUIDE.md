@@ -279,3 +279,30 @@ An AI-powered Instagram chatbot that automatically replies to messages
 
 **This is a clear, legitimate use case** - you should have a good chance of approval!
 
+---
+
+## Connect flow – manual QA checklist
+
+After deploying the Instagram connect flow (OAuth scopes + `/me/accounts` + webhook subscription), verify with a **fresh Facebook account + Page + IG professional account**:
+
+1. **App permissions**  
+   In App Review, ensure these have the required access (e.g. Advanced where needed):  
+   `public_profile`, `email`, `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata`, `pages_messaging`, `instagram_basic`, `instagram_manage_messages`.
+
+2. **Connect**  
+   Log into your app → Dashboard → “Connect your first account” (or connect another). Complete Facebook login and grant all requested permissions.
+
+3. **Logs**  
+   Confirm no “0 accounts” in logs; you should see something like “/me/accounts returned N account(s)” and “Found Instagram account … Page ID … has_page_token: True” (or “Using Page Access Token from /me/accounts”).
+
+4. **Webhook**  
+   Check logs for “Webhook subscribed_apps for page … True”. In Meta App Dashboard → Webhooks, the Page should show as subscribed.
+
+5. **Messaging**  
+   From another Instagram account, send a DM to the connected IG account. Confirm the webhook receives it and (if applicable) the bot replies.
+
+6. **Debug route (optional)**  
+   With `DEBUG_ROUTES_ENABLED=true`, call  
+   `GET /dashboard/debug/instagram-token?token=USER_ACCESS_TOKEN`  
+   (use a short-lived user token from the OAuth flow). Verify `debug_token.scopes` and `me_accounts_count` / `accounts` in the JSON response.
+

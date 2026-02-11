@@ -255,12 +255,18 @@ def instagram_auth():
     state = secrets.token_urlsafe(32)
     session['instagram_oauth_state'] = state
     
-    # Build Instagram Business OAuth URL (using Facebook Graph API)
+    # Build Instagram Business OAuth URL (using Facebook Graph API).
+    # Required: login (public_profile, email), Pages (pages_show_list, pages_read_engagement, pages_manage_metadata), messaging, Instagram.
+    FACEBOOK_OAUTH_SCOPES = (
+        "email,public_profile,"
+        "pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging,"
+        "instagram_basic,instagram_manage_messages"
+    )
     oauth_url = (
         f"https://www.facebook.com/v18.0/dialog/oauth"
         f"?client_id={Config.FACEBOOK_APP_ID}"
         f"&redirect_uri={Config.FACEBOOK_REDIRECT_URI}"
-        f"&scope=instagram_basic,instagram_manage_messages,pages_messaging"
+        f"&scope={FACEBOOK_OAUTH_SCOPES}"
         f"&response_type=code"
         f"&state={state}"
     )
@@ -311,20 +317,32 @@ def instagram_callback():
             flash("Failed to get Instagram access token.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        # Get Instagram Business account information
-        # First, get the user's Instagram Business accounts
+        debug_data = None  # Set so we can safely log it in error paths
+        # Optional: log token scopes for debugging (required for fallback path anyway)
+        debug_token_url = "https://graph.facebook.com/v18.0/debug_token"
+        debug_params = {
+            'input_token': access_token,
+            'access_token': Config.FACEBOOK_APP_ID + '|' + Config.FACEBOOK_APP_SECRET
+        }
+        debug_response = http_requests.get(debug_token_url, params=debug_params)
+        if debug_response.status_code == 200:
+            debug_data = debug_response.json()
+            scopes = debug_data.get('data', {}).get('scopes', [])
+            granular = debug_data.get('data', {}).get('granular_scopes', [])
+            logger.info(f"Token scopes: {scopes}; granular_scopes count: {len(granular)}")
+            logger.debug(f"Token debug response: {debug_data}")
+        
+        # 1) Get Pages the user manages (requires pages_show_list). Include access_token to get page token in one call.
         accounts_url = "https://graph.facebook.com/v18.0/me/accounts"
         accounts_params = {
             'access_token': access_token,
-            'fields': 'id,name,instagram_business_account'
+            'fields': 'id,name,access_token,instagram_business_account'
         }
         
         logger.debug(f"Fetching accounts from: {accounts_url}")
-        logger.debug(f"With params: {accounts_params}")
         
         accounts_response = http_requests.get(accounts_url, params=accounts_params)
         logger.debug(f"Response status: {accounts_response.status_code}")
-        logger.debug(f"Response headers: {dict(accounts_response.headers)}")
         
         if accounts_response.status_code != 200:
             logger.error(f"API Error: {accounts_response.text}")
@@ -332,42 +350,35 @@ def instagram_callback():
             return redirect(url_for('dashboard_bp.dashboard'))
         
         accounts_data = accounts_response.json()
-        logger.debug(f"Accounts response: {accounts_data}")
+        accounts_list = accounts_data.get('data', [])
+        logger.info(f"/me/accounts returned {len(accounts_list)} account(s)")
+        logger.debug(f"Accounts response (tokens redacted): {[{k: ('***' if k == 'access_token' else v) for k, v in a.items()} for a in accounts_list]}")
         
-        # Find the Instagram Business account
+        # Find the Instagram Business account and use page token from /me/accounts when present
         instagram_account = None
-        page_id = None  # Initialize page_id here so it's available later
+        page_id = None
         page_name = None
+        page_access_token = None
         
-        for account in accounts_data.get('data', []):
-            logger.debug(f"Checking account: {account}")
+        for account in accounts_list:
+            logger.debug(f"Checking account: id={account.get('id')}, name={account.get('name')}, has_ig={bool(account.get('instagram_business_account'))}")
             if account.get('instagram_business_account'):
                 instagram_account = account['instagram_business_account']
-                # Also extract page_id and page_name if we found the account
                 page_id = account.get('id')
                 page_name = account.get('name')
-                logger.info(f"Found Instagram account: {instagram_account}")
-                logger.info(f"Found Page ID: {page_id}, Page Name: {page_name}")
+                # Page token is returned by /me/accounts when we request access_token in fields (avoids extra GET /{page_id})
+                page_access_token = account.get('access_token')
+                logger.info(f"Found Instagram account: {instagram_account}, Page ID: {page_id}, Page Name: {page_name}, has_page_token: {bool(page_access_token)}")
                 break
         
         if not instagram_account:
-            logger.info(f"No Instagram Business account found in {len(accounts_data.get('data', []))} accounts - trying alternative method...")
+            logger.info(f"No Instagram Business account found in {len(accounts_list)} accounts - trying alternative method (granular_scopes)...")
             
-            # Let's try a different approach - get the specific Page ID from the token
-            debug_token_url = "https://graph.facebook.com/v18.0/debug_token"
-            debug_params = {
-                'input_token': access_token,
-                'access_token': Config.FACEBOOK_APP_ID + '|' + Config.FACEBOOK_APP_SECRET
-            }
-            debug_response = http_requests.get(debug_token_url, params=debug_params)
-            debug_data = debug_response.json()
-            logger.debug(f"Token debug response: {debug_data}")
-            
-            # Extract Page ID and Instagram account ID from the token
+            # Fallback: get Page ID and Instagram ID from token granular_scopes (debug_data set above if debug_token succeeded)
             instagram_account_id = None
             
-            if 'data' in debug_data and 'granular_scopes' in debug_data['data']:
-                for scope in debug_data['data']['granular_scopes']:
+            if debug_data and 'data' in debug_data and 'granular_scopes' in debug_data.get('data', {}):
+                for scope in debug_data['data'].get('granular_scopes', []):
                     # Get Page ID from pages_messaging scope
                     if scope['scope'] == 'pages_messaging' and scope['target_ids']:
                         page_id = scope['target_ids'][0]
@@ -429,30 +440,42 @@ def instagram_callback():
             flash("Could not find the Facebook Page associated with your Instagram account. Please ensure your Instagram Business account is properly linked to a Facebook Page.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        # We need to get a Page Access Token to query Instagram account details
-        # First, let's get the Page Access Token
-        page_access_token_url = f"https://graph.facebook.com/v18.0/{page_id}"
-        page_token_params = {
-            'fields': 'access_token,name',
-            'access_token': access_token
-        }
+        # 2) Get Page Access Token if we didn't get it from /me/accounts (fallback path; requires pages_read_engagement)
+        if not page_access_token:
+            page_access_token_url = f"https://graph.facebook.com/v18.0/{page_id}"
+            page_token_params = {
+                'fields': 'access_token,name',
+                'access_token': access_token
+            }
+            logger.debug(f"Getting Page Access Token from: {page_access_token_url}")
+            page_token_response = http_requests.get(page_access_token_url, params=page_token_params)
+            logger.debug(f"Page token response status: {page_token_response.status_code}")
+            
+            if page_token_response.status_code != 200:
+                logger.error(f"Failed to get Page Access Token: {page_token_response.text}")
+                flash("Failed to get Page Access Token. Please try again.", "error")
+                return redirect(url_for('dashboard_bp.dashboard'))
+            
+            page_token_data = page_token_response.json()
+            page_access_token = page_token_data.get('access_token')
+            if page_name is None:
+                page_name = page_token_data.get('name')
+            logger.info(f"Got Page Access Token from GET /{page_id} for page_name={page_name}")
+        else:
+            logger.info(f"Using Page Access Token from /me/accounts for page_name={page_name}")
         
-        logger.debug(f"Getting Page Access Token from: {page_access_token_url}")
-        page_token_response = http_requests.get(page_access_token_url, params=page_token_params)
-        logger.debug(f"Page token response status: {page_token_response.status_code}")
+        # 3) Subscribe Page to webhook for Instagram messaging (requires pages_manage_metadata)
+        subscribed_fields = "messages,messaging_postbacks,message_deliveries,message_reads"
+        subscribe_url = f"https://graph.facebook.com/v18.0/{page_id}/subscribed_apps"
+        subscribe_params = {'access_token': page_access_token, 'subscribed_fields': subscribed_fields}
+        subscribe_response = http_requests.post(subscribe_url, data=subscribe_params)
+        if subscribe_response.status_code == 200:
+            sub_result = subscribe_response.json()
+            logger.info(f"Webhook subscribed_apps for page {page_id}: {sub_result.get('success', False)}")
+        else:
+            logger.warning(f"Webhook subscribed_apps failed for page {page_id}: {subscribe_response.status_code} {subscribe_response.text}")
         
-        if page_token_response.status_code != 200:
-            logger.error(f"Failed to get Page Access Token: {page_token_response.text}")
-            flash("Failed to get Page Access Token. Please try again.", "error")
-            return redirect(url_for('dashboard_bp.dashboard'))
-        
-        page_token_data = page_token_response.json()
-        page_access_token = page_token_data.get('access_token')
-        if page_name is None:
-            page_name = page_token_data.get('name')
-        logger.info(f"Got Page Access Token for page_name={page_name}")
-        
-        # Now get Instagram account details using the Page Access Token
+        # 4) Get Instagram profile using the Page Access Token
         profile_url = f"https://graph.facebook.com/v18.0/{instagram_user_id}"
         profile_params = {
             'fields': 'id,username,media_count',

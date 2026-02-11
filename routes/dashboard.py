@@ -729,6 +729,58 @@ def toggle_bot_pause():
 # Debug routes
 # ---------------------------------------------------------------------------
 
+@dashboard_bp.route("/dashboard/debug/instagram-token", methods=["GET"])
+@login_required
+def debug_instagram_token():
+    """Debug route: Verify Facebook user token — debug_token scopes and /me/accounts count. Pass ?token=USER_ACCESS_TOKEN."""
+    if not Config.DEBUG_ROUTES_ENABLED:
+        return jsonify({"error": "Not found"}), 404
+    token = request.args.get("token")
+    if not token or not token.strip():
+        return jsonify({"error": "Missing query parameter: token=USER_ACCESS_TOKEN"}), 400
+    token = token.strip()
+    if not Config.FACEBOOK_APP_ID or not Config.FACEBOOK_APP_SECRET:
+        return jsonify({"error": "Facebook app not configured"}), 503
+    app_token = f"{Config.FACEBOOK_APP_ID}|{Config.FACEBOOK_APP_SECRET}"
+    out = {}
+    try:
+        # debug_token
+        debug_resp = requests.get(
+            "https://graph.facebook.com/v18.0/debug_token",
+            params={"input_token": token, "access_token": app_token},
+            timeout=10
+        )
+        if debug_resp.status_code != 200:
+            out["debug_token_error"] = f"status={debug_resp.status_code} body={debug_resp.text[:500]}"
+        else:
+            debug_data = debug_resp.json()
+            out["debug_token"] = debug_data.get("data", {})
+            out["scopes"] = out["debug_token"].get("scopes", [])
+            out["granular_scopes"] = out["debug_token"].get("granular_scopes", [])
+        # /me/accounts
+        acc_resp = requests.get(
+            "https://graph.facebook.com/v18.0/me/accounts",
+            params={"access_token": token, "fields": "id,name,access_token,instagram_business_account"},
+            timeout=10
+        )
+        if acc_resp.status_code != 200:
+            out["me_accounts_error"] = f"status={acc_resp.status_code} body={acc_resp.text[:500]}"
+            out["me_accounts_count"] = 0
+            out["accounts"] = []
+        else:
+            acc_data = acc_resp.json()
+            accounts_list = acc_data.get("data", [])
+            out["me_accounts_count"] = len(accounts_list)
+            # Redact access_token in response
+            out["accounts"] = [
+                {"id": a.get("id"), "name": a.get("name"), "has_ig": bool(a.get("instagram_business_account")), "access_token": "***" if a.get("access_token") else None}
+                for a in accounts_list
+            ]
+    except Exception as e:
+        out["error"] = str(e)
+    return jsonify(out)
+
+
 @dashboard_bp.route("/dashboard/debug/decrease-replies", methods=["POST"])
 @login_required
 def debug_decrease_replies():
