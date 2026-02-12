@@ -218,6 +218,33 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
+        /* Temporary Meta App Review: webhook status (yellow) */
+        .webhook-status-review {
+            background: rgba(255, 193, 7, 0.12);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .webhook-status-review .webhook-status-head {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 193, 7, 0.95);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .webhook-status-review .webhook-status-note {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem;
+        }
+        .webhook-status-review .webhook-status-detail {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -602,6 +629,27 @@
                 </div>
             {% endif %}
         </div>
+
+        <!-- Temporary: Webhook status for Meta App Review (only when APP_REVIEW_MANUAL_SEND is true) -->
+        {% if app_review_manual_send %}
+        <div class="webhook-status-review dashboard-full">
+            <div class="webhook-status-head">
+                <i class="fas fa-bell"></i>
+                <span>Webhook subscription status</span>
+            </div>
+            <div class="webhook-status-note">
+                Temporary feature for Meta App Review. Our app subscribes your Page to webhooks to receive Instagram messaging events. This section will be removed after review.
+            </div>
+            <div class="webhook-status-detail">
+                <p style="margin: 0.25rem 0;"><strong>Webhook subscription:</strong> {{ 'Active' if webhook_status and webhook_status.active else 'Inactive' }}</p>
+                {% if webhook_status and webhook_status.last_webhook_at_str %}
+                <p style="margin: 0.25rem 0;"><strong>Last webhook event:</strong> {{ webhook_status.last_webhook_at_str }} — {{ webhook_status.last_webhook_event_type or 'message' }}</p>
+                {% else %}
+                <p style="margin: 0.25rem 0;"><strong>Last webhook event:</strong> No events yet</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Quick Actions - Full Width -->
         <div class="dashboard-section-block dashboard-full">

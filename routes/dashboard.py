@@ -51,7 +51,9 @@ def dashboard():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
         cursor.execute(f"""
-            SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active, created_at 
+            SELECT id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, is_active, created_at,
+                   COALESCE(webhook_subscription_active, FALSE) as webhook_subscription_active,
+                   last_webhook_at, last_webhook_event_type
             FROM instagram_connections 
             WHERE user_id = {placeholder} 
             ORDER BY created_at DESC
@@ -161,20 +163,36 @@ def dashboard():
         conn.close()
     
     connections_list = []
+    webhook_status = {'active': False, 'last_webhook_at': None, 'last_webhook_at_str': None, 'last_webhook_event_type': None}
     for conn_data in connections:
-        connections_list.append({
+        c = {
             'id': conn_data[0],
             'instagram_user_id': conn_data[1],
             'instagram_page_id': conn_data[2],
             'instagram_username': conn_data[3],
             'instagram_page_name': conn_data[4],
             'is_active': conn_data[5],
-            'created_at': conn_data[6]
-        })
+            'created_at': conn_data[6],
+            'webhook_subscription_active': conn_data[7] if len(conn_data) > 7 else False,
+            'last_webhook_at': conn_data[8] if len(conn_data) > 8 else None,
+            'last_webhook_event_type': conn_data[9] if len(conn_data) > 9 else None,
+        }
+        connections_list.append(c)
+        if c.get('webhook_subscription_active'):
+            webhook_status['active'] = True
+        if c.get('last_webhook_at'):
+            if webhook_status['last_webhook_at'] is None or (c['last_webhook_at'] and c['last_webhook_at'] > webhook_status['last_webhook_at']):
+                webhook_status['last_webhook_at'] = c['last_webhook_at']
+                webhook_status['last_webhook_event_type'] = c.get('last_webhook_event_type')
+    if webhook_status['last_webhook_at']:
+        t = webhook_status['last_webhook_at']
+        webhook_status['last_webhook_at_str'] = t.strftime('%Y-%m-%d %H:%M:%S') if hasattr(t, 'strftime') else str(t)
     
     return render_template("dashboard.html", 
                          user=user, 
                          connections=connections_list,
+                         app_review_manual_send=Config.APP_REVIEW_MANUAL_SEND,
+                         webhook_status=webhook_status,
                          replies_sent=replies_sent_monthly,
                          replies_limit=replies_limit_monthly,
                          replies_purchased=replies_purchased,

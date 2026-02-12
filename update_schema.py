@@ -235,13 +235,63 @@ def migrate_conversation_senders():
     finally:
         conn.close()
 
+def migrate_instagram_connections_webhook():
+    """Add webhook status columns to instagram_connections (for Meta app review temporary UI)."""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    cursor = conn.cursor()
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+        columns_to_add = [
+            ('webhook_subscription_active', 'BOOLEAN DEFAULT FALSE' if is_postgres else 'BOOLEAN DEFAULT 0'),
+            ('last_webhook_at', 'TIMESTAMP' if is_postgres else 'TIMESTAMP'),
+            ('last_webhook_event_type', 'VARCHAR(64)' if is_postgres else 'TEXT'),
+        ]
+        for column_name, column_type in columns_to_add:
+            try:
+                if is_postgres:
+                    cursor.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='instagram_connections' AND column_name=%s
+                    """, (column_name,))
+                    if not cursor.fetchone():
+                        cursor.execute(f"ALTER TABLE instagram_connections ADD COLUMN {column_name} {column_type}")
+                        print(f"✅ Added column instagram_connections.{column_name}")
+                    else:
+                        print(f"⏭️  Column instagram_connections.{column_name} already exists")
+                else:
+                    try:
+                        cursor.execute(f"ALTER TABLE instagram_connections ADD COLUMN {column_name} {column_type}")
+                        print(f"✅ Added column instagram_connections.{column_name}")
+                    except Exception as e:
+                        if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
+                            print(f"⏭️  Column instagram_connections.{column_name} already exists")
+                        else:
+                            raise
+            except Exception as e:
+                print(f"❌ Error adding instagram_connections.{column_name}: {e}")
+                return False
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ instagram_connections webhook migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     print("🔧 Running database migration to add missing columns...")
     ok1 = migrate_client_settings()
     ok2 = migrate_instagram_connections()
     ok3 = migrate_messages_connection_id()
     ok4 = migrate_conversation_senders()
-    if ok1 and ok2 and ok3 and ok4:
+    ok5 = migrate_instagram_connections_webhook()
+    if ok1 and ok2 and ok3 and ok4 and ok5:
         print("✅ Your database is now updated and ready!")
     else:
         print("❌ Migration failed. Please check the errors above.")

@@ -469,7 +469,8 @@ def instagram_callback():
         subscribe_url = f"https://graph.facebook.com/v18.0/{page_id}/subscribed_apps"
         subscribe_params = {'access_token': page_access_token, 'subscribed_fields': subscribed_fields}
         subscribe_response = http_requests.post(subscribe_url, data=subscribe_params)
-        if subscribe_response.status_code == 200:
+        webhook_subscribed = subscribe_response.status_code == 200
+        if webhook_subscribed:
             sub_result = subscribe_response.json()
             logger.info(f"Webhook subscribed_apps for page {page_id}: {sub_result.get('success', False)}")
         else:
@@ -577,9 +578,10 @@ def instagram_callback():
                             instagram_username = {param},
                             instagram_page_name = {param},
                             is_active = TRUE,
+                            webhook_subscription_active = {param},
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = {param}
-                    """, (page_access_token, profile_data.get('username'), page_name, existing[0]))
+                    """, (page_access_token, profile_data.get('username'), page_name, webhook_subscribed, existing[0]))
                     
                     # If user had free trial but lost replies (e.g., from database reset), restore them
                     cursor.execute(f"""
@@ -605,9 +607,9 @@ def instagram_callback():
                 else:
                     # Create new connection
                     cursor.execute(f"""
-                        INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, page_access_token, is_active)
-                        VALUES ({param}, {param}, {param}, {param}, {param}, {param}, TRUE)
-                    """, (session['user_id'], instagram_user_id, page_id, profile_data.get('username'), page_name, page_access_token))
+                        INSERT INTO instagram_connections (user_id, instagram_user_id, instagram_page_id, instagram_username, instagram_page_name, page_access_token, is_active, webhook_subscription_active)
+                        VALUES ({param}, {param}, {param}, {param}, {param}, {param}, TRUE, {param})
+                    """, (session['user_id'], instagram_user_id, page_id, profile_data.get('username'), page_name, page_access_token, webhook_subscribed))
                     
                     # Grant free trial ONLY if:
                     # 1. User has NOT received free trial before

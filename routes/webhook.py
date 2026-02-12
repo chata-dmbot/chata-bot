@@ -368,6 +368,18 @@ def _process_incoming_messages_impl(incoming_by_sender):
                 save_message(sender_id, event["text"], "", webhook_conn, instagram_connection_id=connection_id)
             logger.info(f"[bg] Saved {len(events)} user message(s) for {sender_id}")
 
+            # Update last webhook timestamp/type for Meta app review temporary UI (pages_manage_metadata)
+            if connection_id is not None:
+                try:
+                    ph = get_param_placeholder()
+                    cursor.execute(
+                        f"UPDATE instagram_connections SET last_webhook_at = CURRENT_TIMESTAMP, last_webhook_event_type = {ph} WHERE id = {ph}",
+                        ("message", connection_id)
+                    )
+                    webhook_conn.commit()
+                except Exception as e:
+                    logger.warning(f"[bg] Could not update last_webhook_at: {e}")
+
             # Ensure sender username is stored for Conversation History (e.g. professional accounts)
             if instagram_connection and connection_id and access_token:
                 try:
