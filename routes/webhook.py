@@ -146,7 +146,13 @@ def webhook():
             logger.warning("Neither INSTAGRAM_APP_SECRET nor FACEBOOK_APP_SECRET set - rejecting webhook")
             return "Forbidden", 403
         if not _verify_instagram_webhook_signature(raw_body, sig_header):
-            logger.error("Webhook signature verification failed")
+            body_len = len(raw_body) if raw_body else 0
+            has_header = bool(sig_header and sig_header.strip())
+            header_prefix_ok = sig_header.startswith("sha256=") if sig_header else False
+            logger.error(
+                "Webhook signature verification failed | body_len=%s has_header=%s header_sha256=%s secret_set=%s",
+                body_len, has_header, header_prefix_ok, bool(_webhook_secret),
+            )
             return "Forbidden", 403
 
         logger.info("WEBHOOK RECEIVED POST REQUEST")
