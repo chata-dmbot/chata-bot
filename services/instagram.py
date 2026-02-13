@@ -185,10 +185,10 @@ def get_instagram_connection_by_page_id(page_id, conn=None):
 
 
 def _verify_instagram_webhook_signature(raw_body, signature_header):
-    """Verify X-Hub-Signature-256 (HMAC-SHA256 of raw body with app secret). Uses INSTAGRAM_APP_SECRET if set, else FACEBOOK_APP_SECRET."""
+    """Verify X-Hub-Signature-256 (HMAC-SHA256 of raw body with app secret). Prefer FACEBOOK_APP_SECRET (Meta signs with main App Secret)."""
     if not signature_header or not raw_body:
         return False
-    secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip().encode("utf-8")
+    secret = (Config.FACEBOOK_APP_SECRET or Config.INSTAGRAM_APP_SECRET or "").strip().encode("utf-8")
     if not secret:
         return False
     prefix = "sha256="

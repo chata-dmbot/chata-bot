@@ -141,9 +141,10 @@ def webhook():
     elif request.method == "POST":
         raw_body = request.get_data(cache=True)
         sig_header = request.headers.get("X-Hub-Signature-256", "")
-        _webhook_secret = (Config.INSTAGRAM_APP_SECRET or Config.FACEBOOK_APP_SECRET or "").strip()
+        # Meta signs webhooks with the app's main App Secret; use FACEBOOK_APP_SECRET first so verification matches.
+        _webhook_secret = (Config.FACEBOOK_APP_SECRET or Config.INSTAGRAM_APP_SECRET or "").strip()
         if not _webhook_secret:
-            logger.warning("Neither INSTAGRAM_APP_SECRET nor FACEBOOK_APP_SECRET set - rejecting webhook")
+            logger.warning("Neither FACEBOOK_APP_SECRET nor INSTAGRAM_APP_SECRET set - rejecting webhook")
             return "Forbidden", 403
         if not _verify_instagram_webhook_signature(raw_body, sig_header):
             body_len = len(raw_body) if raw_body else 0
