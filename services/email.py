@@ -298,7 +298,7 @@ def send_data_deletion_request_acknowledgment_email(email):
         </p>
         
         <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 20px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">
-            If you have any questions or concerns, please don't hesitate to reach out to us at chata.dmbot@gmail.com.
+            If you have any questions or concerns, please don't hesitate to reach out to us at hello@getchata.com.
         </p>
         
         <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 20px 0 0 0; text-transform: none; letter-spacing: normal; line-height: 1.7;">

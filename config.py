@@ -53,7 +53,7 @@ class Config:
     
     # Email Configuration
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-    SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "chata.dmbot@gmail.com")
+    SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "hello@getchata.com")
     
     # Stripe Configuration
     STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
@@ -67,7 +67,7 @@ class Config:
     # Application constants (replace magic numbers throughout the codebase)
     # ---------------------------------------------------------------------------
     BASE_URL = os.getenv("BASE_URL", "https://getchata.com")
-    SUPPORT_EMAIL = "chata.dmbot@gmail.com"
+    SUPPORT_EMAIL = "hello@getchata.com"
     
     # Reply plan limits
     STARTER_MONTHLY_REPLIES = 150
