@@ -190,50 +190,38 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
         timeout = getattr(Config, "OPENAI_TIMEOUT", 60)
         client = openai.OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
 
-        # Extract latest message from follower
-        latest_message = ""
-        if history and len(history) > 0:
-            # Get the last user message
-            for msg in reversed(history):
-                if msg.get('role') == 'user':
-                    latest_message = msg.get('content', '').strip()
-                    break
-
         # Get settings for this specific connection
         if connection_id:
-            # Get user_id from connection - reuse provided connection
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
             cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
             result = cursor.fetchone()
-            
+
             if result:
                 user_id = result[0]
-                # Pass connection to get_client_settings to avoid opening another one
                 settings = get_client_settings(user_id, connection_id, conn)
-                system_prompt = build_personality_prompt(settings, history=history, latest_message=latest_message)
+                system_prompt = build_personality_prompt(settings, include_conversation=False)
                 logger.info(f"Using connection-specific settings for connection {connection_id}")
                 logger.debug(f"Prompt length: {len(system_prompt)} chars")
-                logger.debug(f"Latest message: {latest_message[:50]}...")
             else:
-                # Fallback to global settings
                 logger.warning(f"Connection {connection_id} not found, using neutral persona fallback")
                 fallback_settings = {
                     'bot_name': '',
                     'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
                 }
-                system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
+                system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
         else:
-            # Use global settings (for original Chata account)
             logger.warning("No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
             fallback_settings = {
                 'bot_name': '',
                 'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
             }
-            system_prompt = build_personality_prompt(fallback_settings, history=history, latest_message=latest_message)
+            system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
 
-        # Since everything is now in the system prompt, we only send the system message
-        messages = [{"role": "system", "content": system_prompt}]
+        # System message = persona, rules, examples only. Conversation = separate user/assistant messages.
+        history_slice = history[-MAX_HISTORY_MESSAGES:] if history and len(history) > MAX_HISTORY_MESSAGES else (history or [])
+        messages = [{"role": "system", "content": system_prompt}] + history_slice
+        logger.debug(f"Sending {len(messages)} messages (1 system + {len(history_slice)} conversation)")
 
         model_name = "gpt-5-nano"
         model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
@@ -293,9 +281,15 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
 # Prompt building
 # ---------------------------------------------------------------------------
 
-def build_personality_prompt(settings, history=None, latest_message=None):
+# Number of conversation messages (user + assistant) sent to the API (last N messages = 5 exchanges).
+MAX_HISTORY_MESSAGES = 10
+
+
+def build_personality_prompt(settings, history=None, latest_message=None, include_conversation=True):
     """
-    Build the system prompt using the new structured format.
+    Build the system prompt (persona, rules, examples). When include_conversation is False,
+    the prompt does not embed recent chat or latest message; the caller sends conversation
+    as separate user/assistant messages in the API request.
     """
     def clean(value):
         if not value:
@@ -360,10 +354,10 @@ def build_personality_prompt(settings, history=None, latest_message=None):
     
     example_conversations_text = '\n\n'.join(example_conversations) if example_conversations else "No example conversations provided."
 
-    # Format recent chat (last 20 messages)
+    # Format recent chat and latest message only when embedding conversation in the system prompt.
     recent_chat_text = "No recent chat history."
-    if history and len(history) > 0:
-        # Get last 20 messages (10 from follower, 10 from bot ideally)
+    latest_message_text = ""
+    if include_conversation and history and len(history) > 0:
         last_messages = history[-20:] if len(history) > 20 else history
         chat_lines = []
         for msg in last_messages:
@@ -375,16 +369,33 @@ def build_personality_prompt(settings, history=None, latest_message=None):
                 elif role == 'assistant':
                     chat_lines.append(f'You: "{content}"')
         recent_chat_text = '\n'.join(chat_lines) if chat_lines else "No recent chat history."
+        latest_message_text = latest_message if latest_message else ""
 
-    # Format latest message
-    latest_message_text = latest_message if latest_message else ""
+    # Build prompt from segments; omit sections when value is empty to save tokens.
+    parts = []
 
-    # Build the prompt using the new structure (using regular string, not f-string)
-    prompt_template = """You are {NAME}, a {AGE} year old {WHAT_YOU_DO} from {LOCATION}.
+    # Persona line: only include if at least one of name/age/occupation/location is set
+    has_persona = (name and name != "you") or age or occupation or location
+    if has_persona:
+        bits = [f"You are {name}"]
+        if age:
+            bits.append(f"a {age} year old")
+        if occupation:
+            bits.append(occupation)
+        if location:
+            bits.append(f"from {location}")
+        persona = " ".join(bits) + "."
+        persona = " ".join(persona.split())  # collapse multiple spaces
+        if persona == "You are you.":
+            persona = "You are the person replying."
+        parts.append(persona)
+    else:
+        parts.append("You are the person replying.")
 
-About you: {ABOUT}.
+    if about:
+        parts.append(f"About you: {about}.")
 
-Stay fully in character. Never mention or imply anything automated.
+    parts.append("""Stay fully in character. Never mention or imply anything automated.
 
 Follow these rules:
 
@@ -410,53 +421,50 @@ Follow these rules:
 
 11. Variation and no repetition: Never reuse the same phrase, opener, or sign-off in consecutive replies. If you used a particular line or greeting in your last reply (or the one before), say something different this time. Rotate how you start and end messages. Vary sentence structure and word choice so each message feels fresh. A little ambiguity is fine—you do not need to repeat the same idea in the same way every time.
 
-12. Match and take inspiration from the follower: Mirror their energy, vocabulary, and style. If they are brief, be brief. If they are excited or use certain words or emojis, echo that vibe. Take inspiration from what they say—reference their interests, their words, or their mood—so the conversation feels like a real back-and-forth, not a script. Let their message shape your reply; do not fall back on the same stock phrases regardless of what they wrote.
+12. Match and take inspiration from the follower: Mirror their energy, vocabulary, and style. If they are brief, be brief. If they are excited or use certain words or emojis, echo that vibe. Take inspiration from what they say—reference their interests, their words, or their mood—so the conversation feels like a real back-and-forth, not a script. Let their message shape your reply; do not fall back on the same stock phrases regardless of what they wrote.""")
 
-Avoid these topics: {TOPICS_TO_AVOID}.
+    if avoid_topics:
+        parts.append(f"""Avoid these topics: {avoid_topics}.
 
-If the follower brings them up, redirect gently in your own tone.
+If the follower brings them up, redirect gently in your own tone.""")
 
-You can reference your content only when it fits naturally:
+    has_content = promo_links or content_highlights or post_descriptions
+    if has_content:
+        content_lines = ["You can reference your content only when it fits naturally:"]
+        if promo_links:
+            content_lines.append(f"- Promo links: {promo_links_text}")
+        if content_highlights:
+            content_lines.append(f"- Content highlights: {content_highlights_text}")
+        if post_descriptions:
+            content_lines.append(f"- Posts: {post_descriptions_text}")
+        parts.append("\n".join(content_lines))
 
-- Promo links: {PROMO_LINKS}
-
-- Content highlights: {CONTENT_HIGHLIGHTS}
-
-- Posts: {POST_DESCRIPTIONS}
-
-Your main guidance for tone and style: the example conversations below. They define how you text. Match their length, tone, phrasing, and communication style. Use them as the primary reference for every reply.
+    if example_conversations_text and example_conversations_text != "No example conversations provided.":
+        parts.append("""Your main guidance for tone and style: the example conversations below. They define how you text. Match their length, tone, phrasing, and communication style. Use them as the primary reference for every reply.
 
 Example conversations (your main style guide):
 
-{EXAMPLE_CONVERSATIONS}
+""" + example_conversations_text)
 
-Here is the recent chat between you and this follower:
+    if include_conversation:
+        if recent_chat_text and recent_chat_text != "No recent chat history.":
+            parts.append("""Here is the recent chat between you and this follower:
 
-{RECENT_CHAT_LAST_20_MESSAGES}
+""" + recent_chat_text)
 
-Follower's latest message (this is the one you must answer now):
+        parts.append('''Follower's latest message (this is the one you must answer now):
 
-"{LATEST_MESSAGE}"
+"''' + latest_message_text + '''"
 
-Reply with a single message as {NAME}, following the rules above and mirroring the style of the example conversations.
+Reply with a single message as ''' + name + ''', following the rules above and mirroring the style of the example conversations.
 
 Before replying: check the recent chat. If you already used a phrase or opener in your last 1–2 messages, do not repeat it—vary your wording. Let the follower's latest message guide your tone and content.
 
-Use the recent chat only as context, and answer only to the follower's latest message."""
+Use the recent chat only as context, and answer only to the follower's latest message.''')
+    else:
+        parts.append(f"Reply as {name} to the follower's last message in the conversation. Stay in character and follow the rules above.")
 
-    # Replace placeholders (using single braces since we're not using f-string)
-    prompt = prompt_template.replace("{NAME}", name)
-    prompt = prompt.replace("{AGE}", age)
-    prompt = prompt.replace("{WHAT_YOU_DO}", occupation)
-    prompt = prompt.replace("{LOCATION}", location)
-    prompt = prompt.replace("{ABOUT}", about)
-    prompt = prompt.replace("{TOPICS_TO_AVOID}", avoid_topics)
-    prompt = prompt.replace("{PROMO_LINKS}", promo_links_text)
-    prompt = prompt.replace("{CONTENT_HIGHLIGHTS}", content_highlights_text)
-    prompt = prompt.replace("{POST_DESCRIPTIONS}", post_descriptions_text)
-    prompt = prompt.replace("{EXAMPLE_CONVERSATIONS}", example_conversations_text)
-    prompt = prompt.replace("{RECENT_CHAT_LAST_20_MESSAGES}", recent_chat_text)
-    prompt = prompt.replace("{LATEST_MESSAGE}", latest_message_text)
+    prompt = "\n\n".join(parts)
 
     logger.debug(f"Built system prompt ({len(prompt)} chars)")
     logger.debug(f"Prompt start >>> {prompt} <<< Prompt end")
