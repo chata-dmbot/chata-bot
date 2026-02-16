@@ -94,7 +94,7 @@ ALL_CONVERSATION_PROMPTS = CONVERSATION_EXAMPLES
 MODEL_CONFIG = {
     "gpt-5-nano": {
         "token_param": "max_completion_tokens",
-        "supports_temperature": False,
+        "supports_temperature": True,
         "max_completion_cap": 3000,
     },
 }
@@ -201,6 +201,11 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                 user_id = result[0]
                 settings = get_client_settings(user_id, connection_id, conn)
                 system_prompt = build_personality_prompt(settings, include_conversation=False)
+                try:
+                    temperature = float(settings.get('temperature', 0.7))
+                    temperature = max(0.0, min(2.0, temperature))
+                except (TypeError, ValueError):
+                    temperature = 0.7
                 logger.info(f"Using connection-specific settings for connection {connection_id}")
                 logger.debug(f"Prompt length: {len(system_prompt)} chars")
             else:
@@ -210,6 +215,7 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                     'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
                 }
                 system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
+                temperature = 0.7
         else:
             logger.warning("No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
             fallback_settings = {
@@ -217,6 +223,7 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
                 'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
             }
             system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
+            temperature = 0.7
 
         # System message = persona, rules, examples only. Conversation = separate user/assistant messages.
         history_slice = history[-MAX_HISTORY_MESSAGES:] if history and len(history) > MAX_HISTORY_MESSAGES else (history or [])
@@ -230,10 +237,8 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
             "model": model_name,
             "messages": messages,
         }
-        # temperature and max_tokens are hardcoded per model config —
-        # gpt-5-nano does not support temperature and caps at 3000 tokens.
         if model_config.get("supports_temperature", True):
-            completion_kwargs["temperature"] = 0.7  # default; nano skips this
+            completion_kwargs["temperature"] = temperature
 
         token_param = model_config.get("token_param", "max_tokens")
         max_tokens = model_config.get("max_completion_cap", 3000)

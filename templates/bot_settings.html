@@ -254,6 +254,60 @@ textarea::placeholder {
     color: rgba(255, 125, 125, 0.8);
 }
 
+/* --- Temperature slider (gray left, blue right) --- */
+.temperature-slider-wrap {
+    --temp-ratio: 0.35;
+}
+.temperature-slider {
+    width: 100%;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.2) calc(var(--temp-ratio) * 100%),
+        var(--chata-blue) calc(var(--temp-ratio) * 100%),
+        var(--chata-blue) 100%);
+    border-radius: 4px;
+    outline: none;
+}
+.temperature-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s ease;
+}
+.temperature-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.08);
+}
+.temperature-slider::-moz-range-track {
+    background: linear-gradient(to right,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.2) calc(var(--temp-ratio) * 100%),
+        var(--chata-blue) calc(var(--temp-ratio) * 100%),
+        var(--chata-blue) 100%);
+    border-radius: 4px;
+}
+.temperature-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.temperature-value {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+}
+
 /* --- Conversation Examples --- */
 .conversation-examples {
     display: grid;
@@ -1068,6 +1122,17 @@ textarea {
             </div>
         </section>
 
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Temperature</h2>
+                <p>Higher values make replies more varied and relaxed; lower values make them more consistent and focused.</p>
+            </div>
+            <div class="form-group temperature-slider-wrap">
+                <label for="temperature">Response temperature <span id="temperature-value" class="temperature-value">{{ "%.1f"|format(settings.get('temperature', 0.7) if settings else 0.7) }}</span></label>
+                <input type="range" id="temperature" name="temperature" class="temperature-slider" min="0" max="2" step="0.1" value="{{ settings.get('temperature', 0.7) if settings else 0.7 }}">
+            </div>
+        </section>
+
         <div class="action-buttons">
             <button type="submit" class="btn-primary">
                 <i class="fas fa-save"></i>
@@ -1278,6 +1343,24 @@ textarea {
         });
     }
 
+    /* --- Temperature slider: update value label and track color (gray left, blue right) --- */
+    function updateTemperatureDisplay() {
+        var slider = document.getElementById('temperature');
+        var valueSpan = document.getElementById('temperature-value');
+        var wrap = slider ? slider.closest('.temperature-slider-wrap') : null;
+        if (!slider || !valueSpan || !wrap) return;
+        var val = parseFloat(slider.value, 10) || 0;
+        valueSpan.textContent = val.toFixed(1);
+        wrap.style.setProperty('--temp-ratio', (val / 2).toString());
+    }
+    function setupTemperatureSlider() {
+        var slider = document.getElementById('temperature');
+        if (!slider) return;
+        updateTemperatureDisplay();
+        slider.addEventListener('input', updateTemperatureDisplay);
+        slider.addEventListener('change', updateTemperatureDisplay);
+    }
+
     /* --- Toast notification --- */
     function showToast() {
         var toast = document.getElementById('help-toast');
@@ -1322,6 +1405,7 @@ textarea {
         requestAnimationFrame(function () {
             attachAutoResize();
             attachCounters();
+            updateTemperatureDisplay();
         });
         window.closeResetModal();
     };
@@ -1347,6 +1431,7 @@ textarea {
     document.addEventListener('DOMContentLoaded', function () {
         attachAutoResize();
         attachCounters();
+        setupTemperatureSlider();
         setupLinkControls();
         setupPostControls();
         setupFAQControls();
