@@ -5,6 +5,25 @@ from database import get_db_connection, get_param_placeholder, is_postgres
 from config import Config
 
 
+def _float_default(value, default):
+    """Return float(value) if value is not None, else default."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _clamp_float(value, low, high, default):
+    """Parse value to float and clamp to [low, high]; use default if invalid."""
+    try:
+        x = float(value)
+        return max(low, min(high, x))
+    except (TypeError, ValueError):
+        return default
+
+
 def get_client_settings(user_id, connection_id=None, conn=None):
     """
     Get bot settings for a specific client/connection.
@@ -27,7 +46,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             cursor.execute(f"""
                 SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
                        use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
-                       blocked_users, is_active
+                       blocked_users, temperature, presence_penalty, frequency_penalty, is_active
                 FROM client_settings 
                 WHERE user_id = {placeholder} AND instagram_connection_id = {placeholder}
             """, (user_id, connection_id))
@@ -35,7 +54,7 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             cursor.execute(f"""
                 SELECT bot_personality, bot_name, bot_age, bot_gender, bot_location, bot_occupation, bot_education,
                        use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs, instagram_url, avoid_topics,
-                       blocked_users, is_active
+                       blocked_users, temperature, presence_penalty, frequency_penalty, is_active
                 FROM client_settings 
                 WHERE user_id = {placeholder} AND instagram_connection_id IS NULL
             """, (user_id,))
@@ -71,7 +90,10 @@ def get_client_settings(user_id, connection_id=None, conn=None):
             'instagram_url': row[14] or '',
             'avoid_topics': row[15] or '',
             'blocked_users': json.loads(row[16]) if row[16] else [],
-            'auto_reply': bool(row[17]) if row[17] is not None else True
+            'temperature': _float_default(row[17], 0.7),
+            'presence_penalty': _float_default(row[18], 0),
+            'frequency_penalty': _float_default(row[19], 0),
+            'auto_reply': bool(row[20]) if row[20] is not None else True
         }
     
     # Return default settings if none exist
@@ -93,6 +115,9 @@ def get_client_settings(user_id, connection_id=None, conn=None):
         'instagram_url': '',
         'avoid_topics': '',
         'blocked_users': [],
+        'temperature': 0.7,
+        'presence_penalty': 0,
+        'frequency_penalty': 0,
         'auto_reply': True
     }
 
@@ -168,6 +193,9 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
         samples_json = json.dumps(settings.get('conversation_samples', {}))
         faqs_json = json.dumps(settings.get('faqs', []))
         blocked_users_json = json.dumps(settings.get('blocked_users', []))
+        temperature = _clamp_float(settings.get('temperature', 0.7), 0, 2, 0.7)
+        presence_penalty = _clamp_float(settings.get('presence_penalty', 0), -2, 2, 0)
+        frequency_penalty = _clamp_float(settings.get('frequency_penalty', 0), -2, 2, 0)
     
         # Use different syntax for PostgreSQL vs SQLite
         is_pg = is_postgres()
@@ -179,16 +207,17 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                   settings.get('active_start', '09:00'), settings.get('active_end', '18:00'),
                   links_json, posts_json, samples_json, faqs_json, settings.get('instagram_url', ''), settings.get('avoid_topics', ''),
                   blocked_users_json,
+                  temperature, presence_penalty, frequency_penalty,
                   settings.get('auto_reply', True))
 
         cols = """(user_id, instagram_connection_id, bot_personality, bot_name, bot_age, bot_gender, bot_location,
              bot_occupation, bot_education, use_active_hours, active_start, active_end, links, posts, conversation_samples, faqs,
-             instagram_url, avoid_topics, blocked_users, is_active)"""
+             instagram_url, avoid_topics, blocked_users, temperature, presence_penalty, frequency_penalty, is_active)"""
 
         vals = f"""VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                     {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                    {placeholder}, {placeholder})"""
+                    {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"""
 
         if is_pg:
             cursor.execute(f"""
@@ -203,8 +232,9 @@ def save_client_settings(user_id, settings, connection_id=None, conn=None):
                 links = EXCLUDED.links, posts = EXCLUDED.posts,
                 conversation_samples = EXCLUDED.conversation_samples, faqs = EXCLUDED.faqs,
                 instagram_url = EXCLUDED.instagram_url, avoid_topics = EXCLUDED.avoid_topics,
-                blocked_users = EXCLUDED.blocked_users, is_active = EXCLUDED.is_active,
-                updated_at = CURRENT_TIMESTAMP
+                blocked_users = EXCLUDED.blocked_users, temperature = EXCLUDED.temperature,
+                presence_penalty = EXCLUDED.presence_penalty, frequency_penalty = EXCLUDED.frequency_penalty,
+                is_active = EXCLUDED.is_active, updated_at = CURRENT_TIMESTAMP
             """, params)
         else:
             cursor.execute(f"""

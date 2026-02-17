@@ -97,6 +97,11 @@ MODEL_CONFIG = {
         "supports_temperature": False,
         "max_completion_cap": 3000,
     },
+    "gpt-4.1-mini": {
+        "supports_temperature": True,
+        "supports_penalties": True,
+        "send_max_tokens": False,
+    },
 }
 
 DEFAULT_MODEL_CONFIG = {
@@ -107,6 +112,14 @@ DEFAULT_MODEL_CONFIG = {
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _clamp_float(value, low, high, default):
+    """Parse value to float and clamp to [low, high]; use default if invalid."""
+    try:
+        x = float(value)
+        return max(low, min(high, x))
+    except (TypeError, ValueError):
+        return default
 
 
 # ---------------------------------------------------------------------------
@@ -199,48 +212,54 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
 
             if result:
                 user_id = result[0]
-                settings = get_client_settings(user_id, connection_id, conn)
-                system_prompt = build_personality_prompt(settings, include_conversation=False)
+                effective_settings = get_client_settings(user_id, connection_id, conn)
+                system_prompt = build_personality_prompt(effective_settings, include_conversation=False)
                 logger.info(f"Using connection-specific settings for connection {connection_id}")
                 logger.debug(f"Prompt length: {len(system_prompt)} chars")
             else:
                 logger.warning(f"Connection {connection_id} not found, using neutral persona fallback")
-                fallback_settings = {
+                effective_settings = {
                     'bot_name': '',
-                    'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
+                    'bot_personality': 'You must still act like a real human. Keep responses short and conversational.',
+                    'temperature': 0.7, 'presence_penalty': 0, 'frequency_penalty': 0,
                 }
-                system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
+                system_prompt = build_personality_prompt(effective_settings, include_conversation=False)
         else:
             logger.warning("No connection_id passed to get_ai_reply_with_connection; using neutral persona fallback.")
-            fallback_settings = {
+            effective_settings = {
                 'bot_name': '',
-                'bot_personality': 'You must still act like a real human. Keep responses short and conversational.'
+                'bot_personality': 'You must still act like a real human. Keep responses short and conversational.',
+                'temperature': 0.7, 'presence_penalty': 0, 'frequency_penalty': 0,
             }
-            system_prompt = build_personality_prompt(fallback_settings, include_conversation=False)
+            system_prompt = build_personality_prompt(effective_settings, include_conversation=False)
 
         # System message = persona, rules, examples only. Conversation = separate user/assistant messages.
         history_slice = history[-MAX_HISTORY_MESSAGES:] if history and len(history) > MAX_HISTORY_MESSAGES else (history or [])
         messages = [{"role": "system", "content": system_prompt}] + history_slice
         logger.debug(f"Sending {len(messages)} messages (1 system + {len(history_slice)} conversation)")
 
-        model_name = "gpt-5-nano"
+        model_name = "gpt-4.1-mini"
         model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
+        temperature = _clamp_float(effective_settings.get("temperature", 0.7), 0, 2, 0.7)
+        presence_penalty = _clamp_float(effective_settings.get("presence_penalty", 0), -2, 2, 0)
+        frequency_penalty = _clamp_float(effective_settings.get("frequency_penalty", 0), -2, 2, 0)
 
         completion_kwargs = {
             "model": model_name,
             "messages": messages,
         }
-        # temperature and max_tokens are hardcoded per model config —
-        # gpt-5-nano does not support temperature and caps at 3000 tokens.
         if model_config.get("supports_temperature", True):
-            completion_kwargs["temperature"] = 0.7  # default; nano skips this
-
-        token_param = model_config.get("token_param", "max_tokens")
-        max_tokens = model_config.get("max_completion_cap", 3000)
-        if token_param == "max_completion_tokens":
-            completion_kwargs["max_completion_tokens"] = max_tokens
-        else:
-            completion_kwargs["max_tokens"] = max_tokens
+            completion_kwargs["temperature"] = temperature
+        if model_config.get("supports_penalties", False):
+            completion_kwargs["presence_penalty"] = presence_penalty
+            completion_kwargs["frequency_penalty"] = frequency_penalty
+        if model_config.get("send_max_tokens", True):
+            token_param = model_config.get("token_param", "max_tokens")
+            max_tokens = model_config.get("max_completion_cap", 3000)
+            if token_param == "max_completion_tokens":
+                completion_kwargs["max_completion_tokens"] = max_tokens
+            else:
+                completion_kwargs["max_tokens"] = max_tokens
         openai_start = time.time()
         response = client.chat.completions.create(**completion_kwargs)
         openai_duration = time.time() - openai_start
@@ -419,7 +438,9 @@ Follow these rules:
 
 9. Variation and no repetition: Never reuse the same phrase, opener, or sign-off in consecutive replies. If you used a particular line or greeting in your last reply (or the one before), say something different this time. Rotate how you start and end messages. Vary sentence structure and word choice so each message feels fresh. A little ambiguity is fine—you do not need to repeat the same idea in the same way every time.
 
-10. Match and take inspiration from the follower: Mirror their energy, vocabulary, and style. If they are brief, be brief. If they are excited or use certain words or emojis, echo that vibe. Take inspiration from what they say—reference their interests, their words, or their mood—so the conversation feels like a real back-and-forth, not a script. Let their message shape your reply; do not fall back on the same stock phrases regardless of what they wrote.""")
+10. Match and take inspiration from the follower: Mirror their energy, vocabulary, and style. If they are brief, be brief. If they are excited or use certain words or emojis, echo that vibe. Take inspiration from what they say—reference their interests, their words, or their mood—so the conversation feels like a real back-and-forth, not a script. Let their message shape your reply; do not fall back on the same stock phrases regardless of what they wrote.
+
+11. Do not make up features, integrations, or technical details. Only state product facts that you were explicitly given. Persona and story can be creative; product and tech must be accurate.""")
 
     if avoid_topics:
         parts.append(f"""Avoid these topics: {avoid_topics}.

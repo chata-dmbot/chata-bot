@@ -142,12 +142,13 @@ else:
 
 if Config.RUN_MIGRATIONS_ON_STARTUP:
     logger.info("Running database migration...")
-    from update_schema import migrate_client_settings, migrate_instagram_connections_webhook
+    from update_schema import migrate_client_settings, migrate_client_settings_advanced_params, migrate_instagram_connections_webhook
     try:
         if migrate_client_settings():
             logger.info("Migration completed successfully")
         else:
             logger.warning("Migration had issues but continuing...")
+        migrate_client_settings_advanced_params()
         migrate_instagram_connections_webhook()
     except Exception as e:
         logger.warning(f"Migration error (continuing anyway): {e}")

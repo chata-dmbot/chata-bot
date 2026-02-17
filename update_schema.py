@@ -103,6 +103,52 @@ def migrate_client_settings():
     finally:
         conn.close()
 
+
+def migrate_client_settings_advanced_params():
+    """Add temperature, presence_penalty, frequency_penalty to client_settings if missing."""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    cursor = conn.cursor()
+    db_url = os.environ.get('DATABASE_URL', '')
+    is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+    columns_to_add = [
+        ('temperature', 'REAL DEFAULT 0.7'),
+        ('presence_penalty', 'REAL DEFAULT 0'),
+        ('frequency_penalty', 'REAL DEFAULT 0'),
+    ]
+    try:
+        for column_name, column_type in columns_to_add:
+            try:
+                if is_postgres:
+                    cursor.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='client_settings' AND column_name=%s
+                    """, (column_name,))
+                    if not cursor.fetchone():
+                        cursor.execute(f"ALTER TABLE client_settings ADD COLUMN {column_name} {column_type}")
+                        print(f"✅ Added column: {column_name}")
+                    else:
+                        print(f"⏭️  Column already exists: {column_name}")
+                else:
+                    cursor.execute(f"ALTER TABLE client_settings ADD COLUMN {column_name} {column_type}")
+                    print(f"✅ Added column: {column_name}")
+            except Exception as e:
+                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                    print(f"⏭️  Column already exists: {column_name}")
+                else:
+                    raise
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 def migrate_instagram_connections():
     """Add instagram_page_name and instagram_username to instagram_connections"""
     conn = get_db_connection()

@@ -457,6 +457,22 @@ def bot_settings():
                     if follower_value:
                         conversation_samples[follower_key] = follower_value
 
+            try:
+                temperature = float(request.form.get('temperature', 0.7))
+                temperature = max(0.0, min(2.0, temperature))
+            except (TypeError, ValueError):
+                temperature = 0.7
+            try:
+                presence_penalty = float(request.form.get('presence_penalty', 0))
+                presence_penalty = max(-2.0, min(2.0, presence_penalty))
+            except (TypeError, ValueError):
+                presence_penalty = 0
+            try:
+                frequency_penalty = float(request.form.get('frequency_penalty', 0))
+                frequency_penalty = max(-2.0, min(2.0, frequency_penalty))
+            except (TypeError, ValueError):
+                frequency_penalty = 0
+
             settings = {
                 'bot_personality': request.form.get('bot_personality', '').strip(),
                 'bot_name': request.form.get('bot_name', '').strip(),
@@ -470,7 +486,10 @@ def bot_settings():
                 'conversation_samples': conversation_samples,
                 'instagram_url': request.form.get('instagram_url', '').strip(),
                 'avoid_topics': request.form.get('avoid_topics', '').strip(),
-                'blocked_users': [username.strip().lstrip('@').lower() for username in request.form.get('blocked_users', '').strip().split('\n') if username.strip()] if request.form.get('blocked_users') else []
+                'blocked_users': [username.strip().lstrip('@').lower() for username in request.form.get('blocked_users', '').strip().split('\n') if username.strip()] if request.form.get('blocked_users') else [],
+                'temperature': temperature,
+                'presence_penalty': presence_penalty,
+                'frequency_penalty': frequency_penalty,
             }
 
             save_client_settings(user_id, settings, connection_id, conn)
