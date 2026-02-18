@@ -219,8 +219,10 @@ a {
 .advanced-settings-inner {
     padding-top: 1.5rem;
     display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.5rem 2rem;
+    align-items: flex-start;
 }
 .advanced-settings-inner .form-hint {
     margin-top: 0.25rem;
@@ -242,23 +244,63 @@ a {
     outline: none;
 }
 
-/* --- Advanced knob rows --- */
+/* --- Advanced knob rows (horizontal cards) --- */
 .advanced-knob-row {
     display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 140px;
+    max-width: 200px;
 }
 .advanced-knob-row .form-group {
-    flex: 0 0 auto;
+    width: 100%;
     margin-bottom: 0;
 }
 .advanced-knob-row .knob-cell {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    flex: 1;
-    min-width: 200px;
+    gap: 0.5rem;
+    width: 100%;
+}
+.knob-info-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+.knob-info-icon {
+    color: rgba(255, 255, 255, 0.45);
+    cursor: help;
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+.knob-info-icon:hover {
+    color: rgba(51, 102, 255, 0.9);
+}
+.knob-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 0.6rem 0.85rem;
+    background: rgba(15, 20, 35, 0.98);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: normal;
+    max-width: 240px;
+    width: max-content;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 20;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.knob-info-wrap:hover .knob-tooltip {
+    opacity: 1;
 }
 .knob-container {
     position: relative;
@@ -304,9 +346,8 @@ a {
     letter-spacing: 0.05em;
     transition: color 0.2s ease;
 }
-.advanced-knob-row .form-hint {
-    width: 100%;
-    margin-top: 0.15rem;
+.advanced-knob-row .form-hint.inline-tooltip-only {
+    display: none;
 }
 
 /* --- Form Elements --- */
@@ -1202,9 +1243,13 @@ textarea {
                                 <div class="knob-needle"></div>
                             </div>
                             <span class="knob-value-display" aria-live="polite"></span>
+                            <div class="knob-info-wrap">
+                                <i class="fas fa-info-circle knob-info-icon" aria-hidden="true"></i>
+                                <span class="knob-tooltip">Higher = more varied, creative replies; lower = more consistent and focused.</span>
+                            </div>
                         </div>
                         <input type="hidden" id="temperature" name="temperature" value="{{ settings.get('temperature', 0.7) if settings else 0.7 }}">
-                        <p class="form-hint">Higher = more varied, creative replies; lower = more consistent and focused.</p>
+                        <p class="form-hint inline-tooltip-only">Higher = more varied, creative replies; lower = more consistent and focused.</p>
                     </div>
                 </div>
                 <div class="advanced-knob-row" data-knob="presence_penalty" data-min="-2" data-max="2" data-step="0.1" data-value="{{ settings.get('presence_penalty', 0) if settings else 0 }}">
@@ -1216,9 +1261,13 @@ textarea {
                                 <div class="knob-needle"></div>
                             </div>
                             <span class="knob-value-display" aria-live="polite"></span>
+                            <div class="knob-info-wrap">
+                                <i class="fas fa-info-circle knob-info-icon" aria-hidden="true"></i>
+                                <span class="knob-tooltip">Encourages talking about new topics; reduces repetition of themes.</span>
+                            </div>
                         </div>
                         <input type="hidden" id="presence_penalty" name="presence_penalty" value="{{ settings.get('presence_penalty', 0) if settings else 0 }}">
-                        <p class="form-hint">Encourages talking about new topics; reduces repetition of themes.</p>
+                        <p class="form-hint inline-tooltip-only">Encourages talking about new topics; reduces repetition of themes.</p>
                     </div>
                 </div>
                 <div class="advanced-knob-row" data-knob="frequency_penalty" data-min="-2" data-max="2" data-step="0.1" data-value="{{ settings.get('frequency_penalty', 0) if settings else 0 }}">
@@ -1230,9 +1279,13 @@ textarea {
                                 <div class="knob-needle"></div>
                             </div>
                             <span class="knob-value-display" aria-live="polite"></span>
+                            <div class="knob-info-wrap">
+                                <i class="fas fa-info-circle knob-info-icon" aria-hidden="true"></i>
+                                <span class="knob-tooltip">Reduces repetition of the same words or phrases in a reply.</span>
+                            </div>
                         </div>
                         <input type="hidden" id="frequency_penalty" name="frequency_penalty" value="{{ settings.get('frequency_penalty', 0) if settings else 0 }}">
-                        <p class="form-hint">Reduces repetition of the same words or phrases in a reply.</p>
+                        <p class="form-hint inline-tooltip-only">Reduces repetition of the same words or phrases in a reply.</p>
                     </div>
                 </div>
             </div>
