@@ -167,19 +167,9 @@
             50% { transform: translateY(-20px); }
         }
         
-        @keyframes slideLogos {
-            0% {
-                transform: translate3d(0, 0, 0);
-            }
-            100% {
-                transform: translate3d(-25%, 0, 0); /* Move by 1/4 — 4 identical sets so reset is invisible */
-            }
-        }
-        
-        /* Seamless infinite loop: GPU layer + fast speed so reset is imperceptible */
+        /* Logo slider: no CSS animation — seamless scroll is done in JS (requestAnimationFrame + wrap) */
         .logo-slider {
             will-change: transform;
-            animation: slideLogos 18s linear infinite !important;
         }
         
         @keyframes slideConversations {
@@ -710,7 +700,7 @@
                 <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: #fff; opacity: 0.5; z-index: 1;"></div>
                 <!-- Bottom white line -->
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: #fff; opacity: 0.5; z-index: 1;"></div>
-                <div class="logo-slider" style="display: flex; align-items: center; gap: 4rem;">
+                <div class="logo-slider" id="logoSlider" style="display: flex; align-items: center; gap: 4rem;">
                     <!-- First set of logos -->
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
                         <img src="{{ url_for('static', filename='images/instagram.png') }}" alt="Instagram" style="height: 60px; width: auto; filter: none;">
@@ -1883,6 +1873,32 @@
         window.addEventListener('scroll', animateOnScroll);
         // Run once on page load
         animateOnScroll();
+
+        // They Trust Us: seamless infinite logo scroll (same approach as conversation carousel — no jump)
+        const logoSlider = document.getElementById('logoSlider');
+        if (logoSlider) {
+            let logoPosition = 0;
+            const logoPxPerFrame = 2;
+            function getLogoSetWidth() {
+                return logoSlider.scrollWidth / 4;
+            }
+            function wrapLogoPosition(pos) {
+                const w = getLogoSetWidth();
+                while (pos <= -w) pos += w;
+                while (pos > 0) pos -= w;
+                return pos;
+            }
+            function animateLogoSlider() {
+                const oneSetWidth = getLogoSetWidth();
+                if (oneSetWidth > 0) {
+                    logoPosition -= logoPxPerFrame;
+                    logoPosition = wrapLogoPosition(logoPosition);
+                    logoSlider.style.transform = 'translateX(' + logoPosition + 'px)';
+                }
+                requestAnimationFrame(animateLogoSlider);
+            }
+            animateLogoSlider();
+        }
 
         // Draggable Conversation Carousel with Infinite Loop and iOS-style scaling
         const slider = document.getElementById('conversationSlider');
