@@ -169,16 +169,17 @@
         
         @keyframes slideLogos {
             0% {
-                transform: translateX(0);
+                transform: translate3d(0, 0, 0);
             }
             100% {
-                transform: translateX(-25%); /* Move by 1/4 since we now have 4 sets for seamless loop */
+                transform: translate3d(-25%, 0, 0); /* Move by 1/4 — 4 identical sets so reset is invisible */
             }
         }
         
-        /* Ensure smooth infinite loop by using a longer duration and seamless reset */
+        /* Seamless infinite loop: GPU layer + fast speed so reset is imperceptible */
         .logo-slider {
-            animation: slideLogos 35s linear infinite !important; /* Faster smooth continuous scrolling */
+            will-change: transform;
+            animation: slideLogos 18s linear infinite !important;
         }
         
         @keyframes slideConversations {
@@ -736,10 +737,10 @@
                         <img src="{{ url_for('static', filename='images/railway.png') }}" alt="Railway" style="height: 60px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 70px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 52px; width: auto; filter: none;">
                     </div>
         
                     <!-- Duplicate set for seamless loop -->
@@ -768,10 +769,10 @@
                         <img src="{{ url_for('static', filename='images/railway.png') }}" alt="Railway" style="height: 60px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 70px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 52px; width: auto; filter: none;">
                     </div>
         
                     <!-- Third set for ultra-smooth loop -->
@@ -800,10 +801,10 @@
                         <img src="{{ url_for('static', filename='images/railway.png') }}" alt="Railway" style="height: 60px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 70px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 52px; width: auto; filter: none;">
                     </div>
         
                     <!-- Fourth set for seamless infinite loop -->
@@ -832,10 +833,10 @@
                         <img src="{{ url_for('static', filename='images/railway.png') }}" alt="Railway" style="height: 60px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/namecheap.png') }}" alt="Namecheap" style="height: 70px; width: auto; filter: none;">
                     </div>
                     <div class="logo-item" style="flex-shrink: 0; transition: opacity 0.3s;">
-                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 60px; width: auto; filter: none;">
+                        <img src="{{ url_for('static', filename='images/sendgrid.png') }}" alt="SendGrid" style="height: 52px; width: auto; filter: none;">
                     </div>
           </div>
         </div>
