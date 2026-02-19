@@ -229,6 +229,13 @@
             /* Transitions now handled by JavaScript for gradual scroll-based fade */
         }
 
+        /* Mobile: hide hero subtitle so layout stays clean on small screens */
+        @media (max-width: 768px) {
+            .hero-subtitle {
+                display: none !important;
+            }
+        }
+
         /* Why Choose Chata Section */
         /* CHATA Description Section */
         .chata-description-section {
