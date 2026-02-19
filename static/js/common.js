@@ -10,13 +10,18 @@ function hidePageLoadOverlay() {
 var grid = null;
 var ticking = false;
 
+function isMobileGrid() {
+    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+}
+
 function createInteractiveGrid() {
     var g = document.getElementById('interactiveGrid');
     if (!g) return;
+    g.innerHTML = '';
+    if (isMobileGrid()) return; /* mobile: no cells, static grid from CSS only to avoid lag */
     var gridSize = 50;
     var cols = Math.ceil(window.innerWidth / gridSize);
     var rows = Math.ceil(window.innerHeight * 6 / gridSize);
-    g.innerHTML = '';
     for (var i = 0; i < rows; i++) {
         for (var j = 0; j < cols; j++) {
             var cell = document.createElement('div');
@@ -132,8 +137,10 @@ window.addEventListener('load', function() {
     window.scrollTo(0, 0);
     createInteractiveGrid();
     grid = document.getElementById('interactiveGrid');
-    updateGridLighting();
-    setTimeout(createAmbientLighting, 2000);
+    if (!isMobileGrid()) {
+        updateGridLighting();
+        setTimeout(createAmbientLighting, 2000);
+    }
 });
 window.addEventListener('pageshow', hidePageLoadOverlay);
 window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);

@@ -234,6 +234,46 @@
             .hero-subtitle {
                 display: none !important;
             }
+            .description-text {
+                text-align: justify !important;
+            }
+            #swipeIndicator {
+                display: none !important;
+            }
+            .conversation-carousel-section .carousel-container {
+                margin-top: 2rem;
+            }
+            #conversationSlider {
+                pointer-events: none !important;
+                cursor: default !important;
+            }
+            .feature-section > div {
+                flex-direction: column !important;
+                align-items: center !important;
+            }
+            .feature-block {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 0 !important;
+                display: block !important;
+                text-align: center !important;
+            }
+            .feature-block img {
+                display: none !important;
+            }
+            .feature-block p {
+                display: none !important;
+            }
+            .feature-block h3 {
+                margin: 1rem 0 !important;
+                font-size: 1.1rem !important;
+            }
+            .feature-block > div {
+                flex: none !important;
+                width: 100% !important;
+                display: block !important;
+            }
         }
 
         /* Why Choose Chata Section */
@@ -1223,7 +1263,7 @@
             <div class="feature-section" style="margin-bottom: 6rem; opacity: 0; transform: translateY(30px); transition: all 0.8s ease; max-width: 1400px; margin-left: auto; margin-right: auto;">
                 <div style="display: flex; align-items: stretch; justify-content: center; gap: 3rem;">
                     <!-- Feature 1: Image left, Text right -->
-                    <div style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
+                    <div class="feature-block" style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
                         <div style="flex: 0 0 35%; padding-right: 1.5rem; display: flex; justify-content: center; align-items: center;">
                             <img src="{{ url_for('static', filename='images/feature1.png') }}" alt="Complete Control" style="width: 200px; height: 200px; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             </div>
@@ -1238,7 +1278,7 @@
         </div>
 
                     <!-- Feature 2: Text left, Image right -->
-                    <div style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
+                    <div class="feature-block" style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
                         <div style="flex: 0 0 65%; padding-right: 1rem;">
                             <h3 style="font-size: 1.4rem; font-weight: 600; color: #fff; margin-bottom: 0.8rem; margin-top: 0; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.4; min-height: 3.2rem;">
                                 Quick, Easy, Effective Setup<br>&nbsp;
@@ -1258,7 +1298,7 @@
             <div class="feature-section" style="margin-bottom: 6rem; margin-top: -2rem; opacity: 0; transform: translateY(30px); transition: all 0.8s ease; max-width: 1400px; margin-left: auto; margin-right: auto;">
                 <div style="display: flex; align-items: stretch; justify-content: center; gap: 3rem;">
                     <!-- Feature 3: Image left, Text right -->
-                    <div style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
+                    <div class="feature-block" style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
                         <div style="flex: 0 0 35%; padding-right: 1.5rem; display: flex; justify-content: center; align-items: center;">
                             <img src="{{ url_for('static', filename='images/feature3.png') }}" alt="Promote Your Products" style="width: 200px; height: 200px; object-fit: contain; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
                 </div>
@@ -1273,7 +1313,7 @@
                 </div>
 
                     <!-- Feature 4: Text left, Image right -->
-                    <div style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
+                    <div class="feature-block" style="flex: 0 0 45%; display: flex; align-items: center; min-height: 200px;">
                         <div style="flex: 0 0 65%; padding-right: 1rem;">
                             <h3 style="font-size: 1.4rem; font-weight: 600; color: #fff; margin-bottom: 0.8rem; margin-top: 0; letter-spacing: 0.05em; text-transform: uppercase;">
                                 Smart Replies That Feel Truly Human
@@ -1907,7 +1947,8 @@
             animateLogoSlider();
         }
 
-        // Draggable Conversation Carousel with Infinite Loop and iOS-style scaling
+        // Draggable Conversation Carousel with Infinite Loop and iOS-style scaling (desktop only; mobile: auto-scroll only)
+        function isMobileCarousel() { return window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
         const slider = document.getElementById('conversationSlider');
         const sliderContainer = document.querySelector('.carousel-container');
         const sliderItems = slider.querySelectorAll('div[style*="flex: 0 0"]'); // Get all image containers
@@ -2027,9 +2068,11 @@
             }, 10000);
         }
 
-        swipeIndicatorTimeout = setTimeout(() => {
-            showSwipeIndicator();
-        }, 5000);
+        if (!isMobileCarousel()) {
+            swipeIndicatorTimeout = setTimeout(() => {
+                showSwipeIndicator();
+            }, 5000);
+        }
 
         // Function to update image scaling and opacity based on distance from center
         function updateImageEffects() {
@@ -2084,93 +2127,92 @@
             return position;
         }
 
-        slider.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            isDown = true;
-            isUserInteracting = true;
-            currentAutoScrollSpeed = 0;
-            slider.style.cursor = 'grabbing';
-            startX = e.pageX;
-            scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
-            
-            hideSwipeIndicator();
-            resetSwipeIndicatorTimer();
-            
-            velocity = 0;
-            lastX = e.pageX;
-            lastTime = Date.now();
-            
-            if (momentumAnimationId) {
-                cancelAnimationFrame(momentumAnimationId);
-                momentumAnimationId = null;
-            }
-            
-            resetSwipeIndicatorTimer();
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDown) {
-                isDown = false;
-                slider.style.cursor = 'grab';
+        if (!isMobileCarousel()) {
+            slider.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDown = true;
+                isUserInteracting = true;
+                currentAutoScrollSpeed = 0;
+                slider.style.cursor = 'grabbing';
+                startX = e.pageX;
+                scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
                 
-                if (Math.abs(velocity) > 1) {
-                    startMomentumAnimation();
-                } else {
-                    setTimeout(() => {
-                        isUserInteracting = false;
-                        resetSwipeIndicatorTimer();
-                    }, 2000);
+                hideSwipeIndicator();
+                resetSwipeIndicatorTimer();
+                
+                velocity = 0;
+                lastX = e.pageX;
+                lastTime = Date.now();
+                
+                if (momentumAnimationId) {
+                    cancelAnimationFrame(momentumAnimationId);
+                    momentumAnimationId = null;
                 }
-            }
-        });
+                
+                resetSwipeIndicatorTimer();
+            });
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            
-            const x = e.pageX;
-            const currentTime = Date.now();
-            
-            if (lastTime > 0) {
-                const timeDelta = currentTime - lastTime;
-                const distanceDelta = x - lastX;
-                velocity = (distanceDelta / timeDelta) * 16;
-                velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
-            }
-            
-            const walk = (x - startX) * 2;
-            let newPosition = scrollLeft + walk;
-            
-            newPosition = wrapPosition(newPosition);
-            
-            slider.style.transform = `translateX(${newPosition}px)`;
-            updateImageEffects();
-            
-            lastX = x;
-            lastTime = currentTime;
-        });
+            document.addEventListener('mouseup', () => {
+                if (isDown) {
+                    isDown = false;
+                    slider.style.cursor = 'grab';
+                    
+                    if (Math.abs(velocity) > 1) {
+                        startMomentumAnimation();
+                    } else {
+                        setTimeout(() => {
+                            isUserInteracting = false;
+                            resetSwipeIndicatorTimer();
+                        }, 2000);
+                    }
+                }
+            });
 
-        // Touch support for mobile
-        slider.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            startX = e.touches[0].pageX;
-            scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
-            
-            hideSwipeIndicator();
-            resetSwipeIndicatorTimer();
-        }, { passive: false });
+            document.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                
+                const x = e.pageX;
+                const currentTime = Date.now();
+                
+                if (lastTime > 0) {
+                    const timeDelta = currentTime - lastTime;
+                    const distanceDelta = x - lastX;
+                    velocity = (distanceDelta / timeDelta) * 16;
+                    velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
+                }
+                
+                const walk = (x - startX) * 2;
+                let newPosition = scrollLeft + walk;
+                
+                newPosition = wrapPosition(newPosition);
+                
+                slider.style.transform = `translateX(${newPosition}px)`;
+                updateImageEffects();
+                
+                lastX = x;
+                lastTime = currentTime;
+            });
 
-        slider.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const x = e.touches[0].pageX;
-            const walk = (x - startX) * 2;
-            let newPosition = scrollLeft + walk;
-            
-            newPosition = wrapPosition(newPosition);
-            
-            slider.style.transform = `translateX(${newPosition}px)`;
-            updateImageEffects();
-        }, { passive: false });
+            slider.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startX = e.touches[0].pageX;
+                scrollLeft = slider.style.transform ? parseInt(slider.style.transform.replace('translateX(', '').replace('px)', '')) : 0;
+                
+                hideSwipeIndicator();
+                resetSwipeIndicatorTimer();
+            }, { passive: false });
+
+            slider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const x = e.touches[0].pageX;
+                const walk = (x - startX) * 2;
+                let newPosition = scrollLeft + walk;
+                newPosition = wrapPosition(newPosition);
+                slider.style.transform = `translateX(${newPosition}px)`;
+                updateImageEffects();
+            }, { passive: false });
+        }
 
         // Initial update of effects on page load
         updateImageEffects();
