@@ -560,7 +560,10 @@ def handle_subscription_deleted(subscription):
             
             conn.commit()
             
-            log_activity(user_id, 'stripe_subscription_canceled', 'Subscription canceled - remaining replies preserved')
+            try:
+                log_activity(user_id, 'stripe_subscription_canceled', 'Subscription canceled - remaining replies preserved')
+            except Exception:
+                logger.warning(f"Could not log activity for user {user_id} (user may have been deleted)")
             logger.info(f"Subscription canceled for user {user_id} (remaining replies preserved)")
         finally:
             try:
