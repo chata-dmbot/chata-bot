@@ -5,8 +5,9 @@ Entry point: creates the Flask app, registers blueprints, and starts the server.
 from dotenv import load_dotenv
 import os
 import io
+import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, redirect, url_for, flash, session, jsonify
 from extensions import limiter, csrf
 import stripe  # type: ignore[reportMissingImports]
@@ -20,14 +21,56 @@ from health import health_check
 # ---------------------------------------------------------------------------
 load_dotenv()
 
-# Configure logging
+# ---------------------------------------------------------------------------
+# Logging — structured JSON in production, plain text locally
+# ---------------------------------------------------------------------------
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+
+class SensitiveDataFilter(logging.Filter):
+    """Redact API keys and tokens from log output."""
+    _PATTERNS = [
+        re.compile(r'sk-[A-Za-z0-9]{20,}'),
+        re.compile(r'SG\.[A-Za-z0-9_-]{20,}'),
+        re.compile(r'(access_token|authorization|secret|token)=[^\s&]+', re.IGNORECASE),
+    ]
+    def filter(self, record):
+        msg = record.getMessage()
+        for pat in self._PATTERNS:
+            msg = pat.sub('[REDACTED]', msg)
+        record.msg = msg
+        record.args = None
+        return True
+
+if Config.LOG_JSON:
+    try:
+        from pythonjsonlogger import json as jsonlogger
+        handler = logging.StreamHandler()
+        handler.setFormatter(jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+        handler.addFilter(SensitiveDataFilter())
+        logging.root.handlers = [handler]
+        logging.root.setLevel(getattr(logging, log_level, logging.INFO))
+    except ImportError:
+        logging.basicConfig(level=getattr(logging, log_level, logging.INFO),
+                            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                            datefmt="%Y-%m-%d %H:%M:%S")
+else:
+    logging.basicConfig(level=getattr(logging, log_level, logging.INFO),
+                        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                        datefmt="%Y-%m-%d %H:%M:%S")
+
 logger = logging.getLogger("chata")
+
+# ---------------------------------------------------------------------------
+# Sentry (optional — only if SENTRY_DSN is set)
+# ---------------------------------------------------------------------------
+if Config.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(dsn=Config.SENTRY_DSN, integrations=[FlaskIntegration()], traces_sample_rate=0.1)
+        logger.info("Sentry initialized")
+    except Exception as e:
+        logger.warning(f"Sentry init failed: {e}")
 
 # Validate required environment variables
 try:
@@ -48,11 +91,11 @@ Config.check_production_database()
 app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
-# Session cookie security — enforce HTTPS-only cookies in production
-is_production = bool(os.environ.get('DATABASE_URL'))  # Production uses PostgreSQL
-app.config['SESSION_COOKIE_SECURE'] = is_production     # HTTPS-only in production
-app.config['SESSION_COOKIE_HTTPONLY'] = True              # No JavaScript access to session cookie
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'            # CSRF protection for top-level navigations
+# Session hardening
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=Config.SESSION_TIMEOUT_HOURS)
+app.config['SESSION_COOKIE_SECURE'] = Config.SESSION_COOKIE_SECURE
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # ---------------------------------------------------------------------------
 # Extensions (defined in extensions.py to avoid circular imports)
@@ -141,17 +184,31 @@ else:
     logger.error("Database initialization failed - some features may not work")
 
 if Config.RUN_MIGRATIONS_ON_STARTUP:
-    logger.info("Running database migration...")
-    from update_schema import migrate_client_settings, migrate_client_settings_advanced_params, migrate_instagram_connections_webhook
-    try:
-        if migrate_client_settings():
-            logger.info("Migration completed successfully")
-        else:
-            logger.warning("Migration had issues but continuing...")
-        migrate_client_settings_advanced_params()
-        migrate_instagram_connections_webhook()
-    except Exception as e:
-        logger.warning(f"Migration error (continuing anyway): {e}")
+    logger.info("Running database migrations...")
+    from update_schema import (
+        migrate_client_settings,
+        migrate_instagram_connections,
+        migrate_messages_connection_id,
+        migrate_conversation_senders,
+        migrate_client_settings_advanced_params,
+        migrate_instagram_connections_webhook,
+        migrate_queue_tables_and_indexes,
+    )
+    _migrations = [
+        ("migrate_client_settings", migrate_client_settings),
+        ("migrate_instagram_connections", migrate_instagram_connections),
+        ("migrate_messages_connection_id", migrate_messages_connection_id),
+        ("migrate_conversation_senders", migrate_conversation_senders),
+        ("migrate_client_settings_advanced_params", migrate_client_settings_advanced_params),
+        ("migrate_instagram_connections_webhook", migrate_instagram_connections_webhook),
+        ("migrate_queue_tables_and_indexes", migrate_queue_tables_and_indexes),
+    ]
+    for name, fn in _migrations:
+        try:
+            if not fn():
+                logger.error(f"Migration failed: {name}")
+        except Exception as e:
+            logger.error(f"Migration error ({name}): {e}")
 else:
     logger.info("Skipping migration on startup (RUN_MIGRATIONS_ON_STARTUP=false)")
 

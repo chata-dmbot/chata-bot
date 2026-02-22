@@ -98,30 +98,98 @@ def signup():
 
 # ── login ─────────────────────────────────────────────────────────────────
 
+_MAX_FAILED_LOGINS = 7
+_LOCKOUT_MINUTES = 15
+
 @auth_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("10 per minute")  # Rate limit: 10 login attempts per minute per IP
+@limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
         username_or_email = request.form.get("username_or_email", "").strip()
         password = request.form.get("password")
-        
+
         if not username_or_email or not password:
             flash("Username/Email and password are required.", "error")
             return render_template("login.html")
-        
+
         try:
             user = get_user_by_username_or_email(username_or_email)
+
+            # Account lockout check
+            if user:
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        cursor = conn.cursor()
+                        ph = get_param_placeholder()
+                        cursor.execute(
+                            f"SELECT failed_login_attempts, locked_until FROM users WHERE id = {ph}",
+                            (user['id'],))
+                        lock_row = cursor.fetchone()
+                        if lock_row:
+                            attempts = lock_row[0] or 0
+                            locked_until = lock_row[1]
+                            from datetime import datetime, timedelta
+                            if locked_until and datetime.utcnow() < locked_until:
+                                flash(f"Account locked. Try again in {_LOCKOUT_MINUTES} minutes.", "error")
+                                return render_template("login.html")
+                    except Exception as e:
+                        logger.warning(f"Lockout check failed: {e}")
+                    finally:
+                        conn.close()
+
             if user and check_password_hash(user['password_hash'], password):
+                # Reset lockout on success
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        cursor = conn.cursor()
+                        ph = get_param_placeholder()
+                        cursor.execute(
+                            f"UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = {ph}",
+                            (user['id'],))
+                        conn.commit()
+                    except Exception:
+                        pass
+                    finally:
+                        conn.close()
+
+                session.clear()
                 session['user_id'] = user['id']
+                session.permanent = True
                 log_activity(user['id'], 'login', 'User logged in successfully')
                 flash(f"Welcome back, {user['username']}!", "success")
                 return redirect(url_for('dashboard_bp.dashboard'))
             else:
+                # Record failed attempt
+                if user:
+                    conn = get_db_connection()
+                    if conn:
+                        try:
+                            cursor = conn.cursor()
+                            ph = get_param_placeholder()
+                            from datetime import datetime, timedelta
+                            cursor.execute(
+                                f"UPDATE users SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1 WHERE id = {ph}",
+                                (user['id'],))
+                            cursor.execute(
+                                f"SELECT failed_login_attempts FROM users WHERE id = {ph}",
+                                (user['id'],))
+                            row = cursor.fetchone()
+                            if row and row[0] >= _MAX_FAILED_LOGINS:
+                                cursor.execute(
+                                    f"UPDATE users SET locked_until = {ph} WHERE id = {ph}",
+                                    (datetime.utcnow() + timedelta(minutes=_LOCKOUT_MINUTES), user['id']))
+                            conn.commit()
+                        except Exception as e:
+                            logger.warning(f"Failed to record login attempt: {e}")
+                        finally:
+                            conn.close()
                 flash("Invalid username/email or password.", "error")
         except Exception as e:
             logger.error(f"Login error: {e}")
             flash("An error occurred during login. Please try again.", "error")
-    
+
     return render_template("login.html")
 
 

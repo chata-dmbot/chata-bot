@@ -43,10 +43,13 @@ def health_check():
     # Check environment variables
     required_vars = [
         'OPENAI_API_KEY',
-        'ACCESS_TOKEN',
-        'INSTAGRAM_USER_ID',
         'FACEBOOK_APP_ID',
-        'FACEBOOK_APP_SECRET'
+        'FACEBOOK_APP_SECRET',
+        'SECRET_KEY',
+        'VERIFY_TOKEN',
+        'REDIS_URL',
+        'STRIPE_SECRET_KEY',
+        'STRIPE_WEBHOOK_SECRET',
     ]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:

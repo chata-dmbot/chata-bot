@@ -293,8 +293,10 @@ def migrate_instagram_connections_webhook():
         is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
         columns_to_add = [
             ('webhook_subscription_active', 'BOOLEAN DEFAULT FALSE' if is_postgres else 'BOOLEAN DEFAULT 0'),
-            ('last_webhook_at', 'TIMESTAMP' if is_postgres else 'TIMESTAMP'),
+            ('last_webhook_at', 'TIMESTAMP'),
             ('last_webhook_event_type', 'VARCHAR(64)' if is_postgres else 'TEXT'),
+            ('page_access_token_encrypted', 'TEXT'),
+            ('page_access_token_kid', 'VARCHAR(64)' if is_postgres else 'TEXT'),
         ]
         for column_name, column_type in columns_to_add:
             try:
@@ -330,14 +332,143 @@ def migrate_instagram_connections_webhook():
         conn.close()
 
 
+def migrate_client_settings_advanced_params():
+    """Add advanced generation params to client_settings if missing."""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    cursor = conn.cursor()
+    db_url = os.environ.get('DATABASE_URL', '')
+    is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+    columns_to_add = [
+        ('temperature', 'REAL DEFAULT 0.7'),
+        ('presence_penalty', 'REAL DEFAULT 0'),
+        ('frequency_penalty', 'REAL DEFAULT 0'),
+    ]
+    try:
+        for column_name, column_type in columns_to_add:
+            try:
+                if is_postgres:
+                    cursor.execute("""
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='client_settings' AND column_name=%s
+                    """, (column_name,))
+                    if not cursor.fetchone():
+                        cursor.execute(f"ALTER TABLE client_settings ADD COLUMN {column_name} {column_type}")
+                else:
+                    cursor.execute(f"ALTER TABLE client_settings ADD COLUMN {column_name} {column_type}")
+            except Exception as e:
+                if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
+                    continue
+                raise
+        conn.commit()
+        print("✅ client_settings advanced params migration completed")
+        return True
+    except Exception as e:
+        print(f"❌ client_settings advanced params migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def migrate_queue_tables_and_indexes():
+    """Create queue/dead-letter tables and critical indexes."""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Failed to connect to database")
+        return False
+    cursor = conn.cursor()
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        is_postgres = db_url.startswith('postgres://') or db_url.startswith('postgresql://')
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_client_settings_user_connection ON client_settings(user_id, instagram_connection_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_conn_sender_id ON messages(instagram_connection_id, instagram_user_id, id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_conn_created_at ON messages(instagram_connection_id, created_at DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status_created ON subscriptions(user_id, status, created_at DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_subscription_id ON subscriptions(stripe_subscription_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_logs_user_created ON usage_logs(user_id, created_at DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_activity_logs_user_created ON activity_logs(user_id, created_at DESC)")
+        if is_postgres:
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name='users' AND column_name='failed_login_attempts'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0")
+
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name='users' AND column_name='locked_until'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP")
+        else:
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0")
+            except Exception:
+                pass
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP")
+            except Exception:
+                pass
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_daily_ai_usage (
+                user_id INTEGER REFERENCES users(id),
+                usage_date DATE NOT NULL,
+                requests_count INTEGER DEFAULT 0,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                estimated_cost_usd REAL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, usage_date)
+            )
+        """)
+        if is_postgres:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS webhook_dead_letters (
+                    id BIGSERIAL PRIMARY KEY,
+                    source VARCHAR(100) NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    reason TEXT,
+                    retries INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        else:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS webhook_dead_letters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    reason TEXT,
+                    retries INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        conn.commit()
+        print("✅ queue tables and indexes migration completed")
+        return True
+    except Exception as e:
+        print(f"❌ queue tables and indexes migration failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     print("🔧 Running database migration to add missing columns...")
     ok1 = migrate_client_settings()
     ok2 = migrate_instagram_connections()
     ok3 = migrate_messages_connection_id()
     ok4 = migrate_conversation_senders()
-    ok5 = migrate_instagram_connections_webhook()
-    if ok1 and ok2 and ok3 and ok4 and ok5:
+    ok5 = migrate_client_settings_advanced_params()
+    ok6 = migrate_instagram_connections_webhook()
+    ok7 = migrate_queue_tables_and_indexes()
+    if ok1 and ok2 and ok3 and ok4 and ok5 and ok6 and ok7:
         print("✅ Your database is now updated and ready!")
     else:
         print("❌ Migration failed. Please check the errors above.")

@@ -27,7 +27,27 @@ class Config:
     
     # OpenAI Configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    OPENAI_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "60"))  # seconds per request; prevents hung connections
+    OPENAI_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "60"))
+    OPENAI_DAILY_BUDGET_USD = float(os.getenv("OPENAI_DAILY_BUDGET_USD", "25"))
+    OPENAI_GLOBAL_DAILY_BUDGET_USD = float(os.getenv("OPENAI_GLOBAL_DAILY_BUDGET_USD", "100"))
+    OPENAI_ENABLE_MODERATION = os.getenv("OPENAI_ENABLE_MODERATION", "false").lower() in ("true", "1", "yes")
+
+    # Redis / RQ (background job queue)
+    REDIS_URL = os.getenv("REDIS_URL")
+    RQ_QUEUE_NAME = os.getenv("RQ_QUEUE_NAME", "chata-webhooks")
+    RQ_DEFAULT_TIMEOUT_SECONDS = int(os.getenv("RQ_DEFAULT_TIMEOUT_SECONDS", "180"))
+
+    # Token encryption (Fernet keyring for Instagram tokens at rest)
+    TOKEN_ENCRYPTION_KEYS = os.getenv("TOKEN_ENCRYPTION_KEYS")
+
+    # Observability
+    SENTRY_DSN = os.getenv("SENTRY_DSN")
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LOG_JSON = os.getenv("LOG_JSON", "true").lower() in ("true", "1", "yes")
+
+    # Session hardening
+    SESSION_TIMEOUT_HOURS = int(os.getenv("SESSION_TIMEOUT_HOURS", "24"))
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in ("true", "1", "yes")
     
     # Meta/Instagram Configuration
     _DEFAULT_VERIFY_TOKEN = "chata_verify_token"
@@ -71,7 +91,7 @@ class Config:
     
     # Reply plan limits
     STARTER_MONTHLY_REPLIES = 150
-    STANDARD_MONTHLY_REPLIES = 250
+    STANDARD_MONTHLY_REPLIES = 1500
     ADDON_REPLIES = 150          # replies per add-on purchase
     REPLY_WARNING_THRESHOLD = 50  # warn user when remaining replies fall to this
     
@@ -80,27 +100,37 @@ class Config:
     # Production Settings
     PORT = int(os.environ.get("PORT", 5000))
     
-    @staticmethod
-    def validate_required_vars():
-        """Validate that all required environment variables are set"""
+    @classmethod
+    def is_production(cls):
+        """True when DATABASE_URL points to PostgreSQL (i.e. not local SQLite dev)."""
+        return bool(cls.DATABASE_URL and (
+            cls.DATABASE_URL.startswith("postgres://") or cls.DATABASE_URL.startswith("postgresql://")
+        ))
+
+    @classmethod
+    def validate_required_vars(cls):
+        """Validate that all required environment variables are set."""
         required_vars = [
             'OPENAI_API_KEY',
-            'ACCESS_TOKEN',
-            'INSTAGRAM_USER_ID',
             'FACEBOOK_APP_ID',
-            'FACEBOOK_APP_SECRET'
+            'FACEBOOK_APP_SECRET',
+            'SECRET_KEY',
+            'VERIFY_TOKEN',
+            'REDIS_URL',
+            'STRIPE_SECRET_KEY',
+            'STRIPE_WEBHOOK_SECRET',
         ]
-        
-        missing_vars = []
-        for var in required_vars:
-            if not os.getenv(var):
-                missing_vars.append(var)
-        
+
+        missing_vars = [v for v in required_vars if not os.getenv(v)]
+
+        if cls.is_production() and not os.getenv('TOKEN_ENCRYPTION_KEYS'):
+            missing_vars.append('TOKEN_ENCRYPTION_KEYS')
+
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
+
         return True
-    
+
     @classmethod
     def check_secret_key(cls):
         """Raise an error if the default SECRET_KEY is used in production (DATABASE_URL is set)."""

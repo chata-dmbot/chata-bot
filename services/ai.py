@@ -5,6 +5,15 @@ import json
 import time
 from config import Config
 from database import get_db_connection, get_param_placeholder
+from services.openai_guardrails import (
+    check_and_reserve_user_budget,
+    check_circuit_breaker,
+    record_openai_success,
+    record_openai_failure,
+    call_with_retry,
+    OpenAIBudgetExceeded,
+    OpenAICircuitOpen,
+)
 
 logger = logging.getLogger("chata.services.ai")
 
@@ -200,18 +209,42 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
         should_close = True
     
     try:
+        # Budget and circuit breaker checks (user_id may be None for legacy/original account)
+        if connection_id:
+            _cursor = conn.cursor()
+            _ph = get_param_placeholder()
+            _cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {_ph}", (connection_id,))
+            _uid_row = _cursor.fetchone()
+            _budget_user_id = _uid_row[0] if _uid_row else None
+        else:
+            _budget_user_id = None
+
+        try:
+            check_circuit_breaker()
+            if _budget_user_id:
+                check_and_reserve_user_budget(_budget_user_id)
+        except (OpenAIBudgetExceeded, OpenAICircuitOpen) as guard_exc:
+            logger.warning(f"Guardrail blocked OpenAI call: {guard_exc}")
+            if should_close and conn:
+                conn.close()
+            return None
+
         timeout = getattr(Config, "OPENAI_TIMEOUT", 60)
         client = openai.OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
 
         # Get settings for this specific connection
         if connection_id:
-            cursor = conn.cursor()
-            placeholder = get_param_placeholder()
-            cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
-            result = cursor.fetchone()
+            if _budget_user_id:
+                user_id = _budget_user_id
+                result = True
+            else:
+                cursor = conn.cursor()
+                placeholder = get_param_placeholder()
+                cursor.execute(f"SELECT user_id FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+                result = cursor.fetchone()
+                user_id = result[0] if result else None
 
-            if result:
-                user_id = result[0]
+            if result and user_id:
                 effective_settings = get_client_settings(user_id, connection_id, conn)
                 system_prompt = build_personality_prompt(effective_settings, include_conversation=False)
                 logger.info(f"Using connection-specific settings for connection {connection_id}")
@@ -261,8 +294,9 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
             else:
                 completion_kwargs["max_tokens"] = max_tokens
         openai_start = time.time()
-        response = client.chat.completions.create(**completion_kwargs)
+        response = call_with_retry(client, **completion_kwargs)
         openai_duration = time.time() - openai_start
+        record_openai_success()
         logger.info(f"OpenAI chat latency (connection {connection_id or 'global'}): {openai_duration:.2f}s; model={model_name}")
 
         if not response.choices:
@@ -290,10 +324,11 @@ def get_ai_reply_with_connection(history, connection_id=None, conn=None):
         return ai_reply
 
     except Exception as e:
+        record_openai_failure()
         logger.error(f"OpenAI API error: {e}")
         if should_close and conn:
             conn.close()
-        return "Sorry, I'm having trouble replying right now."
+        return None
 
 
 # ---------------------------------------------------------------------------

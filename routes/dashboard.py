@@ -55,7 +55,7 @@ def dashboard():
                    COALESCE(webhook_subscription_active, FALSE) as webhook_subscription_active,
                    last_webhook_at, last_webhook_event_type
             FROM instagram_connections 
-            WHERE user_id = {placeholder} 
+            WHERE user_id = {placeholder} AND is_active = TRUE
             ORDER BY created_at DESC
         """, (user_id,))
         connections = cursor.fetchall()
@@ -1040,14 +1040,12 @@ def disconnect_instagram(connection_id):
             flash("Connection not found or you don't have permission to disconnect it.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        # Delete dependent rows first (foreign key constraints)
-        cursor.execute(f"DELETE FROM conversation_senders WHERE instagram_connection_id = {placeholder}", (connection_id,))
-        cursor.execute(f"DELETE FROM messages WHERE instagram_connection_id = {placeholder}", (connection_id,))
-        cursor.execute(f"DELETE FROM usage_logs WHERE instagram_connection_id = {placeholder}", (connection_id,))
-        cursor.execute(f"DELETE FROM client_settings WHERE instagram_connection_id = {placeholder}", (connection_id,))
-        
-        # Then delete the connection
-        cursor.execute(f"DELETE FROM instagram_connections WHERE id = {placeholder}", (connection_id,))
+        # Soft-delete: mark the connection inactive but keep messages, settings, and history
+        cursor.execute(f"""
+            UPDATE instagram_connections
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+            WHERE id = {placeholder}
+        """, (connection_id,))
         
         conn.commit()
         
