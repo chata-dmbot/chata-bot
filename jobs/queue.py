@@ -7,11 +7,16 @@ from config import Config
 
 logger = logging.getLogger("chata.jobs.queue")
 
+_redis_conn = None
+
 
 def get_redis_connection():
-    if not Config.REDIS_URL:
-        raise RuntimeError("REDIS_URL is required for background processing.")
-    return Redis.from_url(Config.REDIS_URL)
+    global _redis_conn
+    if _redis_conn is None:
+        if not Config.REDIS_URL:
+            raise RuntimeError("REDIS_URL is required for background processing.")
+        _redis_conn = Redis.from_url(Config.REDIS_URL)
+    return _redis_conn
 
 
 def get_webhook_queue():

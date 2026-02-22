@@ -5,6 +5,7 @@ Uses connection pooling for PostgreSQL in production.
 import os
 import logging
 import sqlite3
+import threading
 import psycopg2
 import psycopg2.pool
 from config import Config
@@ -15,6 +16,7 @@ logger = logging.getLogger("chata.database")
 # PostgreSQL connection pool (initialised lazily on first use)
 # ---------------------------------------------------------------------------
 _pg_pool = None
+_pg_pool_lock = threading.Lock()
 _CONNECT_TIMEOUT_SECONDS = int(os.environ.get("DATABASE_CONNECT_TIMEOUT", "10"))
 
 
@@ -30,15 +32,17 @@ def _get_pg_pool():
     """Return (and lazily create) the PostgreSQL connection pool."""
     global _pg_pool
     if _pg_pool is None:
-        database_url = os.environ.get('DATABASE_URL')
-        if database_url:
-            size = getattr(Config, 'DATABASE_POOL_SIZE', 10)
-            dsn = _pg_dsn_with_timeout(database_url)
-            _pg_pool = psycopg2.pool.ThreadedConnectionPool(
-                minconn=1,
-                maxconn=size,
-                dsn=dsn,
-            )
+        with _pg_pool_lock:
+            if _pg_pool is None:
+                database_url = os.environ.get('DATABASE_URL')
+                if database_url:
+                    size = getattr(Config, 'DATABASE_POOL_SIZE', 10)
+                    dsn = _pg_dsn_with_timeout(database_url)
+                    _pg_pool = psycopg2.pool.ThreadedConnectionPool(
+                        minconn=1,
+                        maxconn=size,
+                        dsn=dsn,
+                    )
     return _pg_pool
 
 
@@ -102,7 +106,13 @@ def init_database():
     
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
-        logger.info(f"Database connection - DATABASE_URL: {database_url[:50]}...")
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+            safe_url = f"{parsed.scheme}://***@{parsed.hostname}:{parsed.port or 5432}/{parsed.path.lstrip('/')}"
+        except Exception:
+            safe_url = "postgres://***"
+        logger.info(f"Database connection - DATABASE_URL: {safe_url}")
     
     conn = get_db_connection()
     if not conn:

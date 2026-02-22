@@ -50,14 +50,22 @@ def process_incoming_messages(incoming_by_sender):
                 logger.warning(f"[worker] sender throttled sender={sender_id}")
                 continue
             events.sort(key=lambda item: item.get("timestamp", 0))
+
+            # Claim ALL MIDs in the batch for idempotency (not just the latest)
+            new_events = []
+            for ev in events:
+                mid = ev.get("mid")
+                if mid and not _claim_message_mid(cursor, webhook_conn, mid):
+                    logger.info(f"[worker] mid={mid[:20]} already processed; skipping")
+                    continue
+                new_events.append(ev)
+            if not new_events:
+                continue
+            events = new_events
+
             latest_event = events[-1]
             recipient_id = latest_event.get("recipient_id")
             entry_page_id = latest_event.get("page_id")
-            message_mid = latest_event.get("mid")
-
-            if message_mid and not _claim_message_mid(cursor, webhook_conn, message_mid):
-                logger.info(f"[worker] mid={message_mid[:20]} already processed; skipping")
-                continue
 
             instagram_connection = None
             if recipient_id:

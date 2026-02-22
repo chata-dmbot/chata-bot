@@ -199,6 +199,12 @@ def webhook():
             job_id = enqueue_incoming_messages(incoming_by_sender)
             logger.info(f"Webhook enqueued sender_batches={len(incoming_by_sender)} job_id={job_id}")
         except Exception as e:
-            logger.error(f"Failed to enqueue webhook job: {e}")
+            logger.error(f"Failed to enqueue webhook job, falling back to sync processing: {e}")
+            try:
+                from services.webhook_processor import process_incoming_messages
+                process_incoming_messages(incoming_by_sender)
+                logger.info("Webhook processed synchronously (Redis fallback)")
+            except Exception as sync_err:
+                logger.error(f"Synchronous fallback also failed: {sync_err}")
 
         return "EVENT_RECEIVED", 200

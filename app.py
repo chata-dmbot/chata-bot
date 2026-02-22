@@ -9,6 +9,7 @@ import re
 import logging
 from datetime import datetime, timedelta
 from flask import Flask, request, redirect, url_for, flash, session, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 from extensions import limiter, csrf
 import stripe  # type: ignore[reportMissingImports]
 
@@ -72,13 +73,9 @@ if Config.SENTRY_DSN:
     except Exception as e:
         logger.warning(f"Sentry init failed: {e}")
 
-# Validate required environment variables
-try:
-    Config.validate_required_vars()
-    logger.info("All required environment variables are set")
-except ValueError as e:
-    logger.error(f"Configuration error: {e}")
-    logger.error("Please check your environment variables")
+# Validate required environment variables — fatal if missing
+Config.validate_required_vars()
+logger.info("All required environment variables are set")
 
 # Refuse to start in production with the default secret key
 Config.check_secret_key()
@@ -134,6 +131,9 @@ class WebhookRawBodyMiddleware:
         return self.app_wsgi(environ, start_response)
 
 
+# ProxyFix: trust X-Forwarded-For from Render's reverse proxy so
+# request.remote_addr returns the real client IP (needed for rate limiting).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.wsgi_app = WebhookRawBodyMiddleware(app.wsgi_app)
 
 

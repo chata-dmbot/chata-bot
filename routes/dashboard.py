@@ -280,7 +280,6 @@ def api_conversation_messages(connection_id, instagram_user_id):
 
 @dashboard_bp.route("/api/conversation-history/<int:connection_id>/<instagram_user_id>/send-pending", methods=["POST"])
 @login_required
-@csrf.exempt
 def api_send_pending_reply(connection_id, instagram_user_id):
     """Send a pending bot reply (App Review manual-send mode). Request body: {"message_id": 123}."""
     user_id = session["user_id"]
@@ -634,21 +633,19 @@ def delete_account():
             logger.warning(f"Could not delete subscriptions: {e}")
             conn.rollback()
         
-        # Delete messages - messages are linked to instagram_user_id, not user_id
-        # We need to delete messages for all Instagram accounts connected to this user
-        if instagram_user_ids:
-            try:
-                # Create placeholders for IN clause
-                placeholders = ','.join([placeholder] * len(instagram_user_ids))
-                cursor.execute(f"""
-                    DELETE FROM messages 
-                    WHERE instagram_user_id IN ({placeholders})
-                """, tuple(instagram_user_ids))
-                conn.commit()
-                logger.info(f"Deleted messages for {len(instagram_user_ids)} Instagram accounts")
-            except Exception as e:
-                logger.warning(f"Could not delete messages: {e}")
-                conn.rollback()
+        # Delete messages belonging to this user's connections
+        try:
+            cursor.execute(f"""
+                DELETE FROM messages 
+                WHERE instagram_connection_id IN (
+                    SELECT id FROM instagram_connections WHERE user_id = {placeholder}
+                )
+            """, (user_id,))
+            conn.commit()
+            logger.info(f"Deleted messages for user {user_id}'s connections")
+        except Exception as e:
+            logger.warning(f"Could not delete messages: {e}")
+            conn.rollback()
         
         # Delete client settings
         try:

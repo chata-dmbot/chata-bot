@@ -89,11 +89,16 @@ _CB_WINDOW_SECONDS = 120
 _CB_OPEN_SECONDS = 60
 
 
+_redis = None
+
 def _get_redis():
-    if not Config.REDIS_URL:
-        return None
-    from redis import Redis
-    return Redis.from_url(Config.REDIS_URL, decode_responses=True)
+    global _redis
+    if _redis is None:
+        if not Config.REDIS_URL:
+            return None
+        from redis import Redis
+        _redis = Redis.from_url(Config.REDIS_URL, decode_responses=True)
+    return _redis
 
 
 def record_openai_success():

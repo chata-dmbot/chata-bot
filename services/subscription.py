@@ -150,22 +150,23 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None,
         current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         if current_month > last_reset_month:
-            # New month - reset monthly counter (only if they have active subscription)
-            # Get the plan type to determine monthly limit
             plan_type = subscription[1]  # 'starter' or 'standard'
             if plan_type == 'standard':
-                monthly_limit = 1500
+                monthly_limit = Config.STANDARD_MONTHLY_REPLIES
             else:
-                monthly_limit = Config.STARTER_MONTHLY_REPLIES  # starter or default
-            
-            logger.info(f"New month detected for user {user_id} with {plan_type} plan, adding {monthly_limit} replies")
+                monthly_limit = Config.STARTER_MONTHLY_REPLIES
+
+            now = datetime.now()
+            logger.info(f"New month detected for user {user_id} with {plan_type} plan, setting limit to {monthly_limit}")
+            # Conditional WHERE prevents double-reset when concurrent requests both see the old month
             cursor.execute(f"""
                 UPDATE users
                 SET replies_sent_monthly = 0,
-                    replies_limit_monthly = replies_limit_monthly + {placeholder},
+                    replies_limit_monthly = {placeholder},
                     last_monthly_reset = {placeholder}
                 WHERE id = {placeholder}
-            """, (monthly_limit, datetime.now(), user_id))
+                  AND (last_monthly_reset IS NULL OR last_monthly_reset < {placeholder})
+            """, (monthly_limit, now, user_id, now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)))
             conn.commit()
             if should_close:
                 conn.close()

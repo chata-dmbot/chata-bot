@@ -6,6 +6,10 @@ from flask import Blueprint, request, redirect, url_for, flash, session, render_
 logger = logging.getLogger("chata.routes.payments")
 import stripe
 from config import Config
+
+def _base_url():
+    """Return the canonical base URL for Stripe redirects (no trailing slash)."""
+    return Config.BASE_URL.rstrip("/")
 from database import get_db_connection, get_param_placeholder
 from services.auth import login_required
 from services.activity import log_activity
@@ -73,8 +77,8 @@ def create_subscription_checkout():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'dashboard',
+            success_url=_base_url() + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=_base_url() + '/dashboard',
             metadata={'user_id': str(user_id), 'type': 'subscription'}
         )
         
@@ -177,8 +181,8 @@ def create_standard_checkout():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'dashboard',
+            success_url=_base_url() + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=_base_url() + '/dashboard',
             metadata={'user_id': str(user_id), 'type': 'subscription', 'plan': 'standard'}
         )
         
@@ -261,8 +265,8 @@ def create_addon_checkout():
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'dashboard',
+            success_url=_base_url() + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=_base_url() + '/dashboard',
             metadata={'user_id': str(user_id), 'type': 'addon'}
         )
         
@@ -376,8 +380,8 @@ def create_upgrade_checkout():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'dashboard',
+            success_url=_base_url() + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=_base_url() + '/dashboard',
             metadata={'user_id': str(user_id), 'type': 'upgrade', 'old_subscription_id': subscription_id}
         )
         
@@ -442,8 +446,8 @@ def create_downgrade_checkout():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=request.host_url + 'checkout/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'dashboard',
+            success_url=_base_url() + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=_base_url() + '/dashboard',
             metadata={'user_id': str(user_id), 'type': 'downgrade', 'old_subscription_id': subscription_id}
         )
         
@@ -490,16 +494,16 @@ def cancel_subscription():
         conn.close()
         conn = None
         
-        # Cancel subscription immediately in Stripe
+        # Cancel subscription in Stripe FIRST — only update DB if Stripe succeeds
         try:
             stripe.Subscription.delete(subscription_id)
             logger.info(f"Immediately canceled subscription {subscription_id} in Stripe")
         except Exception as e:
-            logger.warning(f"Error canceling subscription in Stripe: {e}")
-            # Continue anyway - we'll still mark it as canceled in DB
+            logger.error(f"Failed to cancel subscription in Stripe: {e}")
+            flash("Could not cancel your subscription. Please try again or contact support.", "error")
+            return redirect(url_for('dashboard_bp.dashboard'))
         
-        # Update database immediately to reflect canceled status
-        # IMPORTANT: Only update status, NOT plan_type - preserve the plan type
+        # Stripe cancellation succeeded — now update DB
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -508,21 +512,8 @@ def cancel_subscription():
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
         """, ('canceled', subscription_id))
-        
-        # Verify the update worked and plan_type is preserved
-        cursor.execute(f"""
-            SELECT plan_type, status
-            FROM subscriptions
-            WHERE stripe_subscription_id = {placeholder}
-        """, (subscription_id,))
-        verify = cursor.fetchone()
-        if verify:
-            updated_plan_type, updated_status = verify
-            logger.info(f"Updated subscription status to '{updated_status}', plan_type preserved as '{updated_plan_type}'")
-            if updated_plan_type != plan_type:
-                logger.warning(f"Plan type changed from {plan_type} to {updated_plan_type} - this should not happen!")
-        
         conn.commit()
+        logger.info(f"Marked subscription {subscription_id} as canceled in DB (plan_type '{plan_type}' preserved)")
         
         flash("Subscription canceled. You can still use your remaining replies, but cannot purchase add-ons.", "success")
         return redirect(url_for('dashboard_bp.dashboard'))

@@ -290,8 +290,8 @@ def handle_subscription_created(subscription):
             if price_id:
                 if standard_price_id and price_id == standard_price_id:
                     plan_type = 'standard'
-                    replies_limit = 1500
-                    logger.info(f"Detected Standard plan - setting replies_limit to 1500")
+                    replies_limit = Config.STANDARD_MONTHLY_REPLIES
+                    logger.info(f"Detected Standard plan - setting replies_limit to {replies_limit}")
                 elif starter_price_id and price_id == starter_price_id:
                     plan_type = 'starter'
                     replies_limit = Config.STARTER_MONTHLY_REPLIES
@@ -332,29 +332,14 @@ def handle_subscription_created(subscription):
             
             logger.info(f"Subscription record created in database")
             
-            # Get current replies_limit_monthly from users table to preserve existing replies
+            # Set replies_limit_monthly to the plan's absolute value (not additive)
+            # to prevent inflation from multiple Stripe events firing in sequence.
             cursor.execute(f"""
-                SELECT replies_limit_monthly FROM users WHERE id = {placeholder}
-            """, (user_id,))
-            user_data = cursor.fetchone()
-            current_replies_limit = user_data[0] if user_data else 0
-            
-            logger.info(f"Adding {replies_limit} replies to user {user_id}'s existing {current_replies_limit} replies")
-            
-            if current_replies_limit > 0:
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = replies_limit_monthly + {placeholder}
-                    WHERE id = {placeholder}
-                """, (replies_limit, user_id))
-                logger.info(f"Added {replies_limit} replies (new total: {current_replies_limit + replies_limit})")
-            else:
-                cursor.execute(f"""
-                    UPDATE users 
-                    SET replies_limit_monthly = {placeholder}
-                    WHERE id = {placeholder}
-                """, (replies_limit, user_id))
-                logger.info(f"Set replies_limit_monthly to {replies_limit} (no existing replies)")
+                UPDATE users 
+                SET replies_limit_monthly = {placeholder}
+                WHERE id = {placeholder}
+            """, (replies_limit, user_id))
+            logger.info(f"Set replies_limit_monthly to {replies_limit} for user {user_id} ({plan_type} plan)")
             
             conn.commit()
             
@@ -465,18 +450,13 @@ def handle_subscription_updated(subscription):
             
             if current_sub:
                 old_plan_type = current_sub[0]
-                if old_plan_type == 'starter' and new_plan_type == 'standard':
-                    logger.info(f"Detected upgrade from Starter to Standard for user {user_id}")
+                if old_plan_type != new_plan_type:
+                    new_limit = Config.STANDARD_MONTHLY_REPLIES if new_plan_type == 'standard' else Config.STARTER_MONTHLY_REPLIES
+                    logger.info(f"Detected plan change {old_plan_type} -> {new_plan_type} for user {user_id}, setting limit to {new_limit}")
                     cursor.execute(f"""
-                        UPDATE users SET replies_limit_monthly = replies_limit_monthly + 1500
+                        UPDATE users SET replies_limit_monthly = {placeholder}
                         WHERE id = {placeholder}
-                    """, (user_id,))
-                elif old_plan_type == 'standard' and new_plan_type == 'starter':
-                    logger.info(f"Detected downgrade from Standard to Starter for user {user_id}")
-                    cursor.execute(f"""
-                        UPDATE users SET replies_limit_monthly = replies_limit_monthly + 150
-                        WHERE id = {placeholder}
-                    """, (user_id,))
+                    """, (new_limit, user_id))
                 else:
                     logger.info(f"Plan type unchanged: {old_plan_type} -> {new_plan_type}")
             
@@ -664,17 +644,17 @@ def handle_invoice_payment_succeeded(invoice):
                 if plan_result:
                     plan_type = plan_result[0]
                     if plan_type == 'standard':
-                        monthly_limit = 1500
+                        monthly_limit = Config.STANDARD_MONTHLY_REPLIES
                     else:
                         monthly_limit = Config.STARTER_MONTHLY_REPLIES
                 else:
                     monthly_limit = Config.STARTER_MONTHLY_REPLIES
                 
-                # Add monthly replies at the start of new billing period (don't reset, just add)
+                # Reset monthly counter and set limit to the plan's absolute value
                 cursor.execute(f"""
                     UPDATE users 
                     SET replies_sent_monthly = 0,
-                        replies_limit_monthly = replies_limit_monthly + {placeholder},
+                        replies_limit_monthly = {placeholder},
                         last_monthly_reset = CURRENT_TIMESTAMP
                     WHERE id = {placeholder}
                 """, (monthly_limit, user_id))
