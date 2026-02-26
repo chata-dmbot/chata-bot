@@ -595,7 +595,7 @@
   
                 <!-- Mobile menu button -->
                 <div class="md:hidden absolute right-0 pr-4">
-                    <button type="button" id="mobileMenuBtn" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
@@ -603,38 +603,7 @@
                 </div>
             </div>
         </div>
-
-        <!-- Mobile dropdown menu -->
-        <div id="mobileMenu" class="md:hidden" style="display:none; background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <a href="{{ url_for('pages.home') }}" style="color: #fff; font-size: 1rem; font-weight: 500; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none;">HOME</a>
-                <a href="#features" style="color: #fff; font-size: 1rem; font-weight: 500; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none;">FEATURES</a>
-                <a href="#pricing" style="color: #fff; font-size: 1rem; font-weight: 500; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none;">PRICE</a>
-                {% if user_logged_in %}
-                <a href="{{ url_for('dashboard_bp.dashboard') }}" style="color: #fff; font-size: 1rem; font-weight: 500; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none;">DASHBOARD</a>
-                <a href="{{ url_for('auth.logout') }}" style="color: #3366ff; font-size: 1rem; font-weight: 600; padding: 0.75rem 0; text-decoration: none;">LOGOUT</a>
-                {% else %}
-                <a href="{{ url_for('auth.login') }}" style="color: #fff; font-size: 1rem; font-weight: 500; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none;">LOGIN</a>
-                <a href="{{ url_for('auth.signup') }}" style="color: #3366ff; font-size: 1rem; font-weight: 600; padding: 0.75rem 0; text-decoration: none;">GET STARTED</a>
-                {% endif %}
-            </div>
-        </div>
     </nav>
-
-    <script>
-    (function() {
-        var btn = document.getElementById('mobileMenuBtn');
-        var menu = document.getElementById('mobileMenu');
-        if (btn && menu) {
-            btn.addEventListener('click', function() {
-                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-            });
-            menu.querySelectorAll('a').forEach(function(a) {
-                a.addEventListener('click', function() { menu.style.display = 'none'; });
-            });
-        }
-    })();
-    </script>
 {% endblock %}
 
 {% block content %}

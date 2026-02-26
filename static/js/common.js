@@ -131,6 +131,48 @@ function createAmbientLighting() {
     scheduleNextLight();
 }
 
+/* --- Mobile hamburger dropdown (auto-generated on every page) --- */
+function setupMobileMenu() {
+    var nav = document.querySelector('nav.navigation');
+    if (!nav) return;
+    var btn = nav.querySelector('.md\\:hidden button') || document.getElementById('mobileMenuBtn');
+    if (!btn) return;
+    if (document.getElementById('mobileMenu')) return;
+
+    var desktopDivs = nav.querySelectorAll('.hidden.md\\:block');
+    var links = [];
+    desktopDivs.forEach(function(d) {
+        d.querySelectorAll('a').forEach(function(a) {
+            var text = a.textContent.trim();
+            var href = a.getAttribute('href');
+            if (text && href) links.push({ text: text, href: href, highlight: a.classList.contains('cta-button') });
+        });
+    });
+    if (links.length === 0) return;
+
+    var menu = document.createElement('div');
+    menu.id = 'mobileMenu';
+    menu.className = 'md:hidden';
+    menu.style.cssText = 'display:none;background:rgba(0,0,0,0.95);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,0.1);';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'padding:1rem 1.5rem;display:flex;flex-direction:column;gap:0.5rem;';
+    links.forEach(function(l, i) {
+        var a = document.createElement('a');
+        a.href = l.href;
+        a.textContent = l.text;
+        a.style.cssText = 'font-size:1rem;font-weight:' + (l.highlight ? '600' : '500') + ';padding:0.75rem 0;text-decoration:none;color:' + (l.highlight ? '#3366ff' : '#fff') + ';';
+        if (i < links.length - 1) a.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+        a.addEventListener('click', function() { menu.style.display = 'none'; });
+        inner.appendChild(a);
+    });
+    menu.appendChild(inner);
+    nav.appendChild(menu);
+
+    btn.addEventListener('click', function() {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    });
+}
+
 /* --- Bootstrap everything on page load --- */
 window.addEventListener('load', function() {
     hidePageLoadOverlay();
@@ -141,6 +183,7 @@ window.addEventListener('load', function() {
         updateGridLighting();
         setTimeout(createAmbientLighting, 2000);
     }
+    setupMobileMenu();
 });
 window.addEventListener('pageshow', hidePageLoadOverlay);
 window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
