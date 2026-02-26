@@ -282,6 +282,19 @@
         text-transform: none;
         letter-spacing: normal;
     }
+
+    @media (max-width: 768px) {
+        .dashboard-hero h1 {
+            font-size: 2.5rem;
+        }
+        .dashboard-content {
+            padding: 1rem;
+        }
+        .dashboard-row {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+    }
 {% endblock %}
 
 {% block navigation %}

@@ -920,6 +920,15 @@ textarea {
         right: 0.4rem;
     }
 
+    .conversation-examples {
+        grid-template-columns: 1fr !important;
+    }
+
+    .conversation-example-card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
     .action-buttons {
         justify-content: center;
     }
@@ -953,6 +962,15 @@ textarea {
                         <a href="{{ url_for('dashboard_bp.account_settings') }}" class="text-white hover:text-blue-400 px-3 py-2 text-sm font-medium">SETTINGS</a>
                         <a href="{{ url_for('auth.logout') }}" class="cta-button text-white px-6 py-2 rounded-full text-sm font-medium">LOGOUT</a>
                     </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden absolute right-0 pr-4">
+                    <button type="button" class="text-white hover:text-blue-400 focus:outline-none focus:text-blue-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1088,7 +1106,7 @@ textarea {
                     </div>
                     <div class="form-group">
                         <label>URL</label>
-                        <input type="url" name="link_urls[]" placeholder="https://..." value="{{ link.url or '' }}">
+                        <input type="text" name="link_urls[]" placeholder="https://..." value="{{ link.url or '' }}">
                     </div>
                     <button type="button" class="remove-row-btn" data-action="remove-link">
                         <i class="fas fa-times"></i>
@@ -1103,7 +1121,7 @@ textarea {
                     </div>
                     <div class="form-group">
                         <label>URL</label>
-                        <input type="url" name="link_urls[]" placeholder="https://...">
+                        <input type="text" name="link_urls[]" placeholder="https://...">
                     </div>
                     <button type="button" class="remove-row-btn" data-action="remove-link">
                         <i class="fas fa-times"></i>
@@ -1121,7 +1139,7 @@ textarea {
             </div>
             <div class="form-group">
                 <label for="instagram_url">Instagram profile link</label>
-                <input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/username" value="{{ settings.instagram_url if settings else '' }}">
+                <input type="text" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/username" value="{{ settings.instagram_url if settings else '' }}">
             </div>
             <div id="posts-list" class="item-collection">
                 {% if settings and settings.posts and settings.posts|length > 0 %}
@@ -1381,7 +1399,7 @@ textarea {
                 '</div>' +
                 '<div class="form-group">' +
                     '<label>URL</label>' +
-                    '<input type="url" name="link_urls[]" placeholder="https://...">' +
+                    '<input type="text" name="link_urls[]" placeholder="https://...">' +
                 '</div>' +
                 '<button type="button" class="remove-row-btn" data-action="remove-link">' +
                     '<i class="fas fa-times"></i>' +

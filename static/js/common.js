@@ -173,6 +173,24 @@ function setupMobileMenu() {
     });
 }
 
+/* --- Show overlay on same-origin page navigation --- */
+function attachOverlayToLinks() {
+    var overlay = document.getElementById('pageLoadOverlay');
+    if (!overlay) return;
+    document.querySelectorAll('a[href]').forEach(function(a) {
+        if (a._overlayAttached) return;
+        var href = a.getAttribute('href');
+        if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
+        try {
+            var url = new URL(a.href, window.location.href);
+            if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
+                a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
+                a._overlayAttached = true;
+            }
+        } catch (e) {}
+    });
+}
+
 /* --- Bootstrap everything on page load --- */
 window.addEventListener('load', function() {
     hidePageLoadOverlay();
@@ -184,24 +202,9 @@ window.addEventListener('load', function() {
         setTimeout(createAmbientLighting, 2000);
     }
     setupMobileMenu();
+    attachOverlayToLinks();
 });
 window.addEventListener('pageshow', hidePageLoadOverlay);
 window.addEventListener('DOMContentLoaded', hidePageLoadOverlay);
 window.addEventListener('resize', createInteractiveGrid);
 window.addEventListener('scroll', updateGridOnScroll, { passive: true });
-
-/* --- Show overlay on same-origin page navigation --- */
-(function() {
-    var overlay = document.getElementById('pageLoadOverlay');
-    if (!overlay) return;
-    document.querySelectorAll('a[href]').forEach(function(a) {
-        var href = a.getAttribute('href');
-        if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-        try {
-            var url = new URL(a.href, window.location.href);
-            if (url.origin === window.location.origin && url.pathname && url.pathname !== window.location.pathname) {
-                a.addEventListener('click', function() { overlay.classList.remove('hidden'); });
-            }
-        } catch (e) {}
-    });
-})();
