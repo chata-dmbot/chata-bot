@@ -365,6 +365,9 @@ def instagram_callback():
         flash("No authorization code received from Instagram.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     
+    # User completed OAuth (we have a code) — clear any prior error flashes from a cancelled attempt
+    session.pop("_flashes", None)
+    
     try:
         # Exchange code for access token using Facebook Graph API
         token_url = "https://graph.facebook.com/v18.0/oauth/access_token"
