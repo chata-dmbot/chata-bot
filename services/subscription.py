@@ -163,7 +163,9 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None,
                 UPDATE users
                 SET replies_sent_monthly = 0,
                     replies_limit_monthly = {placeholder},
-                    last_monthly_reset = {placeholder}
+                    last_monthly_reset = {placeholder},
+                    last_warning_threshold = NULL,
+                    last_warning_sent_at = NULL
                 WHERE id = {placeholder}
                   AND (last_monthly_reset IS NULL OR last_monthly_reset < {placeholder})
             """, (monthly_limit, now, user_id, now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)))
@@ -267,44 +269,20 @@ def increment_reply_count(user_id, conn=None):
             total_available = replies_limit_monthly + replies_purchased
             remaining = max(0, total_available - total_used)
             
-            # Determine which threshold we're at
             warning_threshold = None
-            if remaining <= Config.REPLY_WARNING_THRESHOLD and remaining > 0:
-                warning_threshold = Config.REPLY_WARNING_THRESHOLD
-            elif remaining <= 100 and remaining > 50:
+            if 0 < remaining <= 50:
+                warning_threshold = 50
+            elif 50 < remaining <= 100:
                 warning_threshold = 100
-            
-            # Send warning if we hit a threshold and haven't sent one for this threshold recently
+
             if warning_threshold and user_email:
-                # Only send if we haven't sent a warning for this threshold in the last 24 hours
-                should_send = True
-                if last_warning_sent_at and last_warning_threshold == warning_threshold:
-                    try:
-                        # Handle both string and datetime objects
-                        if isinstance(last_warning_sent_at, str):
-                            warning_time = datetime.fromisoformat(last_warning_sent_at.replace('Z', '+00:00'))
-                        elif isinstance(last_warning_sent_at, datetime):
-                            warning_time = last_warning_sent_at
-                        else:
-                            warning_time = datetime.now()  # Fallback
-                        
-                        # Calculate time difference safely
-                        now = datetime.now()
-                        if warning_time.tzinfo:
-                            warning_time = warning_time.replace(tzinfo=None)
-                        time_diff = now - warning_time
-                        time_since_warning = time_diff.total_seconds()
-                        if time_since_warning < 86400:  # 24 hours
-                            should_send = False
-                    except Exception as e:
-                        logger.warning(f"Error parsing last_warning_sent_at: {e}")
-                        # If we can't parse it, send the warning to be safe
-                        should_send = True
-                
-                if should_send:
+                already_sent = (
+                    last_warning_threshold is not None
+                    and last_warning_threshold <= warning_threshold
+                )
+                if not already_sent:
                     try:
                         send_usage_warning_email(user_email, remaining)
-                        # Update last warning sent
                         cursor.execute(f"""
                             UPDATE users
                             SET last_warning_sent_at = {placeholder}, last_warning_threshold = {placeholder}
@@ -353,7 +331,9 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
         # Add to user's purchased replies
         cursor.execute(f"""
             UPDATE users
-            SET replies_purchased = replies_purchased + {placeholder}
+            SET replies_purchased = replies_purchased + {placeholder},
+                last_warning_threshold = NULL,
+                last_warning_sent_at = NULL
             WHERE id = {placeholder}
         """, (replies_to_add, user_id))
         
