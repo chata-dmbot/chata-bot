@@ -90,8 +90,9 @@ class Config:
     SUPPORT_EMAIL = "hello@getchata.com"
     
     # Reply plan limits
-    STARTER_MONTHLY_REPLIES = 150
-    STANDARD_MONTHLY_REPLIES = 1500
+    FREE_MONTHLY_REPLIES = 200
+    STARTER_MONTHLY_REPLIES = 1000
+    STANDARD_MONTHLY_REPLIES = 5000
     ADDON_REPLIES = 150          # replies per add-on purchase
     REPLY_WARNING_THRESHOLD = 50  # warn user when remaining replies fall to this
     

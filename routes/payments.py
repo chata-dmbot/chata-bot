@@ -308,15 +308,15 @@ def checkout_success():
         if checkout_session.metadata.get('type') == 'subscription':
             plan = checkout_session.metadata.get('plan', 'starter')
             if plan == 'standard':
-                flash("Standard subscription activated successfully! You now have 1500 replies per month.", "success")
+                flash(f"Standard subscription activated successfully! You now have {Config.STANDARD_MONTHLY_REPLIES} replies per month.", "success")
             else:
-                flash("Starter subscription activated successfully! You now have 150 replies per month.", "success")
+                flash(f"Starter subscription activated successfully! You now have {Config.STARTER_MONTHLY_REPLIES} replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'addon':
-            flash("Payment successful! 150 additional replies have been added to your account.", "success")
+            flash(f"Payment successful! {Config.ADDON_REPLIES} additional replies have been added to your account.", "success")
         elif checkout_session.metadata.get('type') == 'upgrade':
-            flash("Subscription upgraded successfully! You now have 1500 replies per month.", "success")
+            flash(f"Subscription upgraded successfully! You now have {Config.STANDARD_MONTHLY_REPLIES} replies per month.", "success")
         elif checkout_session.metadata.get('type') == 'downgrade':
-            flash("Subscription downgraded successfully! You now have 150 replies per month.", "success")
+            flash(f"Subscription downgraded successfully! You now have {Config.STARTER_MONTHLY_REPLIES} replies per month.", "success")
         
         return redirect(url_for('dashboard_bp.dashboard'))
         
@@ -525,6 +525,64 @@ def cancel_subscription():
     except Exception as e:
         logger.error(f"Error canceling subscription: {e}")
         flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+@payments_bp.route("/checkout/free", methods=["POST"])
+@login_required
+def activate_free_plan():
+    """Activate the Free plan — no Stripe, grants FREE_MONTHLY_REPLIES per month."""
+    user_id = session['user_id']
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+
+        # Prevent activation if the user already has an active paid subscription
+        cursor.execute(f"""
+            SELECT id FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active'
+            LIMIT 1
+        """, (user_id,))
+        existing = cursor.fetchone()
+        if existing:
+            flash("You already have an active paid subscription. Cancel it before switching to Free.", "error")
+            return redirect(url_for('dashboard_bp.dashboard'))
+
+        # Check if the user already has the free plan active (prevent double-grant)
+        cursor.execute(f"""
+            SELECT replies_limit_monthly FROM users WHERE id = {placeholder}
+        """, (user_id,))
+        user_row = cursor.fetchone()
+        if user_row and user_row[0] >= Config.FREE_MONTHLY_REPLIES:
+            flash("You already have an active Free plan.", "info")
+            return redirect(url_for('dashboard_bp.dashboard'))
+
+        # Grant FREE_MONTHLY_REPLIES; reset counters so the user starts fresh
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_limit_monthly = {placeholder},
+                replies_sent_monthly = 0,
+                last_monthly_reset = CURRENT_TIMESTAMP
+            WHERE id = {placeholder}
+        """, (Config.FREE_MONTHLY_REPLIES, user_id))
+        conn.commit()
+
+        log_activity(user_id, 'free_plan_activated', f'Free plan activated: {Config.FREE_MONTHLY_REPLIES} replies/month')
+        logger.info(f"Free plan activated for user {user_id}: {Config.FREE_MONTHLY_REPLIES} replies/month")
+        flash(f"Free plan activated! You have {Config.FREE_MONTHLY_REPLIES} replies per month. You can also buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.", "success")
+        return redirect(url_for('dashboard_bp.dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error activating free plan for user {user_id}: {e}")
+        flash("❌ An error occurred activating the free plan. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     finally:
         if conn:

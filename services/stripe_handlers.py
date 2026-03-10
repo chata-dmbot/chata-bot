@@ -171,7 +171,7 @@ def handle_checkout_session_completed(session_obj):
         if session_type == 'addon':
             # Handle one-time add-on purchase
             amount = session_obj.amount_total / 100  # Convert cents to euros
-            replies_to_add = Config.ADDON_REPLIES  # €5 for 150 replies
+            replies_to_add = Config.ADDON_REPLIES  # €5 for add-on replies
             success = add_purchased_replies(
                 user_id, 
                 amount, 
