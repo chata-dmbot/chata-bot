@@ -332,8 +332,8 @@ def handle_subscription_created(subscription):
             
             logger.info(f"Subscription record created in database")
 
-            # If the user was on the Free plan, mark that row as replaced so the
-            # dashboard / monthly-reset logic only see the new paid subscription.
+            # Mark any active Free row as 'replaced' so dashboard / monthly-reset
+            # only see the new paid subscription.
             cursor.execute(f"""
                 UPDATE subscriptions
                 SET status = 'replaced', updated_at = CURRENT_TIMESTAMP
@@ -342,14 +342,73 @@ def handle_subscription_created(subscription):
                   AND status = 'active'
             """, (user_id,))
 
-            # Set replies_limit_monthly to the plan's absolute value (not additive)
-            # to prevent inflation from multiple Stripe events firing in sequence.
+            # Determine direction (upgrade vs downgrade) by looking at the
+            # previous plan, preferring active rows over canceled/replaced.
             cursor.execute(f"""
-                UPDATE users 
-                SET replies_limit_monthly = {placeholder}
-                WHERE id = {placeholder}
-            """, (replies_limit, user_id))
-            logger.info(f"Set replies_limit_monthly to {replies_limit} for user {user_id} ({plan_type} plan)")
+                SELECT plan_type FROM subscriptions
+                WHERE user_id = {placeholder}
+                  AND stripe_subscription_id != {placeholder}
+                  AND status IN ('active', 'canceled', 'replaced')
+                ORDER BY
+                  CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+                  updated_at DESC
+                LIMIT 1
+            """, (user_id, subscription_id))
+            prev_row = cursor.fetchone()
+            prev_plan_type = prev_row[0] if prev_row else None
+
+            tier_map = {'free': 0, 'starter': 1, 'standard': 2}
+            prev_tier = tier_map.get(prev_plan_type, -1)
+            new_tier = tier_map.get(plan_type, 0)
+            is_downgrade = prev_tier > new_tier
+
+            # Read user's current bucket state and compute carryover (remaining replies)
+            cursor.execute(f"""
+                SELECT COALESCE(replies_limit_monthly, 0),
+                       COALESCE(replies_sent_monthly, 0),
+                       COALESCE(replies_purchased, 0),
+                       COALESCE(replies_used_purchased, 0)
+                FROM users WHERE id = {placeholder}
+            """, (user_id,))
+            m_limit, m_sent, p_total, p_used = cursor.fetchone()
+            carryover = max(0, m_limit - m_sent) + max(0, p_total - p_used)
+
+            if is_downgrade:
+                # Downgrade: preserve remaining as purchased; no immediate
+                # monthly grant. The next calendar-month reset will set the
+                # new plan's allotment.
+                cursor.execute(f"""
+                    UPDATE users
+                    SET replies_purchased = {placeholder},
+                        replies_used_purchased = 0,
+                        replies_limit_monthly = 0,
+                        replies_sent_monthly = 0,
+                        last_warning_threshold = NULL,
+                        last_warning_sent_at = NULL
+                    WHERE id = {placeholder}
+                """, (carryover, user_id))
+                logger.info(
+                    f"Downgrade {prev_plan_type}->{plan_type} for user {user_id}: "
+                    f"preserved {carryover} replies, monthly=0 until next reset"
+                )
+            else:
+                # Upgrade or first-time paid: grant the new plan's monthly
+                # allotment immediately and carry remaining into purchased.
+                cursor.execute(f"""
+                    UPDATE users
+                    SET replies_purchased = {placeholder},
+                        replies_used_purchased = 0,
+                        replies_limit_monthly = {placeholder},
+                        replies_sent_monthly = 0,
+                        last_monthly_reset = CURRENT_TIMESTAMP,
+                        last_warning_threshold = NULL,
+                        last_warning_sent_at = NULL
+                    WHERE id = {placeholder}
+                """, (carryover, replies_limit, user_id))
+                logger.info(
+                    f"Upgrade/first-time {prev_plan_type}->{plan_type} for user {user_id}: "
+                    f"granted {replies_limit} monthly + carried over {carryover}"
+                )
             
             conn.commit()
             

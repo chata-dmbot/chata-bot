@@ -562,17 +562,107 @@ def _free_subscription_id(user_id):
     return f"{FREE_PLAN_SUB_PREFIX}{user_id}"
 
 
+def _user_has_paid_history(cursor, user_id):
+    """True if user ever had a paid subscription row (any status)."""
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT 1 FROM subscriptions
+        WHERE user_id = {placeholder}
+          AND plan_type IN ('starter', 'standard')
+        LIMIT 1
+    """, (user_id,))
+    return cursor.fetchone() is not None
+
+
+def _switch_user_to_free(cursor, user_id, grant_monthly: bool):
+    """Move all currently remaining replies into purchased.
+
+    - grant_monthly=True  -> first-time Free activation: set monthly = 200 and reset cycle.
+    - grant_monthly=False -> downgrade-to-Free path: monthly = 0, leave last_monthly_reset
+      alone so the next calendar-month boundary refills monthly to 200 naturally.
+    """
+    placeholder = get_param_placeholder()
+    cursor.execute(f"""
+        SELECT COALESCE(replies_limit_monthly, 0),
+               COALESCE(replies_sent_monthly, 0),
+               COALESCE(replies_purchased, 0),
+               COALESCE(replies_used_purchased, 0)
+        FROM users WHERE id = {placeholder}
+    """, (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return 0
+    m_limit, m_sent, p_total, p_used = row
+    carryover = max(0, int(m_limit) - int(m_sent)) + max(0, int(p_total) - int(p_used))
+
+    if grant_monthly:
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_purchased = {placeholder},
+                replies_used_purchased = 0,
+                replies_limit_monthly = {placeholder},
+                replies_sent_monthly = 0,
+                last_monthly_reset = CURRENT_TIMESTAMP,
+                last_warning_threshold = NULL,
+                last_warning_sent_at = NULL
+            WHERE id = {placeholder}
+        """, (carryover, Config.FREE_MONTHLY_REPLIES, user_id))
+    else:
+        cursor.execute(f"""
+            UPDATE users
+            SET replies_purchased = {placeholder},
+                replies_used_purchased = 0,
+                replies_limit_monthly = 0,
+                replies_sent_monthly = 0,
+                last_warning_threshold = NULL,
+                last_warning_sent_at = NULL
+            WHERE id = {placeholder}
+        """, (carryover, user_id))
+    return carryover
+
+
+def _ensure_free_subscription_row(cursor, user_id):
+    """Insert (or reactivate) the synthetic Free subscription row."""
+    placeholder = get_param_placeholder()
+    free_sub_id = _free_subscription_id(user_id)
+    free_customer_id = f"{FREE_PLAN_SUB_PREFIX}cust_{user_id}"
+    free_price_id = "free"
+    now_dt = datetime.now()
+
+    cursor.execute(f"""
+        SELECT id FROM subscriptions WHERE stripe_subscription_id = {placeholder}
+    """, (free_sub_id,))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute(f"""
+            UPDATE subscriptions
+            SET status = 'active',
+                plan_type = 'free',
+                current_period_start = {placeholder},
+                current_period_end = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE stripe_subscription_id = {placeholder}
+        """, (now_dt, free_sub_id))
+    else:
+        cursor.execute(f"""
+            INSERT INTO subscriptions
+            (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id,
+             plan_type, status, current_period_start, current_period_end)
+            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder},
+                    {placeholder}, {placeholder}, {placeholder}, NULL)
+        """, (user_id, free_sub_id, free_customer_id, free_price_id,
+              'free', 'active', now_dt))
+
+
 @payments_bp.route("/checkout/free", methods=["POST"])
 @login_required
 def activate_free_plan():
     """Activate the Free plan — no Stripe.
 
-    - Preserves all currently-remaining replies by moving the leftover monthly
-      slice into the purchased bucket.
-    - Grants FREE_MONTHLY_REPLIES on top, refilled monthly via the normal
-      monthly-reset job.
-    - Inserts (or reactivates) a `subscriptions` row with plan_type='free'
-      so the dashboard recognizes it as the current plan.
+    - First-time activation (no paid history): grants 200 monthly + carries
+      over any existing remaining replies.
+    - Returning user with paid history: preserves remaining replies, no
+      immediate 200 grant. Next calendar-month boundary refills to 200.
     """
     user_id = session['user_id']
     conn = None
@@ -588,7 +678,7 @@ def activate_free_plan():
             LIMIT 1
         """, (user_id,))
         if cursor.fetchone():
-            flash("You already have an active paid subscription. Cancel it before switching to Free.", "error")
+            flash("You already have an active paid plan. Use 'Downgrade to Free' from your dashboard.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
 
         # Block if Free is already active
@@ -598,85 +688,48 @@ def activate_free_plan():
             LIMIT 1
         """, (user_id,))
         if cursor.fetchone():
-            flash("You already have an active Free plan.", "info")
+            flash("You're already on the Free plan.", "info")
             return redirect(url_for('dashboard_bp.dashboard'))
 
-        # Read current reply state so we can carry remaining over into purchased
-        cursor.execute(f"""
-            SELECT COALESCE(replies_limit_monthly, 0), COALESCE(replies_sent_monthly, 0)
-            FROM users WHERE id = {placeholder}
-        """, (user_id,))
-        user_row = cursor.fetchone()
-        if not user_row:
+        # Look up user existence
+        cursor.execute(f"SELECT 1 FROM users WHERE id = {placeholder}", (user_id,))
+        if not cursor.fetchone():
             flash("❌ User not found.", "error")
             return redirect(url_for('auth.login'))
-        current_limit, current_sent = user_row
-        carryover = max(0, int(current_limit) - int(current_sent))
 
-        # Carry leftover monthly into purchased bucket; then reset monthly to 200
-        cursor.execute(f"""
-            UPDATE users
-            SET replies_purchased = COALESCE(replies_purchased, 0) + {placeholder},
-                replies_limit_monthly = {placeholder},
-                replies_sent_monthly = 0,
-                last_monthly_reset = CURRENT_TIMESTAMP,
-                last_warning_threshold = NULL,
-                last_warning_sent_at = NULL
-            WHERE id = {placeholder}
-        """, (carryover, Config.FREE_MONTHLY_REPLIES, user_id))
-
-        # Insert/reactivate the Free subscription row (synthetic Stripe ids — schema is NOT NULL)
-        free_sub_id = _free_subscription_id(user_id)
-        free_customer_id = f"{FREE_PLAN_SUB_PREFIX}cust_{user_id}"
-        free_price_id = "free"
-        now_dt = datetime.now()
-
-        cursor.execute(f"""
-            SELECT id FROM subscriptions WHERE stripe_subscription_id = {placeholder}
-        """, (free_sub_id,))
-        existing_free = cursor.fetchone()
-        if existing_free:
-            cursor.execute(f"""
-                UPDATE subscriptions
-                SET status = 'active',
-                    plan_type = 'free',
-                    current_period_start = {placeholder},
-                    current_period_end = NULL,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE stripe_subscription_id = {placeholder}
-            """, (now_dt, free_sub_id))
-        else:
-            cursor.execute(f"""
-                INSERT INTO subscriptions
-                (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id,
-                 plan_type, status, current_period_start, current_period_end)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, NULL)
-            """, (user_id, free_sub_id, free_customer_id, free_price_id,
-                  'free', 'active', now_dt))
-
+        first_time = not _user_has_paid_history(cursor, user_id)
+        carryover = _switch_user_to_free(cursor, user_id, grant_monthly=first_time)
+        _ensure_free_subscription_row(cursor, user_id)
         conn.commit()
 
-        log_activity(
-            user_id,
-            'free_plan_activated',
-            f'Free plan activated: +{Config.FREE_MONTHLY_REPLIES} replies/month, carried over {carryover} unused replies'
-        )
-        logger.info(
-            f"Free plan activated for user {user_id}: +{Config.FREE_MONTHLY_REPLIES} replies/month "
-            f"(carried over {carryover} unused replies into purchased)"
-        )
-        if carryover > 0:
+        if first_time:
+            log_activity(
+                user_id,
+                'free_plan_activated',
+                f'Free plan first-time activation: +{Config.FREE_MONTHLY_REPLIES} replies/month'
+            )
+            logger.info(
+                f"Free plan first-time activation for user {user_id} "
+                f"(+{Config.FREE_MONTHLY_REPLIES}, carried over {carryover})"
+            )
             flash(
-                f"Free plan activated! Your previous {carryover} unused replies were kept, "
-                f"and you also get {Config.FREE_MONTHLY_REPLIES} replies per month from now on. "
-                f"You can buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.",
+                f"Free plan activated! You have {Config.FREE_MONTHLY_REPLIES} replies. "
+                f"Add-ons (€5 / +{Config.ADDON_REPLIES} replies) are available anytime.",
                 "success"
             )
         else:
+            log_activity(
+                user_id,
+                'free_plan_activated_from_paid',
+                f'Free plan activated after paid history; preserved {carryover} replies, no immediate grant'
+            )
+            logger.info(
+                f"Free plan activated for user {user_id} after paid history "
+                f"(preserved {carryover}, no monthly grant until next reset)"
+            )
             flash(
-                f"Free plan activated! You have {Config.FREE_MONTHLY_REPLIES} replies per month. "
-                f"You can also buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.",
+                f"You're on the Free plan. Your {carryover} remaining replies are preserved. "
+                f"Your next 200 replies arrive at the start of next month.",
                 "success"
             )
         return redirect(url_for('dashboard_bp.dashboard'))
@@ -684,6 +737,92 @@ def activate_free_plan():
     except Exception as e:
         logger.error(f"Error activating free plan for user {user_id}: {e}")
         flash("❌ An error occurred activating the free plan. Please try again.", "error")
+        return redirect(url_for('dashboard_bp.dashboard'))
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+@payments_bp.route("/dashboard/downgrade-to-free", methods=["POST"])
+@login_required
+def downgrade_to_free():
+    """Cancel the user's active paid subscription and switch them to Free.
+
+    - Cancels the Stripe subscription server-side.
+    - Preserves all currently remaining replies (moved into the purchased
+      bucket) — no replies are ever lost.
+    - Does NOT grant 200 immediately; the next calendar-month reset will
+      refill monthly to 200.
+    """
+    user_id = session['user_id']
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+
+        # Find the active paid subscription
+        cursor.execute(f"""
+            SELECT stripe_subscription_id, plan_type
+            FROM subscriptions
+            WHERE user_id = {placeholder}
+              AND status = 'active'
+              AND plan_type IN ('starter', 'standard')
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id,))
+        sub = cursor.fetchone()
+        if not sub:
+            flash("You don't have an active paid plan to downgrade.", "error")
+            return redirect(url_for('dashboard_bp.dashboard'))
+
+        stripe_sub_id, plan_type = sub
+        conn.close()
+        conn = None
+
+        # Cancel in Stripe first — only mutate DB if Stripe succeeds
+        try:
+            stripe.Subscription.delete(stripe_sub_id)
+            logger.info(f"Canceled Stripe subscription {stripe_sub_id} (downgrade-to-free) for user {user_id}")
+        except stripe.error.InvalidRequestError as e:
+            # Already canceled in Stripe — proceed with DB cleanup
+            logger.warning(f"Stripe subscription may already be canceled: {e}")
+        except Exception as e:
+            logger.error(f"Stripe cancel failed for downgrade-to-free: {e}")
+            flash("Could not cancel your subscription. Please try again or contact support.", "error")
+            return redirect(url_for('dashboard_bp.dashboard'))
+
+        # Stripe is now canceled — update DB
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            UPDATE subscriptions
+            SET status = 'canceled', updated_at = CURRENT_TIMESTAMP
+            WHERE stripe_subscription_id = {placeholder}
+        """, (stripe_sub_id,))
+
+        carryover = _switch_user_to_free(cursor, user_id, grant_monthly=False)
+        _ensure_free_subscription_row(cursor, user_id)
+        conn.commit()
+
+        log_activity(
+            user_id,
+            'downgrade_to_free',
+            f'Downgraded {plan_type} to Free; preserved {carryover} replies'
+        )
+        flash(
+            f"You're on the Free plan. Your {carryover} remaining replies are preserved. "
+            f"Your next 200 replies arrive at the start of next month.",
+            "success"
+        )
+        return redirect(url_for('dashboard_bp.dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error in downgrade_to_free: {e}")
+        flash("❌ An error occurred. Please try again.", "error")
         return redirect(url_for('dashboard_bp.dashboard'))
     finally:
         if conn:
