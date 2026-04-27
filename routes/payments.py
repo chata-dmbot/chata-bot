@@ -1,6 +1,7 @@
 """Payment routes — Stripe checkout, subscription management."""
 import logging
 import os
+from datetime import datetime
 from flask import Blueprint, request, redirect, url_for, flash, session, render_template
 
 logger = logging.getLogger("chata.routes.payments")
@@ -217,42 +218,61 @@ def create_addon_checkout():
     
     conn = None
     try:
-        # Check if user has an active subscription (required for add-ons)
+        # Add-ons require any active plan (Free or paid)
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
-        
+
         cursor.execute(f"""
             SELECT stripe_customer_id, status, plan_type
-            FROM subscriptions 
-            WHERE user_id = {placeholder}
+            FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active'
             ORDER BY created_at DESC
             LIMIT 1
         """, (user_id,))
         result = cursor.fetchone()
-        
-        if not result or not result[0]:
-            flash("❌ You need an active subscription to purchase add-ons.", "error")
+
+        if not result:
+            flash("❌ You need an active plan to purchase add-ons. Activate the Free plan or subscribe first.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
-        
+
         customer_id, subscription_status, plan_type = result
-        
-        # Check if subscription is active
-        if subscription_status != 'active':
-            flash("❌ You need an active subscription to purchase add-ons. Please reactivate your subscription.", "error")
-            return redirect(url_for('dashboard_bp.dashboard'))
-        
-        # Check if customer exists in Stripe
-        if not customer_id:
-            existing_customers = stripe.Customer.list(email=user_email, limit=1)
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-                stripe.Customer.modify(customer_id, metadata={'user_id': str(user_id)})
-                logger.info(f"Found existing Stripe customer: {customer_id}")
-            else:
-                flash("❌ Customer account not found. Please contact support.", "error")
-                return redirect(url_for('dashboard_bp.dashboard'))
-        
+
+        # Free plan rows use a synthetic stripe_customer_id ("free_cust_..."),
+        # which Stripe Checkout will reject. Resolve a real cus_... id.
+        if not customer_id or not customer_id.startswith('cus_'):
+            real_customer_id = None
+
+            # Re-use any real Stripe customer we already have for this user
+            cursor.execute(f"""
+                SELECT stripe_customer_id
+                FROM subscriptions
+                WHERE user_id = {placeholder} AND stripe_customer_id LIKE 'cus_%'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (user_id,))
+            existing_real = cursor.fetchone()
+            if existing_real and existing_real[0]:
+                real_customer_id = existing_real[0]
+                logger.info(f"Reusing existing real Stripe customer for free user {user_id}: {real_customer_id}")
+
+            if not real_customer_id:
+                try:
+                    existing_customers = stripe.Customer.list(email=user_email, limit=1)
+                    if existing_customers.data:
+                        real_customer_id = existing_customers.data[0].id
+                        stripe.Customer.modify(real_customer_id, metadata={'user_id': str(user_id)})
+                        logger.info(f"Found existing Stripe customer by email for free user {user_id}: {real_customer_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to lookup existing Stripe customer by email: {e}")
+
+            if not real_customer_id:
+                new_cust = stripe.Customer.create(email=user_email, metadata={'user_id': str(user_id)})
+                real_customer_id = new_cust.id
+                logger.info(f"Created new Stripe customer for free user {user_id}: {real_customer_id}")
+
+            customer_id = real_customer_id
+
         conn.close()
         conn = None
         
@@ -534,10 +554,26 @@ def cancel_subscription():
                 pass
 
 
+FREE_PLAN_SUB_PREFIX = "free_"
+
+
+def _free_subscription_id(user_id):
+    """Synthetic id for the Free plan row (no Stripe)."""
+    return f"{FREE_PLAN_SUB_PREFIX}{user_id}"
+
+
 @payments_bp.route("/checkout/free", methods=["POST"])
 @login_required
 def activate_free_plan():
-    """Activate the Free plan — no Stripe, grants FREE_MONTHLY_REPLIES per month."""
+    """Activate the Free plan — no Stripe.
+
+    - Preserves all currently-remaining replies by moving the leftover monthly
+      slice into the purchased bucket.
+    - Grants FREE_MONTHLY_REPLIES on top, refilled monthly via the normal
+      monthly-reset job.
+    - Inserts (or reactivates) a `subscriptions` row with plan_type='free'
+      so the dashboard recognizes it as the current plan.
+    """
     user_id = session['user_id']
     conn = None
     try:
@@ -545,39 +581,104 @@ def activate_free_plan():
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
 
-        # Prevent activation if the user already has an active paid subscription
+        # Block if the user already has a paid active subscription
         cursor.execute(f"""
-            SELECT id FROM subscriptions
-            WHERE user_id = {placeholder} AND status = 'active'
+            SELECT plan_type FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active' AND plan_type != 'free'
             LIMIT 1
         """, (user_id,))
-        existing = cursor.fetchone()
-        if existing:
+        if cursor.fetchone():
             flash("You already have an active paid subscription. Cancel it before switching to Free.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
 
-        # Check if the user already has the free plan active (prevent double-grant)
+        # Block if Free is already active
         cursor.execute(f"""
-            SELECT replies_limit_monthly FROM users WHERE id = {placeholder}
+            SELECT id FROM subscriptions
+            WHERE user_id = {placeholder} AND status = 'active' AND plan_type = 'free'
+            LIMIT 1
         """, (user_id,))
-        user_row = cursor.fetchone()
-        if user_row and user_row[0] >= Config.FREE_MONTHLY_REPLIES:
+        if cursor.fetchone():
             flash("You already have an active Free plan.", "info")
             return redirect(url_for('dashboard_bp.dashboard'))
 
-        # Grant FREE_MONTHLY_REPLIES; reset counters so the user starts fresh
+        # Read current reply state so we can carry remaining over into purchased
+        cursor.execute(f"""
+            SELECT COALESCE(replies_limit_monthly, 0), COALESCE(replies_sent_monthly, 0)
+            FROM users WHERE id = {placeholder}
+        """, (user_id,))
+        user_row = cursor.fetchone()
+        if not user_row:
+            flash("❌ User not found.", "error")
+            return redirect(url_for('auth.login'))
+        current_limit, current_sent = user_row
+        carryover = max(0, int(current_limit) - int(current_sent))
+
+        # Carry leftover monthly into purchased bucket; then reset monthly to 200
         cursor.execute(f"""
             UPDATE users
-            SET replies_limit_monthly = {placeholder},
+            SET replies_purchased = COALESCE(replies_purchased, 0) + {placeholder},
+                replies_limit_monthly = {placeholder},
                 replies_sent_monthly = 0,
-                last_monthly_reset = CURRENT_TIMESTAMP
+                last_monthly_reset = CURRENT_TIMESTAMP,
+                last_warning_threshold = NULL,
+                last_warning_sent_at = NULL
             WHERE id = {placeholder}
-        """, (Config.FREE_MONTHLY_REPLIES, user_id))
+        """, (carryover, Config.FREE_MONTHLY_REPLIES, user_id))
+
+        # Insert/reactivate the Free subscription row (synthetic Stripe ids — schema is NOT NULL)
+        free_sub_id = _free_subscription_id(user_id)
+        free_customer_id = f"{FREE_PLAN_SUB_PREFIX}cust_{user_id}"
+        free_price_id = "free"
+        now_dt = datetime.now()
+
+        cursor.execute(f"""
+            SELECT id FROM subscriptions WHERE stripe_subscription_id = {placeholder}
+        """, (free_sub_id,))
+        existing_free = cursor.fetchone()
+        if existing_free:
+            cursor.execute(f"""
+                UPDATE subscriptions
+                SET status = 'active',
+                    plan_type = 'free',
+                    current_period_start = {placeholder},
+                    current_period_end = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE stripe_subscription_id = {placeholder}
+            """, (now_dt, free_sub_id))
+        else:
+            cursor.execute(f"""
+                INSERT INTO subscriptions
+                (user_id, stripe_subscription_id, stripe_customer_id, stripe_price_id,
+                 plan_type, status, current_period_start, current_period_end)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder},
+                        {placeholder}, {placeholder}, {placeholder}, NULL)
+            """, (user_id, free_sub_id, free_customer_id, free_price_id,
+                  'free', 'active', now_dt))
+
         conn.commit()
 
-        log_activity(user_id, 'free_plan_activated', f'Free plan activated: {Config.FREE_MONTHLY_REPLIES} replies/month')
-        logger.info(f"Free plan activated for user {user_id}: {Config.FREE_MONTHLY_REPLIES} replies/month")
-        flash(f"Free plan activated! You have {Config.FREE_MONTHLY_REPLIES} replies per month. You can also buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.", "success")
+        log_activity(
+            user_id,
+            'free_plan_activated',
+            f'Free plan activated: +{Config.FREE_MONTHLY_REPLIES} replies/month, carried over {carryover} unused replies'
+        )
+        logger.info(
+            f"Free plan activated for user {user_id}: +{Config.FREE_MONTHLY_REPLIES} replies/month "
+            f"(carried over {carryover} unused replies into purchased)"
+        )
+        if carryover > 0:
+            flash(
+                f"Free plan activated! Your previous {carryover} unused replies were kept, "
+                f"and you also get {Config.FREE_MONTHLY_REPLIES} replies per month from now on. "
+                f"You can buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.",
+                "success"
+            )
+        else:
+            flash(
+                f"Free plan activated! You have {Config.FREE_MONTHLY_REPLIES} replies per month. "
+                f"You can also buy add-ons (+{Config.ADDON_REPLIES} replies for €5) anytime.",
+                "success"
+            )
         return redirect(url_for('dashboard_bp.dashboard'))
 
     except Exception as e:

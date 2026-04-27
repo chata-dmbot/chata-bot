@@ -150,9 +150,11 @@ def reset_monthly_replies_if_needed(user_id, current_sent=None, last_reset=None,
         current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         if current_month > last_reset_month:
-            plan_type = subscription[1]  # 'starter' or 'standard'
+            plan_type = subscription[1]  # 'free', 'starter' or 'standard'
             if plan_type == 'standard':
                 monthly_limit = Config.STANDARD_MONTHLY_REPLIES
+            elif plan_type == 'free':
+                monthly_limit = Config.FREE_MONTHLY_REPLIES
             else:
                 monthly_limit = Config.STARTER_MONTHLY_REPLIES
 

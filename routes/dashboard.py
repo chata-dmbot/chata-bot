@@ -96,7 +96,12 @@ def dashboard():
             
             if active_plan_type is not None and active_status == 'active':
                 stripe_status = None
-                if active_subscription_id and Config.STRIPE_SECRET_KEY:
+                # Skip Stripe reconciliation for the Free plan — its synthetic
+                # subscription id ("free_<user_id>") doesn't exist in Stripe.
+                is_free_plan = active_plan_type == 'free' or (
+                    active_subscription_id and active_subscription_id.startswith('free_')
+                )
+                if (not is_free_plan) and active_subscription_id and Config.STRIPE_SECRET_KEY:
                     cache_key = (user_id, active_subscription_id)
                     now = time.time()
                     if cache_key in _stripe_status_cache:
@@ -974,11 +979,13 @@ def debug_trigger_monthly_addition():
             flash("You need an active subscription to trigger monthly addition.", "warning")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        plan_type = subscription[1]  # 'starter' or 'standard'
+        plan_type = subscription[1]  # 'free', 'starter' or 'standard'
         if plan_type == 'standard':
-            monthly_limit = 1500
+            monthly_limit = Config.STANDARD_MONTHLY_REPLIES
+        elif plan_type == 'free':
+            monthly_limit = Config.FREE_MONTHLY_REPLIES
         else:
-            monthly_limit = Config.STARTER_MONTHLY_REPLIES  # starter or default
+            monthly_limit = Config.STARTER_MONTHLY_REPLIES
         
         # Get current replies_limit_monthly
         cursor.execute(f"""

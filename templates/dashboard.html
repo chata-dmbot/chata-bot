@@ -516,8 +516,15 @@
                     <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
                         <span style="color: var(--chata-blue); text-transform: capitalize; font-weight: 600;">{{ current_plan }}</span>
                     </p>
-                    {% if current_plan == 'starter' %}
-                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€9/month • 150 replies</p>
+                    {% if current_plan == 'free' %}
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€0/month • 200 replies (refilled monthly)</p>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('pages.pricing') }}" class="btn-primary">
+                                <i class="fas fa-arrow-up"></i> Upgrade Plan
+                            </a>
+                        </div>
+                    {% elif current_plan == 'starter' %}
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€9/month • 1,000 replies</p>
                         <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                             <form method="POST" action="{{ url_for('payments.create_upgrade_checkout') }}" style="display: inline-block;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -530,7 +537,7 @@
                             </button>
                         </div>
                     {% elif current_plan == 'standard' %}
-                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€29/month • 1500 replies</p>
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€29/month • 5,000 replies</p>
                         <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                             <form method="POST" action="{{ url_for('payments.create_downgrade_checkout') }}" style="display: inline-block;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -543,7 +550,7 @@
                             </button>
                         </div>
                     {% endif %}
-                    <!-- Add Replies Button (only when plan is active, not canceled) -->
+                    <!-- Add Replies Button (available on every active plan, including Free) -->
                     {% if subscription_status != 'canceled' %}
                     <div style="margin-top: 1rem;">
                         <form method="POST" action="{{ url_for('payments.create_addon_checkout') }}" style="display: inline-block;">

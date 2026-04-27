@@ -331,7 +331,17 @@ def handle_subscription_created(subscription):
                       plan_type, subscription_status, current_period_start, current_period_end))
             
             logger.info(f"Subscription record created in database")
-            
+
+            # If the user was on the Free plan, mark that row as replaced so the
+            # dashboard / monthly-reset logic only see the new paid subscription.
+            cursor.execute(f"""
+                UPDATE subscriptions
+                SET status = 'replaced', updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = {placeholder}
+                  AND plan_type = 'free'
+                  AND status = 'active'
+            """, (user_id,))
+
             # Set replies_limit_monthly to the plan's absolute value (not additive)
             # to prevent inflation from multiple Stripe events firing in sequence.
             cursor.execute(f"""
