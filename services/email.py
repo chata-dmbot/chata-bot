@@ -4,6 +4,7 @@ import re
 import sendgrid
 from sendgrid.helpers.mail import Mail
 from config import Config
+from services.log_utils import redact_email
 
 logger = logging.getLogger("chata.services.email")
 
@@ -33,9 +34,10 @@ def send_reset_email(email, reset_token):
     sendgrid_api_key = Config.SENDGRID_API_KEY
     
     if not sendgrid_api_key:
-        # Fallback to console output if no API key
-        logger.info(f"Password reset link for {email}: {reset_url}")
-        logger.warning("SENDGRID_API_KEY not found in environment variables")
+        # Never log the reset URL or token — only that we were unable to send.
+        logger.warning(
+            f"SENDGRID_API_KEY not configured; password reset email NOT sent to {redact_email(email)}"
+        )
         return
     
     try:
@@ -115,20 +117,19 @@ If you didn't request this password reset, you can safely ignore this email. You
         message.reply_to = from_email
         
         response = sg.send(message)
-        logger.info(f"Password reset email sent to {email}. Status: {response.status_code}")
+        redacted = redact_email(email)
+        logger.info(f"Password reset email sent to {redacted}. Status: {response.status_code}")
         
         # Check if the email was sent successfully
         if response.status_code == 202:
-            logger.info(f"Email sent successfully to {email}")
+            logger.info(f"Email sent successfully to {redacted}")
         else:
             logger.error(f"Email failed to send. Status: {response.status_code}")
-            logger.error(f"Response body: {response.body}")
         
     except Exception as e:
-        logger.error(f"Error sending email to {email}: {e}")
+        logger.error(f"Error sending email to {redact_email(email)}: {e}")
         logger.error(f"Error type: {type(e).__name__}")
-        # Fallback to console output
-        logger.info(f"Password reset link for {email}: {reset_url}")
+        # Do NOT log the reset URL or token, even on send failure.
 
 def html_to_plain_text(html_content):
     """Convert HTML email to plain text version for better deliverability"""
@@ -149,7 +150,7 @@ def send_email_via_sendgrid(email, subject, html_content):
     sendgrid_api_key = Config.SENDGRID_API_KEY
     
     if not sendgrid_api_key:
-        logger.warning(f"SENDGRID_API_KEY not found. Email not sent to {email}")
+        logger.warning(f"SENDGRID_API_KEY not found. Email not sent to {redact_email(email)}")
         logger.warning(f"Email subject: {subject}")
         return False
     
@@ -175,22 +176,17 @@ def send_email_via_sendgrid(email, subject, html_content):
         message.reply_to = from_email
         
         response = sg.send(message)
+        redacted = redact_email(email)
         
         if response.status_code == 202:
-            logger.info(f"Email sent successfully to {email}: {subject}")
-            logger.debug(f"SendGrid response headers: {dict(response.headers)}")
-            if hasattr(response, 'body') and response.body:
-                logger.debug(f"SendGrid response body: {response.body}")
+            logger.info(f"Email sent successfully to {redacted}: {subject}")
             return True
         else:
-            logger.error(f"Email failed to send. Status: {response.status_code}")
-            logger.debug(f"SendGrid response headers: {dict(response.headers)}")
-            if hasattr(response, 'body') and response.body:
-                logger.debug(f"SendGrid response body: {response.body}")
+            logger.error(f"Email failed to send to {redacted}. Status: {response.status_code}")
             return False
         
     except Exception as e:
-        logger.error(f"Error sending email to {email}: {e}")
+        logger.error(f"Error sending email to {redact_email(email)}: {e}")
         return False
 
 def send_welcome_email(email):

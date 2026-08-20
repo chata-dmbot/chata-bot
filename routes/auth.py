@@ -16,6 +16,7 @@ from services.users import get_user_by_email, get_user_by_username_or_email, get
 from services.email import send_reset_email, send_welcome_email
 from services.activity import log_activity
 from services.instagram import discover_instagram_user_id
+from services.log_utils import redact_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -32,9 +33,7 @@ def signup():
         email = request.form.get("email", "").strip()
         password = request.form.get("password")
         
-        logger.debug(f"Signup form data:")
-        logger.debug(f"Username: {username}")
-        logger.debug(f"Email: {email}")
+        logger.debug("Signup form received")
         
         # Basic validation
         if not username or not email or not password:
@@ -57,7 +56,7 @@ def signup():
         # Check if username already exists (case-insensitive)
         existing_username = get_user_by_username(username)
         if existing_username:
-            logger.debug(f"Signup rejected: username {username!r} already taken by user id={existing_username['id']} email={existing_username['email']!r}")
+            logger.debug(f"Signup rejected: username already taken (existing user id={existing_username['id']})")
             flash("This username is already taken. Please choose another one.", "error")
             return render_template("signup.html", form_username=username, form_email=email)
         
@@ -202,7 +201,7 @@ def forgot_password():
         if request.method == "POST":
             email = request.form.get("email")
             
-            logger.debug(f"Forgot password request for email: {email}")
+            logger.debug("Forgot password request received")
             
             if not email:
                 flash("Please enter your email address.", "error")
@@ -210,20 +209,20 @@ def forgot_password():
             
             user = get_user_by_email(email)
             if user:
-                logger.debug(f"User found: {user['email']}")
+                logger.debug(f"Forgot password: user matched (id={user['id']})")
                 # Create reset token and send email
                 try:
                     reset_token = create_reset_token(user['id'])
-                    logger.debug("Reset token created for user")
+                    logger.debug("Reset token created")
                     send_reset_email(email, reset_token)
-                    logger.info(f"Email sent successfully to {email}")
+                    logger.info(f"Password reset email dispatched to {redact_email(email)}")
                     flash("If an account with that email exists, we've sent a password reset link. Please check your spam folder if you don't see it.", "success")
                 except Exception as e:
                     logger.error(f"Error in forgot password process: {e}")
                     traceback.print_exc()
                     flash("An error occurred while sending the reset email. Please try again.", "error")
             else:
-                logger.debug(f"User not found for email: {email}")
+                logger.debug("Forgot password: no user matched (uniform response sent)")
                 # Don't reveal if email exists or not (security best practice)
                 flash("If an account with that email exists, we've sent a password reset link.", "success")
             
@@ -401,7 +400,7 @@ def instagram_callback():
             scopes = debug_data.get('data', {}).get('scopes', [])
             granular = debug_data.get('data', {}).get('granular_scopes', [])
             logger.info(f"Token scopes: {scopes}; granular_scopes count: {len(granular)}")
-            logger.debug(f"Token debug response: {debug_data}")
+            # Do NOT log debug_data — it contains user_id, app_id, and other PII.
         
         # 1) Get Pages the user manages (requires pages_show_list). Include access_token to get page token in one call.
         accounts_url = "https://graph.facebook.com/v18.0/me/accounts"
@@ -507,7 +506,11 @@ def instagram_callback():
         
         # If we still don't have page_id, we can't proceed
         if not page_id:
-            logger.error(f"Could not find Page ID. Token debug: {debug_data}")
+            logger.error(
+                "Could not find Page ID for OAuth callback (token_debug_present=%s, scopes_count=%s)",
+                bool(debug_data),
+                len((debug_data or {}).get('data', {}).get('scopes', []) or []),
+            )
             flash("Could not find the Facebook Page associated with your Instagram account. Please ensure your Instagram Business account is properly linked to a Facebook Page.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         

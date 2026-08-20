@@ -148,7 +148,8 @@ def webhook():
             return "Forbidden", 403
 
         logger.info("WEBHOOK RECEIVED POST REQUEST")
-        logger.debug(f"Request headers: {dict(request.headers)}")
+        # Do NOT log full request headers — they include the X-Hub-Signature
+        # and any forwarding headers that may carry session/proxy metadata.
         logger.debug(f"Request remote address: {request.remote_addr}")
         
         # Parse JSON data (body already read; get_json uses cached body)

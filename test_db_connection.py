@@ -13,7 +13,19 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 print("🔍 Testing Database Connection")
-print(f"🔍 DATABASE_URL: {DATABASE_URL[:50] if DATABASE_URL else 'None'}...")
+if DATABASE_URL:
+    # Print only the scheme + host, never the full DSN (which contains credentials).
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(DATABASE_URL)
+        host = parsed.hostname or "unknown"
+        port = parsed.port or "default"
+        scheme = parsed.scheme or "unknown"
+        print(f"🔍 DATABASE_URL target: {scheme}://{host}:{port}")
+    except Exception:
+        print("🔍 DATABASE_URL: present (details redacted)")
+else:
+    print("🔍 DATABASE_URL: None")
 
 if not DATABASE_URL:
     print("❌ No DATABASE_URL found in environment variables")
