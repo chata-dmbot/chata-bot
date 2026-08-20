@@ -3,44 +3,47 @@
 {% block title %}Dashboard - CHATA{% endblock %}
 
 {% block page_styles %}
-        /* Hero Section */
-        .dashboard-hero {
+        /* Compact page header — no giant empty hero */
+        .dashboard-header {
             position: relative;
-            min-height: 60vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-            margin-top: 80px;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 6.25rem 2rem 1.5rem;
             z-index: 10;
         }
 
-        .dashboard-hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #fff, #ccc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .dashboard-header h1 {
+            font-size: clamp(1.5rem, 2.5vw, 2rem);
+            font-weight: 600;
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+            color: #fff;
+            margin: 0 0 0.5rem;
+            text-transform: none;
         }
 
-        .dashboard-hero p {
-            font-size: 1.2rem;
-            font-weight: 300;
-            letter-spacing: 0.05em;
-            color: #888;
+        .dashboard-header p {
+            font-size: 0.95rem;
+            font-weight: 400;
+            letter-spacing: 0;
+            color: rgba(255, 255, 255, 0.55);
+            margin: 0;
             text-transform: none;
+        }
+
+        .dashboard-header .alert {
+            margin-top: 1rem;
+            text-align: left;
+            font-size: 0.9rem;
+            text-transform: none;
+            letter-spacing: 0;
         }
 
         /* Content Section */
         .dashboard-content {
-            max-width: 1200px;
+            max-width: 1180px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 0 2rem 2.5rem;
             position: relative;
             z-index: 10;
         }
@@ -49,8 +52,8 @@
         .dashboard-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
         }
 
         .dashboard-half {
@@ -58,17 +61,17 @@
         }
 
         .dashboard-full {
-            margin-bottom: 2rem;
+            margin-bottom: 1.25rem;
         }
 
         .dashboard-section-block {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
+            background: rgba(9, 13, 22, 0.72);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.2s ease, background 0.2s ease;
             position: relative;
             overflow: hidden;
         }
@@ -85,20 +88,27 @@
         }
 
         .dashboard-section-block:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(51, 102, 255, 0.3);
-            transform: translateY(-2px);
+            background: rgba(11, 16, 27, 0.78);
+            border-color: rgba(51, 102, 255, 0.22);
         }
 
         .dashboard-section-block h2 {
-            color: var(--chata-blue);
-            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 1rem;
             font-weight: 600;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
+            line-height: 1.4;
+            margin-bottom: 1.15rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.65rem;
+            text-transform: none;
+            letter-spacing: -0.01em;
+        }
+
+        .dashboard-section-block h2 i {
+            width: 1.1rem;
+            color: var(--chata-blue);
+            text-align: center;
         }
 
         .dashboard-section-block h3 {
@@ -109,101 +119,142 @@
         }
 
         .dashboard-section-block p {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.68);
+            font-size: 0.875rem;
+            line-height: 1.55;
+            margin-bottom: 0.4rem;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .dashboard-section-block p strong {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
             color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            border: 0;
             text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-block;
-            margin: 0.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1.2;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin: 0;
+            cursor: pointer;
         }
 
         .btn-primary:hover {
             background: linear-gradient(135deg, var(--chata-blue-dark) 0%, var(--chata-blue) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(51, 102, 255, 0.4);
+            box-shadow: 0 4px 14px rgba(51, 102, 255, 0.28);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
             text-decoration: none;
+            font-size: 0.85rem;
             font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-block;
-            margin: 0.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            line-height: 1.2;
+            transition: background 0.2s ease, border-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin: 0;
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            cursor: pointer;
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.22);
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 0;
         }
 
         .stat-item {
             text-align: center;
-            padding: 1.5rem;
-            background: rgba(51, 102, 255, 0.1);
-            border-radius: 15px;
-            border: 1px solid rgba(51, 102, 255, 0.2);
-            transition: all 0.3s ease;
+            padding: 1.25rem 0.75rem;
+            background: rgba(51, 102, 255, 0.07);
+            border-radius: 10px;
+            border: 1px solid rgba(51, 102, 255, 0.14);
         }
 
         .stat-item:hover {
-            background: rgba(51, 102, 255, 0.15);
-            transform: translateY(-2px);
+            background: rgba(51, 102, 255, 0.1);
         }
 
         .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--chata-blue);
-            text-shadow: 0 0 20px rgba(51, 102, 255, 0.5);
-            margin-bottom: 0.5rem;
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            line-height: 1.1;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.4rem;
         }
 
         .stat-label {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.75rem;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.52);
+            text-transform: none;
+            letter-spacing: 0;
         }
 
         .connection-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin: 0.75rem 0 0;
+            transition: border-color 0.2s ease, background 0.2s ease;
         }
 
         .connection-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(51, 102, 255, 0.3);
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(51, 102, 255, 0.2);
+        }
+
+        .connection-info {
+            min-width: 0;
+        }
+
+        .connection-info h3 {
+            margin-bottom: 0.65rem;
+        }
+
+        .connection-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .status-badge {
-            padding: 0.25rem 0.75rem;
+            padding: 0.3rem 0.65rem;
             border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1;
         }
 
         .status-active {
@@ -265,50 +316,56 @@
         .action-buttons-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            gap: 0.75rem;
             margin-top: 1rem;
         }
 
         .action-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 1.15rem;
             text-decoration: none;
             color: white;
-            transition: all 0.3s ease;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
+            transition: background 0.2s ease, border-color 0.2s ease;
+            text-align: left;
+            display: grid;
+            grid-template-columns: 1.5rem minmax(0, 1fr);
+            align-items: flex-start;
+            column-gap: 0.85rem;
+            row-gap: 0.15rem;
         }
 
         .action-card:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(51, 102, 255, 0.3);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(51, 102, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(51, 102, 255, 0.22);
         }
 
         .action-card i {
-            font-size: 2rem;
+            width: 1.5rem;
+            font-size: 1.15rem;
             color: var(--chata-blue);
-            margin-bottom: 0.5rem;
+            margin-top: 0.15rem;
+            text-align: center;
+            grid-row: 1 / span 2;
         }
 
         .action-card h3 {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            margin-bottom: 0.2rem;
             color: #fff;
+            grid-column: 2;
         }
 
         .action-card p {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.4;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.52);
+            line-height: 1.45;
             text-transform: none;
+            margin: 0;
+            grid-column: 2;
         }
 
         .btn-full {
@@ -403,17 +460,40 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .dashboard-hero h1 {
-                font-size: 2.5rem;
+            .dashboard-header {
+                padding: 5.5rem 1rem 1rem;
+            }
+
+            .dashboard-header h1 {
+                font-size: 1.5rem;
             }
             
             .dashboard-content {
-                padding: 1rem;
+                padding: 0.25rem 1rem 1rem;
             }
 
             .dashboard-row {
                 grid-template-columns: 1fr;
                 gap: 1rem;
+            }
+
+            .dashboard-section-block {
+                padding: 1.25rem;
+                margin-bottom: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .connection-item {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .connection-actions {
+                justify-content: flex-start;
             }
 
             .action-buttons-grid {
@@ -423,6 +503,22 @@
 
             .action-card {
                 padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-item {
+                padding: 1rem;
+            }
+
+            .connection-actions > *,
+            .connection-actions form,
+            .connection-actions .btn-secondary {
+                width: 100%;
             }
         }
 {% endblock %}
@@ -472,29 +568,20 @@
 {% block flash_messages %}{% endblock %}
 
 {% block content %}
-    <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div>
-            <h1>Dashboard</h1>
-            <h2 style="font-size: 2rem; font-weight: 400; letter-spacing: 0.05em; color: #fff; margin-bottom: 1rem; text-transform: none;">Welcome, {{ user.username if user.username else user.email }}</h2>
-            <p>Here you can manage your assistant settings and your own settings</p>
-        </div>
-    </section>
+    <header class="dashboard-header">
+        <h1>Welcome back, {{ user.username if user.username else user.email }}</h1>
+        <p>Manage your Instagram assistant, plan, and account.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </header>
 
-    <!-- Flash Messages (below hero) -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="dashboard-content" style="z-index: 20; position: relative;">
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'error' if category == 'error' else category }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
-    <!-- Content -->
     <main class="dashboard-content">
         <!-- Top Row: Account Info & Quick Stats -->
         <div class="dashboard-row">
