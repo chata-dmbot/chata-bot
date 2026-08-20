@@ -3,108 +3,14 @@
 {% block title %}Privacy Policy - Chata{% endblock %}
 
 {% block page_styles %}
-/* Hero Section */
-.privacy-hero {
-    position: relative;
-    min-height: 60vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 2rem;
-    margin-top: 80px;
-    z-index: 10;
-}
-
-.privacy-hero h1 {
-    font-size: 3.5rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #fff, #ccc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.privacy-hero p {
-    font-size: 1.2rem;
-    font-weight: 300;
-    letter-spacing: 0.05em;
-    color: #888;
-    text-transform: none;
-}
-
-/* Content Section */
-.privacy-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    position: relative;
-    z-index: 10;
-}
-
-.privacy-section-block {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.privacy-section-block::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.privacy-section-block:hover::before {
-    opacity: 1;
-}
-
-.privacy-section-block:hover {
-    transform: translateY(-5px);
-    border-color: var(--chata-blue);
-    box-shadow: 0 20px 40px rgba(51, 102, 255, 0.1);
-}
-
-.privacy-section-block h2 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    color: #fff;
-    text-transform: none;
-    letter-spacing: normal;
-}
-
+/* Page-specific legal content (hero/section cards come from common.css) */
 .privacy-section-block h3 {
-    font-size: 1.3rem;
+    font-size: 1.05rem;
     font-weight: 600;
-    margin: 1.5rem 0 1rem 0;
+    margin: 1.25rem 0 0.75rem 0;
     color: var(--chata-blue);
     text-transform: none;
     letter-spacing: normal;
-}
-
-.privacy-section-block p {
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.8;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-    text-transform: none;
-    letter-spacing: normal;
-    font-weight: 400;
 }
 
 .privacy-section-block ul {
@@ -114,9 +20,10 @@
 }
 
 .privacy-section-block li {
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.68);
+    line-height: 1.55;
     margin-bottom: 0.5rem;
+    font-size: 0.875rem;
     font-weight: 400;
 }
 
@@ -129,7 +36,7 @@
     background: rgba(51, 102, 255, 0.1);
     border: 1px solid rgba(51, 102, 255, 0.2);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.25rem;
     margin-top: 1rem;
 }
 
@@ -137,17 +44,6 @@
     margin-bottom: 0.5rem;
     text-transform: none;
     letter-spacing: normal;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .privacy-hero h1 {
-        font-size: 2.5rem;
-    }
-    
-    .privacy-content {
-        padding: 1rem;
-    }
 }
 {% endblock %}
 

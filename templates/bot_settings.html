@@ -58,47 +58,12 @@ a {
 }
 
 
-/* --- Hero --- */
-.bot-settings-hero {
-    padding-top: 140px;
-    padding-bottom: 48px;
-    text-align: center;
-    position: relative;
-    z-index: 5;
-}
-
-.bot-settings-hero h1 {
-    font-size: 3.5rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #fff, #ccc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.bot-settings-hero p {
-    max-width: 560px;
-    margin: 0 auto;
-    font-size: 1.2rem;
-    font-weight: 300;
-    letter-spacing: 0.05em;
-    color: #888;
-    text-transform: none;
-}
-
-/* --- Content --- */
-.bot-settings-content {
-    max-width: 1180px;
-    margin: 0 auto 96px;
-    padding: 0 1.5rem 2rem;
-    position: relative;
-    z-index: 5;
-}
-
 /* --- Alert overrides --- */
+.bot-settings-hero .alert {
+    margin-top: 1rem;
+    text-align: left;
+}
+
 .alert {
     max-width: 1180px;
     margin: 0 auto 1.5rem;
@@ -876,11 +841,6 @@ textarea {
         margin-left: auto;
     }
 
-    .bot-settings-hero h1 {
-        font-size: 2.6rem;
-        letter-spacing: 0.32em;
-    }
-
     .section-card {
         padding: 1.5rem;
     }
@@ -893,15 +853,6 @@ textarea {
         left: 1rem;
         max-width: none;
         top: 80px;
-    }
-
-    .bot-settings-hero {
-        padding-top: 120px;
-    }
-
-    .bot-settings-hero h1 {
-        font-size: 2.2rem;
-        letter-spacing: 0.28em;
     }
 
     .connection-banner {
@@ -980,24 +931,19 @@ textarea {
 {% block flash_messages %}{% endblock %}
 
 {% block content %}
-<section class="bot-settings-hero">
-    <div>
-        <h1>AI Settings</h1>
-        <p>Give your AI the personality that best describes you.</p>
-    </div>
-</section>
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="bot-settings-content" style="z-index: 20; position: relative;">
-        {% for category, message in messages %}
-            <div class="alert alert-{{ 'error' if category in ['error', 'danger', 'warning'] else category }}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-{% endwith %}
+<header class="bot-settings-hero">
+    <h1>AI Settings</h1>
+    <p>Give your AI the personality that best describes you.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'error' if category in ['error', 'danger', 'warning'] else category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</header>
 
 <main class="bot-settings-content">
 {% if not connections %}

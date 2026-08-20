@@ -3,48 +3,6 @@
 {% block title %}Usage Analytics - CHATA{% endblock %}
 
 {% block page_styles %}
-    /* Hero Section */
-    .dashboard-hero {
-        position: relative;
-        min-height: 60vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 2rem;
-        margin-top: 80px;
-        z-index: 10;
-    }
-
-    .dashboard-hero h1 {
-        font-size: 3.5rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-        background: linear-gradient(135deg, #fff, #ccc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .dashboard-hero p {
-        font-size: 1.2rem;
-        font-weight: 300;
-        letter-spacing: 0.05em;
-        color: #888;
-        text-transform: none;
-    }
-
-    /* Content Section */
-    .dashboard-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-        position: relative;
-        z-index: 10;
-    }
-
     /* Dashboard Layout */
     .dashboard-row {
         display: grid;
@@ -53,41 +11,7 @@
         margin-bottom: 2rem;
     }
 
-    .dashboard-section-block {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .dashboard-section-block::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--chata-blue), transparent);
-        opacity: 0.3;
-    }
-
-    .dashboard-section-block:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(51, 102, 255, 0.3);
-        transform: translateY(-2px);
-    }
-
     .dashboard-section-block h2 {
-        color: var(--chata-blue);
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        text-shadow: 0 0 20px rgba(51, 102, 255, 0.3);
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -100,11 +24,12 @@
         margin-bottom: 0.5rem;
     }
 
-    .dashboard-section-block p {
-        color: rgba(255, 255, 255, 0.8);
+    .dashboard-header .alert {
+        margin-top: 1rem;
+        text-align: left;
         font-size: 0.9rem;
-        line-height: 1.6;
-        margin-bottom: 0.5rem;
+        text-transform: none;
+        letter-spacing: 0;
     }
 
     /* Stats Grid */
@@ -132,8 +57,9 @@
     .stat-number {
         font-size: 2rem;
         font-weight: 700;
-        color: var(--chata-blue);
+        color: #fff;
         margin-bottom: 0.5rem;
+        text-shadow: none;
     }
 
     .stat-label {
@@ -284,12 +210,6 @@
     }
 
     @media (max-width: 768px) {
-        .dashboard-hero h1 {
-            font-size: 2.5rem;
-        }
-        .dashboard-content {
-            padding: 1rem;
-        }
         .dashboard-row {
             grid-template-columns: 1fr;
             gap: 1rem;
@@ -344,28 +264,20 @@
 {% block flash_messages %}{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="dashboard-hero">
-    <div>
-        <h1>Usage Analytics</h1>
-        <p>Track your AI's performance and usage statistics</p>
-    </div>
-</section>
-
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="dashboard-content" style="z-index: 20; position: relative;">
+<header class="dashboard-header">
+    <h1>Usage Analytics</h1>
+    <p>Track your AI's performance and usage statistics</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
                     {{ message }}
                 </div>
             {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
+        {% endif %}
+    {% endwith %}
+</header>
 
-<!-- Content -->
 <main class="dashboard-content">
     <div class="dashboard-row">
         <!-- This Month -->

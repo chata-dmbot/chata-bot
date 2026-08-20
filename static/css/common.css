@@ -137,10 +137,13 @@ body::before {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #ef4444;
-    padding: 1rem;
-    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
     margin: 1rem 0;
-    text-align: center;
+    text-align: left;
+    font-size: 0.9rem;
+    letter-spacing: 0;
+    text-transform: none;
     position: relative;
     z-index: 20;
 }
@@ -151,6 +154,158 @@ body::before {
     color: #22c55e;
     position: relative;
     z-index: 20;
+}
+
+.alert-info {
+    background: rgba(51, 102, 255, 0.1);
+    border-color: rgba(51, 102, 255, 0.3);
+    color: #93b0ff;
+}
+
+/* --- Compact page headers (app + legal pages) --- */
+.dashboard-header,
+.dashboard-hero,
+.bot-settings-hero,
+.privacy-hero,
+.terms-hero,
+.faq-hero,
+.data-deletion-hero {
+    position: relative;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 6.25rem 2rem 1.5rem;
+    min-height: 0;
+    display: block;
+    text-align: left;
+    z-index: 10;
+}
+
+.dashboard-header h1,
+.dashboard-hero h1,
+.bot-settings-hero h1,
+.privacy-hero h1,
+.terms-hero h1,
+.faq-hero h1,
+.data-deletion-hero h1 {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin: 0 0 0.5rem;
+    text-transform: none;
+    background: none;
+    -webkit-text-fill-color: #fff;
+}
+
+.dashboard-header p,
+.dashboard-hero p,
+.bot-settings-hero p,
+.privacy-hero p,
+.terms-hero p,
+.faq-hero p,
+.data-deletion-hero p {
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0;
+    text-transform: none;
+    max-width: none;
+}
+
+.dashboard-content,
+.privacy-content,
+.terms-content,
+.faq-content,
+.data-deletion-content,
+.bot-settings-content {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 2rem 2.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.dashboard-section-block,
+.privacy-section-block,
+.terms-section-block,
+.data-deletion-section-block,
+.faq-item {
+    background: rgba(9, 13, 22, 0.72);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-section-block:hover,
+.privacy-section-block:hover,
+.terms-section-block:hover,
+.data-deletion-section-block:hover,
+.faq-item:hover {
+    background: rgba(11, 16, 27, 0.78);
+    border-color: rgba(51, 102, 255, 0.22);
+    transform: none;
+    box-shadow: none;
+}
+
+.dashboard-section-block h2,
+.privacy-section-block h2,
+.terms-section-block h2,
+.data-deletion-section-block h2 {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 1.15rem;
+    text-shadow: none;
+    text-transform: none;
+    letter-spacing: -0.01em;
+}
+
+.dashboard-section-block p,
+.privacy-section-block p,
+.terms-section-block p,
+.data-deletion-section-block p {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header,
+    .dashboard-hero,
+    .bot-settings-hero,
+    .privacy-hero,
+    .terms-hero,
+    .faq-hero,
+    .data-deletion-hero {
+        padding: 5.5rem 1rem 1rem;
+    }
+
+    .dashboard-content,
+    .privacy-content,
+    .terms-content,
+    .faq-content,
+    .data-deletion-content,
+    .bot-settings-content {
+        padding: 0.25rem 1rem 1.5rem;
+    }
+
+    .dashboard-section-block,
+    .privacy-section-block,
+    .terms-section-block,
+    .data-deletion-section-block,
+    .faq-item {
+        padding: 1.25rem;
+    }
 }
 
 /* --- Footer --- */

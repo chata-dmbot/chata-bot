@@ -2,67 +2,188 @@
 
 {% block title %}Instagram Setup Help - Chata{% endblock %}
 
+{% block page_styles %}
+.help-hero {
+    position: relative;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 6.25rem 2rem 1.5rem;
+    z-index: 10;
+}
+
+.help-hero h1 {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin: 0;
+    text-transform: none;
+}
+
+.help-content {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 2rem 2.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.help-card {
+    background: rgba(9, 13, 22, 0.72);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.help-card h2 {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+    text-transform: none;
+    letter-spacing: -0.01em;
+}
+
+.help-card h3 {
+    color: var(--chata-blue);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 1.15rem 0 0.5rem;
+    text-transform: none;
+}
+
+.help-card p {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    margin-bottom: 0.75rem;
+}
+
+.help-card ol,
+.help-card ul {
+    margin: 0.5rem 0 0 1.25rem;
+}
+
+.help-card li {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    margin-bottom: 0.35rem;
+}
+
+.help-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.help-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.help-actions .btn-primary {
+    background: linear-gradient(135deg, var(--chata-blue) 0%, var(--chata-blue-light) 100%);
+    color: #fff;
+}
+
+.help-actions .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.help-actions .btn-secondary:hover {
+    border-color: rgba(51, 102, 255, 0.35);
+}
+
+@media (max-width: 768px) {
+    .help-hero {
+        padding: 5.5rem 1rem 1rem;
+    }
+
+    .help-content {
+        padding: 0.25rem 1rem 1.5rem;
+    }
+
+    .help-card {
+        padding: 1.25rem;
+    }
+}
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="help-section">
-        <h1>Instagram Setup Help</h1>
-        
-        <div class="help-card">
-            <h2>📱 Step 1: Convert to Business Account</h2>
-            <p>Your Instagram account must be a Business account to use our bot features.</p>
-            <ol>
-                <li>Open Instagram app</li>
-                <li>Go to Settings → Account</li>
-                <li>Tap "Switch to Business Account"</li>
-                <li>Follow the setup process</li>
-            </ol>
-        </div>
+<header class="help-hero">
+    <h1>Instagram Setup Help</h1>
+</header>
 
-        <div class="help-card">
-            <h2>🔗 Step 2: Connect to Facebook Page</h2>
-            <p>Your Instagram Business account must be connected to a Facebook Page.</p>
-            <ol>
-                <li>Go to Settings → Account → Linked Accounts</li>
-                <li>Tap "Facebook"</li>
-                <li>Create a Facebook Page or connect existing one</li>
-                <li>Complete the connection</li>
-            </ol>
-        </div>
-
-        <div class="help-card">
-            <h2>✅ Step 3: Connect to Chata</h2>
-            <p>Once your account is set up correctly:</p>
-            <ol>
-                <li>Go to your Chata dashboard</li>
-                <li>Click "Connect New Account"</li>
-                <li>Log into your Facebook account</li>
-                <li>Authorize Chata to access your Instagram</li>
-            </ol>
-        </div>
-
-        <div class="help-card">
-            <h2>❓ Troubleshooting</h2>
-            <h3>Error: "No Instagram Business account found"</h3>
-            <p>Make sure your Instagram account is:</p>
-            <ul>
-                <li>Set to Business type (not Personal or Creator)</li>
-                <li>Connected to a Facebook Page</li>
-                <li>Linked to the Facebook account you're logging in with</li>
-            </ul>
-
-            <h3>Error: "Access denied"</h3>
-            <p>This usually means:</p>
-            <ul>
-                <li>Your Instagram account isn't a Business account</li>
-                <li>Your Instagram isn't connected to a Facebook Page</li>
-                <li>You're logging into the wrong Facebook account</li>
-            </ul>
-        </div>
-
-        <div class="help-actions">
-            <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
-            <a href="mailto:hello@getchata.com" class="btn btn-secondary">Contact Support</a>
-        </div>
+<main class="help-content">
+    <div class="help-card">
+        <h2>📱 Step 1: Convert to Business Account</h2>
+        <p>Your Instagram account must be a Business account to use our bot features.</p>
+        <ol>
+            <li>Open Instagram app</li>
+            <li>Go to Settings → Account</li>
+            <li>Tap "Switch to Business Account"</li>
+            <li>Follow the setup process</li>
+        </ol>
     </div>
-</div>
+
+    <div class="help-card">
+        <h2>🔗 Step 2: Connect to Facebook Page</h2>
+        <p>Your Instagram Business account must be connected to a Facebook Page.</p>
+        <ol>
+            <li>Go to Settings → Account → Linked Accounts</li>
+            <li>Tap "Facebook"</li>
+            <li>Create a Facebook Page or connect existing one</li>
+            <li>Complete the connection</li>
+        </ol>
+    </div>
+
+    <div class="help-card">
+        <h2>✅ Step 3: Connect to Chata</h2>
+        <p>Once your account is set up correctly:</p>
+        <ol>
+            <li>Go to your Chata dashboard</li>
+            <li>Click "Connect New Account"</li>
+            <li>Log into your Facebook account</li>
+            <li>Authorize Chata to access your Instagram</li>
+        </ol>
+    </div>
+
+    <div class="help-card">
+        <h2>❓ Troubleshooting</h2>
+        <h3>Error: "No Instagram Business account found"</h3>
+        <p>Make sure your Instagram account is:</p>
+        <ul>
+            <li>Set to Business type (not Personal or Creator)</li>
+            <li>Connected to a Facebook Page</li>
+            <li>Linked to the Facebook account you're logging in with</li>
+        </ul>
+
+        <h3>Error: "Access denied"</h3>
+        <p>This usually means:</p>
+        <ul>
+            <li>Your Instagram account isn't a Business account</li>
+            <li>Your Instagram isn't connected to a Facebook Page</li>
+            <li>You're logging into the wrong Facebook account</li>
+        </ul>
+    </div>
+
+    <div class="help-actions">
+        <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+        <a href="mailto:hello@getchata.com" class="btn btn-secondary">Contact Support</a>
+    </div>
+</main>
 {% endblock %}
