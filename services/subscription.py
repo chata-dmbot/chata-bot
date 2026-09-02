@@ -329,6 +329,21 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
     try:
         cursor = conn.cursor()
         placeholder = get_param_placeholder()
+
+        # Stripe may retry a webhook after a transient failure. Do not grant
+        # the same Checkout Session twice if the purchase already committed.
+        if payment_provider and payment_id:
+            cursor.execute(f"""
+                SELECT 1 FROM purchases
+                WHERE payment_provider = {placeholder}
+                  AND payment_id = {placeholder}
+                  AND status = 'completed'
+                LIMIT 1
+            """, (payment_provider, payment_id))
+            if cursor.fetchone():
+                logger.info(f"Purchase {payment_provider}:{payment_id} already applied; skipping duplicate")
+                conn.close()
+                return True
         
         # Add to user's purchased replies
         cursor.execute(f"""
@@ -356,6 +371,3 @@ def add_purchased_replies(user_id, amount, payment_provider=None, payment_id=Non
             conn.rollback()
             conn.close()
         return False
-
-# ---- Global settings (delegated to services.settings) ----
-from services.settings import get_setting, set_setting  # noqa: F401 - re-export for callers

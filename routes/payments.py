@@ -19,6 +19,48 @@ from services.users import get_user_by_id
 payments_bp = Blueprint('payments', __name__)
 
 
+def _checkout_effect_applied(user_id, checkout_session, checkout_type):
+    """Return whether the webhook's database change is visible yet."""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        if checkout_type == 'addon':
+            cursor.execute(f"""
+                SELECT 1 FROM purchases
+                WHERE user_id = {placeholder}
+                  AND payment_provider = 'stripe'
+                  AND payment_id = {placeholder}
+                  AND status = 'completed'
+                LIMIT 1
+            """, (user_id, checkout_session.id))
+        else:
+            subscription = getattr(checkout_session, 'subscription', None)
+            subscription_id = (
+                subscription if isinstance(subscription, str)
+                else getattr(subscription, 'id', None)
+            )
+            if not subscription_id:
+                return False
+            cursor.execute(f"""
+                SELECT 1 FROM subscriptions
+                WHERE user_id = {placeholder}
+                  AND stripe_subscription_id = {placeholder}
+                LIMIT 1
+            """, (user_id, subscription_id))
+        return cursor.fetchone() is not None
+    except Exception as exc:
+        logger.warning(f"Could not verify checkout application state: {exc}")
+        return False
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
 @payments_bp.route("/checkout/subscription", methods=["POST"])
 @login_required
 def create_subscription_checkout():
@@ -325,17 +367,25 @@ def checkout_success():
             flash("❌ Invalid checkout session.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        if checkout_session.metadata.get('type') == 'subscription':
+        checkout_type = checkout_session.metadata.get('type')
+        applied = _checkout_effect_applied(session['user_id'], checkout_session, checkout_type)
+
+        if not applied:
+            flash(
+                "Payment completed. Stripe is still syncing your account; refresh the dashboard in a moment.",
+                "info",
+            )
+        elif checkout_type == 'subscription':
             plan = checkout_session.metadata.get('plan', 'starter')
             if plan == 'standard':
                 flash(f"Standard subscription activated successfully! You now have {Config.STANDARD_MONTHLY_REPLIES} replies per month.", "success")
             else:
                 flash(f"Starter subscription activated successfully! You now have {Config.STARTER_MONTHLY_REPLIES} replies per month.", "success")
-        elif checkout_session.metadata.get('type') == 'addon':
+        elif checkout_type == 'addon':
             flash(f"Payment successful! {Config.ADDON_REPLIES} additional replies have been added to your account.", "success")
-        elif checkout_session.metadata.get('type') == 'upgrade':
+        elif checkout_type == 'upgrade':
             flash(f"Subscription upgraded successfully! You now have {Config.STANDARD_MONTHLY_REPLIES} replies per month.", "success")
-        elif checkout_session.metadata.get('type') == 'downgrade':
+        elif checkout_type == 'downgrade':
             flash(f"Subscription downgraded successfully! You now have {Config.STARTER_MONTHLY_REPLIES} replies per month.", "success")
         
         return redirect(url_for('dashboard_bp.dashboard'))
