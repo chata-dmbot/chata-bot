@@ -289,10 +289,10 @@ def create_addon_checkout():
             cursor.execute(f"""
                 SELECT stripe_customer_id
                 FROM subscriptions
-                WHERE user_id = {placeholder} AND stripe_customer_id LIKE 'cus_%'
+                WHERE user_id = {placeholder} AND stripe_customer_id LIKE {placeholder}
                 ORDER BY created_at DESC
                 LIMIT 1
-            """, (user_id,))
+            """, (user_id, 'cus_%'))
             existing_real = cursor.fetchone()
             if existing_real and existing_real[0]:
                 real_customer_id = existing_real[0]
