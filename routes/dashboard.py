@@ -72,6 +72,7 @@ def dashboard():
                 (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan_type,
                 (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_status,
                 (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_subscription_id,
+                (SELECT COALESCE(cancel_at_period_end, FALSE) FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_cancel_at_period_end,
                 (SELECT plan_type FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_plan_type,
                 (SELECT status FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_status,
                 (SELECT stripe_subscription_id FROM subscriptions WHERE user_id = u.id AND status = 'canceled' ORDER BY updated_at DESC LIMIT 1) as canceled_subscription_id
@@ -82,7 +83,7 @@ def dashboard():
         
         if combined_data:
             replies_sent_monthly, replies_limit_monthly, replies_purchased, replies_used_purchased, bot_paused, \
-            active_plan_type, active_status, active_subscription_id, \
+            active_plan_type, active_status, active_subscription_id, active_cancel_at_period_end, \
             canceled_plan_type, canceled_status, canceled_subscription_id = combined_data
             
             total_replies_used = replies_sent_monthly + replies_used_purchased
@@ -93,6 +94,7 @@ def dashboard():
             
             current_plan = None
             subscription_status = None
+            cancel_at_period_end = bool(active_cancel_at_period_end)
             
             if active_plan_type is not None and active_status == 'active':
                 stripe_status = None
@@ -164,6 +166,7 @@ def dashboard():
             bot_paused = False
             current_plan = None
             subscription_status = None
+            cancel_at_period_end = False
     finally:
         conn.close()
     
@@ -208,6 +211,7 @@ def dashboard():
                          minutes_saved=minutes_saved,
                          current_plan=current_plan,
                          subscription_status=subscription_status,
+                         cancel_at_period_end=cancel_at_period_end,
                          bot_paused=bot_paused)
 
 

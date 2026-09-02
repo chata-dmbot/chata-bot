@@ -20,6 +20,35 @@ logger = logging.getLogger("chata.routes.webhook")
 webhook_bp = Blueprint('webhook', __name__)
 
 
+def _release_stripe_event_claim(event_id):
+    """Allow Stripe to retry an event whose handler did not complete."""
+    if not event_id:
+        return
+    conn = get_db_connection()
+    if not conn:
+        logger.error(f"Could not release failed Stripe event claim {event_id}")
+        return
+    try:
+        cursor = conn.cursor()
+        placeholder = get_param_placeholder()
+        cursor.execute(
+            f"DELETE FROM stripe_webhook_events WHERE event_id = {placeholder}",
+            (event_id,),
+        )
+        conn.commit()
+    except Exception as exc:
+        logger.error(f"Could not release failed Stripe event claim {event_id}: {exc}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
 # NOTE: @csrf.exempt must be applied to stripe_webhook during blueprint registration
 @webhook_bp.route("/webhook/stripe", methods=["POST"])
 @limiter.limit("200 per minute")
@@ -44,7 +73,8 @@ def stripe_webhook():
         return jsonify({'status': 'invalid_signature'}), 400
     
     event_id = event.get('id')
-    # Insert-first idempotency: claim the event before running handlers so retries never run handlers twice
+    # Insert-first idempotency: claim the event before running handlers. The claim
+    # is removed if processing fails so Stripe can retry the event.
     if event_id:
         conn = get_db_connection()
         if conn:
@@ -76,38 +106,43 @@ def stripe_webhook():
     logger.info(f"Received Stripe webhook: {event['type']}")
     logger.info(f"Event ID: {event.get('id', 'unknown')}")
     
-    if event['type'] == 'checkout.session.completed':
-        session_obj = event['data']['object']
-        logger.info(f"Processing checkout session: {session_obj.get('id')}")
-        handle_checkout_session_completed(session_obj)
-    
-    elif event['type'] == 'customer.subscription.created':
-        subscription = event['data']['object']
-        logger.info(f"Processing subscription created: {subscription.get('id')}")
-        handle_subscription_created(subscription)
-    
-    elif event['type'] == 'customer.subscription.updated':
-        subscription = event['data']['object']
-        logger.info(f"Processing subscription updated: {subscription.get('id')}")
-        handle_subscription_updated(subscription)
-    
-    elif event['type'] == 'customer.subscription.deleted':
-        subscription = event['data']['object']
-        logger.info(f"Processing subscription deleted: {subscription.get('id')}")
-        handle_subscription_deleted(subscription)
-    
-    elif event['type'] == 'invoice.payment_succeeded':
-        invoice = event['data']['object']
-        logger.info(f"Processing invoice payment succeeded: {invoice.get('id')}")
-        handle_invoice_payment_succeeded(invoice)
-    
-    elif event['type'] == 'invoice.payment_failed':
-        invoice = event['data']['object']
-        logger.info(f"Processing invoice payment failed: {invoice.get('id')}")
-        handle_invoice_payment_failed(invoice)
-    
-    else:
-        logger.warning(f"Unhandled webhook event type: {event['type']}")
+    try:
+        if event['type'] == 'checkout.session.completed':
+            session_obj = event['data']['object']
+            logger.info(f"Processing checkout session: {session_obj.get('id')}")
+            handle_checkout_session_completed(session_obj)
+
+        elif event['type'] == 'customer.subscription.created':
+            subscription = event['data']['object']
+            logger.info(f"Processing subscription created: {subscription.get('id')}")
+            handle_subscription_created(subscription)
+
+        elif event['type'] == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            logger.info(f"Processing subscription updated: {subscription.get('id')}")
+            handle_subscription_updated(subscription)
+
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            logger.info(f"Processing subscription deleted: {subscription.get('id')}")
+            handle_subscription_deleted(subscription)
+
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            logger.info(f"Processing invoice payment succeeded: {invoice.get('id')}")
+            handle_invoice_payment_succeeded(invoice)
+
+        elif event['type'] == 'invoice.payment_failed':
+            invoice = event['data']['object']
+            logger.info(f"Processing invoice payment failed: {invoice.get('id')}")
+            handle_invoice_payment_failed(invoice)
+
+        else:
+            logger.warning(f"Unhandled webhook event type: {event['type']}")
+    except Exception:
+        logger.exception(f"Stripe webhook handler failed for event {event_id or 'unknown'}")
+        _release_stripe_event_claim(event_id)
+        return jsonify({'error': 'event processing failed'}), 500
     
     logger.info(f"Webhook processing completed for {event['type']}")
     return jsonify({'status': 'success'}), 200
@@ -207,5 +242,8 @@ def webhook():
                 logger.info("Webhook processed synchronously (Redis fallback)")
             except Exception as sync_err:
                 logger.error(f"Synchronous fallback also failed: {sync_err}")
+                # Returning a retryable error is safer than acknowledging and
+                # permanently losing a message that was never queued or processed.
+                return "Service Unavailable", 503
 
         return "EVENT_RECEIVED", 200

@@ -295,8 +295,6 @@ def migrate_instagram_connections_webhook():
             ('webhook_subscription_active', 'BOOLEAN DEFAULT FALSE' if is_postgres else 'BOOLEAN DEFAULT 0'),
             ('last_webhook_at', 'TIMESTAMP'),
             ('last_webhook_event_type', 'VARCHAR(64)' if is_postgres else 'TEXT'),
-            ('page_access_token_encrypted', 'TEXT'),
-            ('page_access_token_kid', 'VARCHAR(64)' if is_postgres else 'TEXT'),
         ]
         for column_name, column_type in columns_to_add:
             try:

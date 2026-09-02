@@ -1,6 +1,5 @@
 """Stripe webhook event handlers."""
 import logging
-import os
 import stripe
 from datetime import datetime, timedelta
 from config import Config
@@ -70,6 +69,15 @@ def _stripe_price_id_from_items(items_list):
         return getattr(price, 'id', None)
     except (TypeError, AttributeError):
         return None
+
+
+def _plan_details_for_price_id(price_id):
+    """Return (plan_type, monthly_limit) only for a configured recurring price."""
+    if price_id and price_id == Config.STRIPE_STANDARD_PLAN_PRICE_ID:
+        return "standard", Config.STANDARD_MONTHLY_REPLIES
+    if price_id and price_id == Config.STRIPE_STARTER_PLAN_PRICE_ID:
+        return "starter", Config.STARTER_MONTHLY_REPLIES
+    return None
 
 
 # ---- Webhook event handlers ----
@@ -183,8 +191,7 @@ def handle_checkout_session_completed(session_obj):
                 logger.info(f"Added {replies_to_add} replies for user {user_id} from Stripe payment")
     except Exception as e:
         logger.error(f"Error handling checkout session completed: {e}")
-        import traceback
-        traceback.print_exc()
+        raise
 
 def handle_subscription_created(subscription):
     """Handle new subscription creation (subscription can be dict from webhook or StripeObject)."""
@@ -210,8 +217,7 @@ def handle_subscription_created(subscription):
         
         conn = get_db_connection()
         if not conn:
-            logger.error("Failed to get DB connection for subscription creation")
-            return
+            raise RuntimeError("Failed to get DB connection for subscription creation")
         try:
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
@@ -278,30 +284,13 @@ def handle_subscription_created(subscription):
                 except Exception as e:
                     logger.warning(f"All alternative methods failed: {e}")
             
-            # Determine plan type based on price ID
-            standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
-            starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
-            
-            logger.info(f"Comparing price_id '{price_id}' with standard '{standard_price_id}' and starter '{starter_price_id}'")
-            
-            plan_type = 'starter'
-            replies_limit = Config.STARTER_MONTHLY_REPLIES
-            
-            if price_id:
-                if standard_price_id and price_id == standard_price_id:
-                    plan_type = 'standard'
-                    replies_limit = Config.STANDARD_MONTHLY_REPLIES
-                    logger.info(f"Detected Standard plan - setting replies_limit to {replies_limit}")
-                elif starter_price_id and price_id == starter_price_id:
-                    plan_type = 'starter'
-                    replies_limit = Config.STARTER_MONTHLY_REPLIES
-                    logger.info(f"Detected Starter plan - setting replies_limit to {Config.STARTER_MONTHLY_REPLIES}")
-                else:
-                    logger.warning(f"Price ID {price_id} doesn't match known plans, defaulting to Starter")
-            else:
-                logger.error(f"Price ID is None - cannot determine plan type. This is an error!")
-                logger.warning(f"Skipping database insertion due to missing price_id")
-                return
+            plan_details = _plan_details_for_price_id(price_id)
+            if not plan_details:
+                raise ValueError(
+                    f"Subscription {subscription_id} has unknown or missing Stripe price ID {price_id!r}"
+                )
+            plan_type, replies_limit = plan_details
+            logger.info(f"Detected {plan_type} plan - setting replies_limit to {replies_limit}")
             
             # Check if using PostgreSQL
             if is_postgres():
@@ -423,8 +412,7 @@ def handle_subscription_created(subscription):
         
     except Exception as e:
         logger.error(f"Error handling subscription created: {e}")
-        import traceback
-        traceback.print_exc()
+        raise
 
 def handle_subscription_updated(subscription):
     """Handle subscription updates (including upgrades/downgrades). Subscription can be dict from webhook or StripeObject."""
@@ -445,8 +433,7 @@ def handle_subscription_updated(subscription):
         
         conn = get_db_connection()
         if not conn:
-            logger.error("Failed to get DB connection for subscription update")
-            return
+            raise RuntimeError("Failed to get DB connection for subscription update")
         try:
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
@@ -463,7 +450,15 @@ def handle_subscription_updated(subscription):
             existing_price_id = existing_sub_data[2] if existing_sub_data and len(existing_sub_data) > 2 else None
             
             if existing_status == 'canceled' or cancel_at_period_end:
-                logger.warning(f"Subscription {subscription_id} is canceled - preserving existing plan_type '{existing_plan_type}'")
+                target_status = 'canceled' if existing_status == 'canceled' else (
+                    subscription.get('status', 'active')
+                    if isinstance(subscription, dict)
+                    else getattr(subscription, 'status', 'active')
+                )
+                logger.info(
+                    f"Subscription {subscription_id} status={target_status}, "
+                    f"cancel_at_period_end={cancel_at_period_end}; preserving plan_type '{existing_plan_type}'"
+                )
                 
                 expanded_sub = stripe.Subscription.retrieve(subscription_id, expand=['items.data.price'])
                 items_list = _stripe_subscription_items_data(expanded_sub)
@@ -482,7 +477,7 @@ def handle_subscription_updated(subscription):
                             current_period_start = {placeholder}, current_period_end = {placeholder},
                             cancel_at_period_end = {placeholder}, updated_at = CURRENT_TIMESTAMP
                         WHERE stripe_subscription_id = {placeholder}
-                    """, ('canceled', final_price_id, period_start, period_end, cancel_value, subscription_id))
+                    """, (target_status, final_price_id, period_start, period_end, cancel_value, subscription_id))
                 else:
                     cursor.execute(f"""
                         UPDATE subscriptions 
@@ -490,24 +485,25 @@ def handle_subscription_updated(subscription):
                             current_period_end = {placeholder}, cancel_at_period_end = {placeholder},
                             updated_at = CURRENT_TIMESTAMP
                         WHERE stripe_subscription_id = {placeholder}
-                    """, ('canceled', period_start, period_end, cancel_value, subscription_id))
+                    """, (target_status, period_start, period_end, cancel_value, subscription_id))
                 
                 conn.commit()
-                logger.info(f"Subscription updated (canceled): {subscription_id} (plan_type preserved: {existing_plan_type})")
+                logger.info(
+                    f"Subscription cancellation state updated: {subscription_id} "
+                    f"(status={target_status}, plan_type preserved: {existing_plan_type})"
+                )
                 return
             
             # Active subscription - process upgrades/downgrades
             expanded_sub = stripe.Subscription.retrieve(subscription_id, expand=['items.data.price'])
             items_list = _stripe_subscription_items_data(expanded_sub)
             price_id = _stripe_price_id_from_items(items_list)
-            standard_price_id = Config.STRIPE_STANDARD_PLAN_PRICE_ID or os.getenv("STRIPE_STANDARD_PLAN_PRICE_ID")
-            starter_price_id = Config.STRIPE_STARTER_PLAN_PRICE_ID or os.getenv("STRIPE_STARTER_PLAN_PRICE_ID")
-            new_plan_type = 'starter'
-            if price_id:
-                if standard_price_id and price_id == standard_price_id:
-                    new_plan_type = 'standard'
-                elif starter_price_id and price_id == starter_price_id:
-                    new_plan_type = 'starter'
+            plan_details = _plan_details_for_price_id(price_id)
+            if not plan_details:
+                raise ValueError(
+                    f"Subscription {subscription_id} update has unknown or missing Stripe price ID {price_id!r}"
+                )
+            new_plan_type, new_limit = plan_details
             
             cursor.execute(f"""
                 SELECT plan_type, replies_limit_monthly
@@ -520,7 +516,6 @@ def handle_subscription_updated(subscription):
             if current_sub:
                 old_plan_type = current_sub[0]
                 if old_plan_type != new_plan_type:
-                    new_limit = Config.STANDARD_MONTHLY_REPLIES if new_plan_type == 'standard' else Config.STARTER_MONTHLY_REPLIES
                     logger.info(f"Detected plan change {old_plan_type} -> {new_plan_type} for user {user_id}, setting limit to {new_limit}")
                     cursor.execute(f"""
                         UPDATE users SET replies_limit_monthly = {placeholder}
@@ -553,8 +548,7 @@ def handle_subscription_updated(subscription):
         
     except Exception as e:
         logger.error(f"Error handling subscription updated: {e}")
-        import traceback
-        traceback.print_exc()
+        raise
 
 def handle_subscription_deleted(subscription):
     """Handle subscription cancellation - keep remaining replies but mark as canceled. Subscription can be dict from webhook or StripeObject."""
@@ -576,8 +570,7 @@ def handle_subscription_deleted(subscription):
         
         conn = get_db_connection()
         if not conn:
-            logger.error("Failed to get DB connection for subscription deletion")
-            return
+            raise RuntimeError("Failed to get DB connection for subscription deletion")
         try:
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
@@ -642,8 +635,7 @@ def handle_subscription_deleted(subscription):
         
     except Exception as e:
         logger.error(f"Error handling subscription deleted: {e}")
-        import traceback
-        traceback.print_exc()
+        raise
 
 def handle_invoice_payment_succeeded(invoice):
     """Handle successful monthly subscription payment"""
@@ -689,8 +681,7 @@ def handle_invoice_payment_succeeded(invoice):
         
         conn = get_db_connection()
         if not conn:
-            logger.error("Failed to get DB connection for invoice payment")
-            return
+            raise RuntimeError("Failed to get DB connection for invoice payment")
         try:
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
@@ -744,8 +735,7 @@ def handle_invoice_payment_succeeded(invoice):
         
     except Exception as e:
         logger.error(f"Error handling invoice payment succeeded: {e}")
-        import traceback
-        traceback.print_exc()
+        raise
 
 def handle_invoice_payment_failed(invoice):
     """Handle failed subscription payment"""
@@ -768,8 +758,7 @@ def handle_invoice_payment_failed(invoice):
         
         conn = get_db_connection()
         if not conn:
-            logger.error("Failed to get DB connection for invoice payment failure")
-            return
+            raise RuntimeError("Failed to get DB connection for invoice payment failure")
         try:
             cursor = conn.cursor()
             placeholder = get_param_placeholder()
@@ -792,3 +781,4 @@ def handle_invoice_payment_failed(invoice):
         
     except Exception as e:
         logger.error(f"Error handling invoice payment failed: {e}")
+        raise

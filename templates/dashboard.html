@@ -603,6 +603,11 @@
                     <p style="margin-top: 1rem;"><strong>Current Plan:</strong> 
                         <span style="color: var(--chata-blue); text-transform: capitalize; font-weight: 600;">{{ current_plan }}</span>
                     </p>
+                    {% if cancel_at_period_end %}
+                        <p style="color: #fbbf24; font-size: 0.85rem; margin-top: 0.25rem;">
+                            Cancellation is scheduled for the end of your current billing period. Your plan remains active until then.
+                        </p>
+                    {% endif %}
                     {% if current_plan == 'free' %}
                         <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-top: 0.25rem;">€0/month • 200 replies</p>
                         <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">

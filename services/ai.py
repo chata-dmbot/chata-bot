@@ -1,7 +1,6 @@
 """AI service — OpenAI prompt building and reply generation."""
 import logging
 import openai
-import json
 import time
 from config import Config
 from database import get_db_connection, get_param_placeholder
@@ -96,16 +95,7 @@ CONVERSATION_EXAMPLES = [
     }
 ]
 
-# Keep for backward compatibility in prompt building
-CONVERSATION_TEMPLATES = CONVERSATION_EXAMPLES
-ALL_CONVERSATION_PROMPTS = CONVERSATION_EXAMPLES
-
 MODEL_CONFIG = {
-    "gpt-5-nano": {
-        "token_param": "max_completion_tokens",
-        "supports_temperature": False,
-        "max_completion_cap": 3000,
-    },
     "gpt-4.1-mini": {
         "supports_temperature": True,
         "supports_penalties": True,
@@ -130,66 +120,6 @@ def _clamp_float(value, low, high, default):
     except (TypeError, ValueError):
         return default
 
-
-# ---------------------------------------------------------------------------
-# Reply generation
-# ---------------------------------------------------------------------------
-
-def get_ai_reply(history):
-    from services.settings import get_setting
-
-    openai.api_key = Config.OPENAI_API_KEY
-    try:
-        timeout = getattr(Config, "OPENAI_TIMEOUT", 60)
-        client = openai.OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
-
-        system_prompt = get_setting("bot_personality",
-            "You are a helpful and friendly Instagram bot.")
-
-        messages = [{"role": "system", "content": system_prompt}]
-        messages += history
-
-        model_name = "gpt-5-nano"
-        model_config = MODEL_CONFIG.get(model_name, DEFAULT_MODEL_CONFIG)
-
-        completion_kwargs = {
-            "model": model_name,
-            "messages": messages,
-        }
-        # temperature and max_tokens hardcoded per model config
-        if model_config.get("supports_temperature", True):
-            completion_kwargs["temperature"] = 0.7
-
-        token_param = model_config.get("token_param", "max_tokens")
-        max_tokens = model_config.get("max_completion_cap", 3000)
-        if token_param == "max_completion_tokens":
-            completion_kwargs["max_completion_tokens"] = max_tokens
-        else:
-            completion_kwargs["max_tokens"] = max_tokens
-        openai_start = time.time()
-        response = client.chat.completions.create(**completion_kwargs)
-        openai_duration = time.time() - openai_start
-        logger.info(f"OpenAI chat latency (global): {openai_duration:.2f}s; model={model_name}")
-
-        if not response.choices:
-            logger.warning(f"OpenAI returned no choices: {response}")
-            return "Sorry, I'm having trouble replying right now."
-
-        message = response.choices[0].message
-        if not message or not getattr(message, "content", None):
-            logger.warning(f"OpenAI returned empty content: {response}")
-            return "Sorry, I'm having trouble replying right now."
-
-        ai_reply = message.content.strip()
-        if not ai_reply:
-            logger.warning(f"OpenAI content was blank after strip: {response}")
-            return "Sorry, I'm having trouble replying right now."
-
-        return ai_reply
-
-    except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
-        return "Sorry, I'm having trouble replying right now."
 
 def get_ai_reply_with_connection(history, connection_id=None, conn=None):
     """

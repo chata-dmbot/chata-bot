@@ -37,9 +37,6 @@ class Config:
     RQ_QUEUE_NAME = os.getenv("RQ_QUEUE_NAME", "chata-webhooks")
     RQ_DEFAULT_TIMEOUT_SECONDS = int(os.getenv("RQ_DEFAULT_TIMEOUT_SECONDS", "180"))
 
-    # Token encryption (Fernet keyring for Instagram tokens at rest)
-    TOKEN_ENCRYPTION_KEYS = os.getenv("TOKEN_ENCRYPTION_KEYS")
-
     # Observability
     SENTRY_DSN = os.getenv("SENTRY_DSN")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -123,9 +120,6 @@ class Config:
         ]
 
         missing_vars = [v for v in required_vars if not os.getenv(v)]
-
-        if cls.is_production() and not os.getenv('TOKEN_ENCRYPTION_KEYS'):
-            missing_vars.append('TOKEN_ENCRYPTION_KEYS')
 
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")

@@ -486,7 +486,7 @@ def create_downgrade_checkout():
 @payments_bp.route("/subscription/cancel", methods=["POST"])
 @login_required
 def cancel_subscription():
-    """Cancel subscription - cancel at period end"""
+    """Schedule a paid subscription to cancel at the end of its billing period."""
     user_id = session['user_id']
     
     conn = None
@@ -497,7 +497,7 @@ def cancel_subscription():
         
         # Get active subscription - get the most recent one
         cursor.execute(f"""
-            SELECT stripe_subscription_id, plan_type
+            SELECT stripe_subscription_id, plan_type, COALESCE(cancel_at_period_end, FALSE)
             FROM subscriptions
             WHERE user_id = {placeholder} AND status = 'active'
             ORDER BY created_at DESC
@@ -509,33 +509,42 @@ def cancel_subscription():
             flash("❌ No active subscription found.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        subscription_id, plan_type = subscription
+        subscription_id, plan_type, already_scheduled = subscription
+        if already_scheduled:
+            flash("Your subscription is already scheduled to cancel at the end of this billing period.", "info")
+            return redirect(url_for('dashboard_bp.dashboard'))
+
         logger.info(f"Canceling subscription {subscription_id} (plan: {plan_type}) for user {user_id}")
         conn.close()
         conn = None
         
-        # Cancel subscription in Stripe FIRST — only update DB if Stripe succeeds
+        # Schedule cancellation in Stripe first. Access and plan allowances stay
+        # active until Stripe sends customer.subscription.deleted at period end.
         try:
-            stripe.Subscription.delete(subscription_id)
-            logger.info(f"Immediately canceled subscription {subscription_id} in Stripe")
+            stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
+            logger.info(f"Scheduled subscription {subscription_id} to cancel at period end")
         except Exception as e:
             logger.error(f"Failed to cancel subscription in Stripe: {e}")
             flash("Could not cancel your subscription. Please try again or contact support.", "error")
             return redirect(url_for('dashboard_bp.dashboard'))
         
-        # Stripe cancellation succeeded — now update DB
+        # Stripe accepted the schedule — mirror it locally while keeping the
+        # subscription active through the paid period.
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(f"""
             UPDATE subscriptions 
-            SET status = {placeholder},
+            SET cancel_at_period_end = {placeholder},
                 updated_at = CURRENT_TIMESTAMP
             WHERE stripe_subscription_id = {placeholder}
-        """, ('canceled', subscription_id))
+        """, (True, subscription_id))
         conn.commit()
-        logger.info(f"Marked subscription {subscription_id} as canceled in DB (plan_type '{plan_type}' preserved)")
+        logger.info(f"Marked subscription {subscription_id} as canceling at period end")
         
-        flash("Subscription canceled. You can still use your remaining replies, but cannot purchase add-ons.", "success")
+        flash(
+            "Subscription cancellation scheduled. Your plan remains active until the end of the current billing period.",
+            "success",
+        )
         return redirect(url_for('dashboard_bp.dashboard'))
         
     except stripe.error.StripeError as e:
