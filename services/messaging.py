@@ -1,9 +1,28 @@
 """Messaging service — save and retrieve messages and conversations."""
 import logging
+from datetime import datetime
 from database import get_db_connection, get_param_placeholder
 from config import Config
 
 logger = logging.getLogger("chata.services.messaging")
+
+
+def get_sent_reply_count_current_month(user_id, conn):
+    """Count replies actually sent for all of a user's Instagram connections this month."""
+    cursor = conn.cursor()
+    placeholder = get_param_placeholder()
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    cursor.execute(f"""
+        SELECT COUNT(*)
+        FROM messages m
+        JOIN instagram_connections ic ON ic.id = m.instagram_connection_id
+        WHERE ic.user_id = {placeholder}
+          AND m.created_at >= {placeholder}
+          AND COALESCE(m.bot_response, '') <> ''
+          AND COALESCE(m.sent_via_api, TRUE) = TRUE
+    """, (user_id, month_start))
+    row = cursor.fetchone()
+    return int(row[0]) if row and row[0] is not None else 0
 
 
 def save_message(instagram_user_id, message_text, bot_response, conn=None, instagram_connection_id=None, sent_via_api=True):

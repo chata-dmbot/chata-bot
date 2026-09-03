@@ -12,7 +12,12 @@ from database import get_db_connection, get_param_placeholder, is_postgres
 from extensions import csrf
 from services.auth import login_required
 from services.users import get_user_by_id
-from services.messaging import get_conversation_list, get_messages_for_conversation, get_conversation_message_count
+from services.messaging import (
+    get_conversation_list,
+    get_messages_for_conversation,
+    get_conversation_message_count,
+    get_sent_reply_count_current_month,
+)
 from services.subscription import check_user_reply_limit, reset_monthly_replies_if_needed, increment_reply_count
 from services.activity import log_activity, get_client_settings, save_client_settings
 from services.email import send_account_deletion_confirmation_email
@@ -89,9 +94,6 @@ def dashboard():
             total_replies_used = replies_sent_monthly + replies_used_purchased
             total_replies_available = replies_limit_monthly + replies_purchased
             remaining_replies = max(0, total_replies_available - total_replies_used)
-            MINUTES_PER_REPLY = 3
-            minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
-            
             current_plan = None
             subscription_status = None
             cancel_at_period_end = bool(active_cancel_at_period_end)
@@ -162,11 +164,16 @@ def dashboard():
             total_replies_used = 0
             total_replies_available = 0
             remaining_replies = 0
-            minutes_saved = 0
             bot_paused = False
             current_plan = None
             subscription_status = None
             cancel_at_period_end = False
+
+        # Usage analytics are based on replies actually delivered this month,
+        # independently of quota buckets that can be reallocated on plan changes.
+        replies_sent_this_month = get_sent_reply_count_current_month(user_id, conn)
+        MINUTES_PER_REPLY = 3
+        minutes_saved = replies_sent_this_month * MINUTES_PER_REPLY
     finally:
         conn.close()
     
@@ -201,7 +208,7 @@ def dashboard():
                          connections=connections_list,
                          app_review_manual_send=Config.APP_REVIEW_MANUAL_SEND,
                          webhook_status=webhook_status,
-                         replies_sent=replies_sent_monthly,
+                         replies_sent=replies_sent_this_month,
                          replies_limit=replies_limit_monthly,
                          replies_purchased=replies_purchased,
                          replies_used_purchased=replies_used_purchased,
@@ -1109,8 +1116,6 @@ def usage_analytics():
             total_replies_used = replies_sent_monthly + replies_used_purchased
             total_replies_available = replies_limit_monthly + replies_purchased
             remaining_replies = max(0, total_replies_available - total_replies_used)
-            MINUTES_PER_REPLY = 3
-            minutes_saved = replies_sent_monthly * MINUTES_PER_REPLY
         else:
             replies_sent_monthly = 0
             replies_limit_monthly = 0
@@ -1119,7 +1124,10 @@ def usage_analytics():
             total_replies_used = 0
             total_replies_available = 0
             remaining_replies = 0
-            minutes_saved = 0
+
+        replies_sent_this_month = get_sent_reply_count_current_month(user_id, conn)
+        MINUTES_PER_REPLY = 3
+        minutes_saved = replies_sent_this_month * MINUTES_PER_REPLY
         
         # Get recent activity
         cursor.execute(f"""
@@ -1147,7 +1155,7 @@ def usage_analytics():
         conn.close()
     
     return render_template("usage_analytics.html", 
-                         replies_sent=replies_sent_monthly,
+                         replies_sent=replies_sent_this_month,
                          replies_limit=replies_limit_monthly,
                          replies_purchased=replies_purchased,
                          replies_used_purchased=replies_used_purchased,

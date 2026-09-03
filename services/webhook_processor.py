@@ -137,15 +137,15 @@ def process_incoming_messages(incoming_by_sender):
                 continue
 
             app_review_manual_send = getattr(Config, "APP_REVIEW_MANUAL_SEND", False)
-            save_message(
-                sender_id,
-                "",
-                reply_text,
-                webhook_conn,
-                instagram_connection_id=connection_id,
-                sent_via_api=not app_review_manual_send,
-            )
             if app_review_manual_send:
+                save_message(
+                    sender_id,
+                    "",
+                    reply_text,
+                    webhook_conn,
+                    instagram_connection_id=connection_id,
+                    sent_via_api=False,
+                )
                 continue
 
             payload = {"recipient": {"id": sender_id}, "message": {"text": reply_text}}
@@ -153,7 +153,23 @@ def process_incoming_messages(incoming_by_sender):
             send_resp = requests.post(send_url, json=payload, timeout=30)
             if send_resp.status_code != 200:
                 logger.error(f"[worker] failed sending message sender={sender_id} code={send_resp.status_code}")
+                save_message(
+                    sender_id,
+                    "",
+                    reply_text,
+                    webhook_conn,
+                    instagram_connection_id=connection_id,
+                    sent_via_api=False,
+                )
                 continue
+            save_message(
+                sender_id,
+                "",
+                reply_text,
+                webhook_conn,
+                instagram_connection_id=connection_id,
+                sent_via_api=True,
+            )
             if user_id:
                 increment_reply_count(user_id, webhook_conn)
     finally:
